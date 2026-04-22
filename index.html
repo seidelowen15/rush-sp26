@@ -2440,7 +2440,7 @@
   function renderDashboard() {
     const me = MEMBERS.find(m => m.id === state.currentUser);
     const openTasks = state.tasks.filter(t => t.status !== 'done').length;
-    const myTasks = state.tasks.filter(t => t.assigneeId === state.currentUser && t.status !== 'done').length;
+    const myTasks = state.tasks.filter(t => (t.assigneeId === state.currentUser || t.assigneeId === 'all') && t.status !== 'done').length;
     const doneTasks = state.tasks.filter(t => t.status === 'done').length;
     const activeCands = state.candidates.filter(c => c.status !== 'rejected').length;
     const now = Date.now();
@@ -2938,7 +2938,11 @@
   // ============================================================
   function renderTasks() {
     const filteredTasks = state.tasks.filter(t => {
-      if (state.taskFilterAssignee !== 'all' && t.assigneeId !== state.taskFilterAssignee) return false;
+      if (state.taskFilterAssignee !== 'all') {
+        // When filtering by a specific person, include their individually-assigned tasks
+        // AND tasks assigned to "All" (since those apply to everyone).
+        if (t.assigneeId !== state.taskFilterAssignee && t.assigneeId !== 'all') return false;
+      }
       if (state.taskFilterCategory !== 'all' && t.categoryId !== state.taskFilterCategory) return false;
       return true;
     });
@@ -2955,7 +2959,7 @@
       '</div>' +
       '<div class="legend">' +
         '<span>Assignee:</span>' +
-        '<button class="chip ' + (state.taskFilterAssignee === 'all' ? 'selected' : '') + '" onclick="setTaskFilter(\'assignee\',\'all\')">All</button>' +
+        '<button class="chip ' + (state.taskFilterAssignee === 'all' ? 'selected' : '') + '" onclick="setTaskFilter(\'assignee\',\'all\')">Everyone</button>' +
         MEMBERS.map(m =>
           '<button class="chip ' + (state.taskFilterAssignee === m.id ? 'selected' : '') + '" onclick="setTaskFilter(\'assignee\',\'' + m.id + '\')" style="' + (state.taskFilterAssignee === m.id ? 'background:' + m.color + '; border-color:' + m.color + '; color:var(--paper)' : '') + '">' +
             '<span class="chip-dot" style="background:' + (state.taskFilterAssignee === m.id ? 'var(--paper)' : m.color) + '"></span>' + escapeHtml(m.name) +
@@ -2990,7 +2994,8 @@
   }
 
   function renderTaskCard(t, colId) {
-    const assignee = MEMBERS.find(m => m.id === t.assigneeId);
+    const isAll = t.assigneeId === 'all';
+    const assignee = isAll ? null : MEMBERS.find(m => m.id === t.assigneeId);
     const cat = state.taskCategories.find(c => c.id === t.categoryId) || state.taskCategories[0];
     const accentColor = cat ? cat.color : '#6B7280';
 
@@ -3007,13 +3012,17 @@
 
     const priorityChip = t.priority === 'high' ? '<span class="task-chip priority-high">‼ High</span>' : '';
 
+    const assigneeChip = isAll
+      ? '<span class="task-chip assignee" style="background:var(--gold-dark)">✦ All</span>'
+      : (assignee ? '<span class="task-chip assignee" style="background:' + assignee.color + '">' + escapeHtml(assignee.name) + '</span>' : '');
+
     return '<div class="task-item ' + (t.status === 'done' ? 'done' : '') + '">' +
       '<div class="task-accent" style="background:' + accentColor + '"></div>' +
       '<div class="task-checkbox" onclick="toggleTaskDone(\'' + t.id + '\')">' + (t.status === 'done' ? '✓' : '') + '</div>' +
       '<div class="task-content">' +
         '<div class="task-text" onclick="openTaskModal(\'' + t.id + '\')">' + escapeHtml(t.text) + '</div>' +
         '<div class="task-meta-row">' +
-          (assignee ? '<span class="task-chip assignee" style="background:' + assignee.color + '">' + escapeHtml(assignee.name) + '</span>' : '') +
+          assigneeChip +
           (cat ? '<span class="task-chip"><span style="width:7px;height:7px;border-radius:50%;background:' + cat.color + ';display:inline-block"></span>' + escapeHtml(cat.name) + '</span>' : '') +
           priorityChip +
           dueChip +
@@ -3086,7 +3095,11 @@
 
   function renderTaskAssigneeChips() {
     const container = document.getElementById('taskAssigneeChips');
-    container.innerHTML = MEMBERS.map(m =>
+    const allSelected = state.editingTask.assigneeId === 'all';
+    const allChip = '<button class="chip ' + (allSelected ? 'selected' : '') + '" onclick="pickTaskAssignee(\'all\')" style="' + (allSelected ? 'background:var(--gold-dark); border-color:var(--gold-dark); color:var(--paper)' : '') + '">' +
+      '<span class="chip-dot" style="background:' + (allSelected ? 'var(--paper)' : 'var(--gold-dark)') + '"></span>All' +
+    '</button>';
+    container.innerHTML = allChip + MEMBERS.map(m =>
       '<button class="chip ' + (state.editingTask.assigneeId === m.id ? 'selected' : '') + '" onclick="pickTaskAssignee(\'' + m.id + '\')" style="' + (state.editingTask.assigneeId === m.id ? 'background:' + m.color + '; border-color:' + m.color : '') + '">' +
         '<span class="chip-dot" style="background:' + (state.editingTask.assigneeId === m.id ? 'var(--paper)' : m.color) + '"></span>' + escapeHtml(m.name) +
       '</button>'
