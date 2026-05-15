@@ -2070,7 +2070,7 @@
 <div class="modal-overlay" id="schedModal">
   <div class="modal">
     <button class="modal-close" onclick="closeSchedModal()">✕</button>
-    <div class="modal-title" id="schedModalTitle">New <em>availability</em></div>
+    <div class="modal-title" id="schedModalTitle">New <em>event</em></div>
     <div class="modal-sub" id="schedModalSub">Block off your time</div>
     <div class="form-grid">
       <div>
@@ -2402,6 +2402,7 @@
         return (data || []).map(row => row.data);
       } catch (e) {
         console.error('Storage.get failed for', key, e);
+        window._lastStorageError = e;
         connectionOK = false;
         return null;
       }
@@ -2432,6 +2433,7 @@
         return true;
       } catch (e) {
         console.error('Storage.set failed for', key, e);
+        window._lastStorageError = e;
         connectionOK = false;
         return false;
       }
@@ -2445,6 +2447,7 @@
         return true;
       } catch (e) {
         console.error('Storage.deleteOne failed', key, id, e);
+        window._lastStorageError = e;
         return false;
       }
     }
@@ -2623,7 +2626,10 @@
 
   async function persist(key, value) {
     const ok = await Storage.set(key, value);
-    if (!ok) toast('Could not save to cloud. Check connection.', 'error');
+    if (!ok) {
+      const reason = (window._lastStorageError && window._lastStorageError.message) || 'unknown error';
+      toast('Save failed (' + key + '): ' + reason, 'error');
+    }
     return ok;
   }
 
@@ -2824,7 +2830,7 @@
       dashboard: ['Home', ''],
       notes: ['Notes', '& ideas'],
       calendar: ['Calendar', ''],
-      schedule: ['Schedule', '& availability'],
+      schedule: ['Schedule', '& events'],
       tasks: ['Tasks', '& to-dos'],
       candidates: ['Candidates', ''],
     };
@@ -4019,7 +4025,7 @@
           escapeHtml(m.name) +
         '</span>'
       ).join('') +
-      '<span style="margin-left:auto; opacity: 0.7;">Click an empty slot to add availability</span>' +
+      '<span style="margin-left:auto; opacity: 0.7;">Click an empty slot to add an event</span>' +
     '</div>';
 
     const mobileDay = days[activeDayIdx >= 0 ? activeDayIdx : 0];
@@ -4042,7 +4048,7 @@
           '<button class="btn btn-icon" onclick="schedNav(-1)">‹</button>' +
           '<button class="btn" onclick="schedToday()">This week</button>' +
           '<button class="btn btn-icon" onclick="schedNav(1)">›</button>' +
-          '<button class="btn primary" onclick="openSchedModalAt()" style="margin-left:6px">+ Add availability</button>' +
+          '<button class="btn primary" onclick="openSchedModalAt()" style="margin-left:6px">+ Add event</button>' +
         '</div>' +
       '</div>' +
       mobilePager +
@@ -4102,7 +4108,7 @@
     state.editingSchedInstanceDate = null;
     state.editingSched = { weekdays: [], recurrence: 'once' };
 
-    document.getElementById('schedModalTitle').innerHTML = 'New <em>availability</em>';
+    document.getElementById('schedModalTitle').innerHTML = 'New <em>event</em>';
     document.getElementById('schedModalSub').textContent = 'Block off your time';
     document.getElementById('deleteSchedBtn').style.display = 'none';
     document.getElementById('schedTitle').value = '';
@@ -4183,10 +4189,10 @@
 
     document.getElementById('schedModalTitle').innerHTML = isExceptionEdit
       ? 'Edit <em>this occurrence</em>'
-      : 'Edit <em>availability</em>';
+      : 'Edit <em>event</em>';
     document.getElementById('schedModalSub').textContent = isExceptionEdit
       ? 'Changing only ' + new Date(instanceDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
-      : (ev.ownerId === state.currentUser ? 'Your availability' : 'Owned by another member — you can\'t edit');
+      : (ev.ownerId === state.currentUser ? 'Your event' : 'Owned by another member — you can\'t edit');
     document.getElementById('deleteSchedBtn').style.display = ev.ownerId === state.currentUser ? 'inline-flex' : 'none';
 
     document.getElementById('schedTitle').value = resolved.title || '';
