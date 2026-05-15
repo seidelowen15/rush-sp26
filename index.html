@@ -1751,6 +1751,310 @@
     .candidates-grid { grid-template-columns: 1fr; }
   }
 
+  /* ========== SCHEDULE (week view) ========== */
+  .sched-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .sched-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .sched-title em { font-style: italic; color: var(--gold-dark); font-weight: 500; }
+  [data-theme="dark"] .sched-title em { color: var(--gold); }
+
+  .sched-nav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  .sched-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    margin-bottom: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fg-soft);
+    align-items: center;
+  }
+  .sched-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .sched-legend-swatch {
+    width: 12px; height: 12px; border-radius: 3px;
+  }
+
+  /* The actual grid container */
+  .sched-grid-wrap {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .sched-day-headers {
+    display: grid;
+    grid-template-columns: 56px repeat(7, 1fr);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+
+  .sched-day-header {
+    padding: 10px 6px;
+    text-align: center;
+    border-right: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--fg-muted);
+  }
+  .sched-day-header:last-child { border-right: none; }
+  .sched-day-header .day-name { display: block; }
+  .sched-day-header .day-num {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--fg);
+    margin-top: 2px;
+    line-height: 1;
+  }
+  .sched-day-header.today .day-num {
+    color: var(--gold-dark);
+  }
+  [data-theme="dark"] .sched-day-header.today .day-num { color: var(--gold); }
+  .sched-day-header.today {
+    background: rgba(212, 166, 74, 0.12);
+  }
+
+  /* The hour-by-hour scrollable body */
+  .sched-body {
+    max-height: 70vh;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .sched-grid {
+    display: grid;
+    grid-template-columns: 56px repeat(7, 1fr);
+    position: relative;
+  }
+
+  .sched-hour-label {
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    height: 48px;
+    padding: 3px 6px 0 0;
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    position: relative;
+  }
+
+  .sched-cell {
+    height: 48px;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .sched-cell:nth-child(8n) { border-right: none; } /* last column has no right border */
+  .sched-cell:hover { background: rgba(10, 36, 99, 0.04); }
+  [data-theme="dark"] .sched-cell:hover { background: rgba(212, 166, 74, 0.06); }
+  .sched-cell.today-col { background: rgba(212, 166, 74, 0.04); }
+  [data-theme="dark"] .sched-cell.today-col { background: rgba(212, 166, 74, 0.05); }
+
+  /* The "now" line */
+  .sched-now-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 0;
+    border-top: 2px solid var(--danger);
+    z-index: 4;
+    pointer-events: none;
+  }
+  .sched-now-line::before {
+    content: '';
+    position: absolute;
+    left: -4px; top: -5px;
+    width: 8px; height: 8px;
+    background: var(--danger);
+    border-radius: 50%;
+  }
+
+  /* The event blocks */
+  .sched-event {
+    position: absolute;
+    border-radius: 5px;
+    padding: 3px 5px;
+    color: var(--paper);
+    font-size: 10px;
+    line-height: 1.2;
+    overflow: hidden;
+    cursor: pointer;
+    z-index: 2;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: filter 0.15s, transform 0.1s;
+  }
+  .sched-event:hover {
+    filter: brightness(1.08);
+    transform: scale(1.01);
+    z-index: 3;
+  }
+  .sched-event .ev-title {
+    font-weight: 600;
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sched-event .ev-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    opacity: 0.9;
+    margin-top: 1px;
+  }
+  .sched-event .ev-recur-icon {
+    position: absolute;
+    top: 3px; right: 3px;
+    font-size: 8px;
+    opacity: 0.7;
+  }
+
+  /* Mobile day view */
+  .sched-mobile-pager {
+    display: none;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sched-mobile-day-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .sched-mobile-day-label em {
+    font-style: italic;
+    color: var(--gold-dark);
+    font-weight: 500;
+  }
+  [data-theme="dark"] .sched-mobile-day-label em { color: var(--gold); }
+
+  /* Weekday-picker chips inside the schedule modal */
+  .weekday-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .weekday-chip {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--fg-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .weekday-chip:hover { border-color: var(--navy); }
+  .weekday-chip.selected {
+    background: var(--navy);
+    color: var(--gold-light);
+    border-color: var(--navy);
+  }
+
+  /* Conflict banner inside the rush event modal */
+  .conflict-banner {
+    background: rgba(184, 40, 50, 0.08);
+    border: 1px solid rgba(184, 40, 50, 0.3);
+    border-radius: 7px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--danger);
+  }
+  .conflict-banner-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .conflict-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .conflict-item {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .conflict-item-name {
+    font-weight: 600;
+  }
+
+  /* "Edit this or all" choice dialog */
+  .recur-choice {
+    text-align: center;
+  }
+  .recur-choice-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .recur-choice-sub {
+    color: var(--fg-muted);
+    font-size: 13px;
+    margin-bottom: 22px;
+    line-height: 1.5;
+  }
+  .recur-choice-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  @media (max-width: 900px) {
+    .sched-day-headers { grid-template-columns: 44px 1fr; }
+    .sched-day-header:not(.mobile-active) { display: none; }
+    .sched-grid { grid-template-columns: 44px 1fr; }
+    .sched-cell { height: 56px; }
+    .sched-cell.hide-mobile { display: none; }
+    .sched-hour-label { height: 56px; font-size: 9px; padding-right: 4px; }
+    .sched-mobile-pager { display: flex; }
+    .sched-header { flex-direction: column; align-items: flex-start; }
+  }
+
+  /* ========== END SCHEDULE ========== */
+
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
@@ -1761,6 +2065,84 @@
 <body>
 <div id="root"></div>
 <div class="toast-stack" id="toastStack"></div>
+
+<!-- ================ SCHEDULE EVENT MODAL ================ -->
+<div class="modal-overlay" id="schedModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeSchedModal()">✕</button>
+    <div class="modal-title" id="schedModalTitle">New <em>availability</em></div>
+    <div class="modal-sub" id="schedModalSub">Block off your time</div>
+    <div class="form-grid">
+      <div>
+        <label class="field-label">What is it?</label>
+        <input type="text" class="field-input serif" id="schedTitle" placeholder="e.g. Calc 141 lecture" />
+      </div>
+      <div class="form-row">
+        <div>
+          <label class="field-label">Start time</label>
+          <input type="time" class="field-input" id="schedStart" />
+        </div>
+        <div>
+          <label class="field-label">End time</label>
+          <input type="time" class="field-input" id="schedEnd" />
+        </div>
+      </div>
+      <div>
+        <label class="field-label">Repeats</label>
+        <div class="chip-row" id="schedRecurChips"></div>
+      </div>
+      <div id="schedOnceRow">
+        <label class="field-label">Date</label>
+        <input type="date" class="field-input" id="schedOnceDate" />
+      </div>
+      <div id="schedWeeklyRow" style="display:none">
+        <label class="field-label">On which days?</label>
+        <div class="weekday-row" id="schedWeekdayChips"></div>
+        <div class="form-row" style="margin-top: 10px;">
+          <div>
+            <label class="field-label">First date</label>
+            <input type="date" class="field-input" id="schedStartDate" />
+          </div>
+          <div>
+            <label class="field-label">Until</label>
+            <input type="date" class="field-input" id="schedUntilDate" />
+          </div>
+        </div>
+      </div>
+      <div>
+        <label class="field-label">Location (optional)</label>
+        <input type="text" class="field-input" id="schedLocation" placeholder="Willard 075, home, etc." />
+      </div>
+      <div>
+        <label class="field-label">Notes (optional)</label>
+        <textarea class="field-textarea" id="schedNotes" placeholder="Anything else…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn danger" id="deleteSchedBtn" onclick="deleteCurrentSched()" style="display:none">Delete</button>
+      <div class="right">
+        <button class="btn" onclick="closeSchedModal()">Cancel</button>
+        <button class="btn primary" onclick="saveSched()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================ RECUR EDIT CHOICE MODAL ================ -->
+<div class="modal-overlay" id="recurChoiceModal">
+  <div class="modal narrow">
+    <button class="modal-close" onclick="closeRecurChoice()">✕</button>
+    <div class="recur-choice">
+      <div class="recur-choice-title" id="recurChoiceTitle">Edit recurring event</div>
+      <div class="recur-choice-sub" id="recurChoiceSub">This event repeats weekly. What do you want to change?</div>
+      <div class="recur-choice-buttons">
+        <button class="btn primary" onclick="recurChoicePicked('one')">Just this one occurrence</button>
+        <button class="btn" onclick="recurChoicePicked('all')">All occurrences in the series</button>
+        <button class="btn" onclick="closeRecurChoice()" style="margin-top:8px">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ================ NOTE EDITOR MODAL ================ -->
 <div class="modal-overlay" id="noteModal">
@@ -1814,6 +2196,7 @@
           <input type="time" class="field-input" id="eventEnd" />
         </div>
       </div>
+      <div id="eventConflictArea"></div>
       <div>
         <label class="field-label">Location</label>
         <input type="text" class="field-input" id="eventLocation" placeholder="e.g. Business Building 101" />
@@ -1997,6 +2380,7 @@
     'candidates': 'candidates',
     'event_cats': 'event_cats',
     'task_cats': 'task_cats',
+    'schedule_events': 'schedule_events',
   };
 
   // ============================================================
@@ -2142,8 +2526,11 @@
     candidates: [],
     eventCategories: [],
     taskCategories: [],
+    scheduleEvents: [],
     currentView: 'dashboard',
     calendarDate: new Date(),
+    weekDate: new Date(),       // anchor date for the week view (any day inside the week)
+    mobileScheduleDay: 0,       // 0-6 offset from week start when on mobile
     loading: true,
     theme: localStorage.getItem('rush26_theme') || 'light',
 
@@ -2161,6 +2548,14 @@
 
     editingCandId: null,
     editingCandStatus: 'prospect',
+
+    // Schedule (personal availability) editing state
+    editingSchedId: null,
+    editingSchedInstanceDate: null,   // ISO date string if editing a specific instance
+    editingSched: {
+      weekdays: [],
+      recurrence: 'once',             // 'once' | 'weekly'
+    },
 
     taskFilterAssignee: 'all',
     taskFilterCategory: 'all',
@@ -2189,18 +2584,20 @@
   // ============================================================
   async function loadAll() {
     try {
-      const [notes, tasks, events, candidates, eventCats, taskCats] = await Promise.all([
+      const [notes, tasks, events, candidates, eventCats, taskCats, scheduleEvents] = await Promise.all([
         Storage.get('notes'),
         Storage.get('tasks'),
         Storage.get('events'),
         Storage.get('candidates'),
         Storage.get('event_cats'),
         Storage.get('task_cats'),
+        Storage.get('schedule_events'),
       ]);
       state.notes = notes || [];
       state.tasks = tasks || [];
       state.events = events || [];
       state.candidates = candidates || [];
+      state.scheduleEvents = scheduleEvents || [];
 
       // First-run seeding: if the workspace has no categories yet, create defaults
       if (!eventCats || eventCats.length === 0) {
@@ -2284,10 +2681,19 @@
           '<div class="view ' + (state.currentView === 'dashboard' ? 'active' : '') + '">' + renderDashboard() + '</div>' +
           '<div class="view ' + (state.currentView === 'notes' ? 'active' : '') + '">' + renderNotesView() + '</div>' +
           '<div class="view ' + (state.currentView === 'calendar' ? 'active' : '') + '">' + renderCalendar() + '</div>' +
+          '<div class="view ' + (state.currentView === 'schedule' ? 'active' : '') + '">' + renderSchedule() + '</div>' +
           '<div class="view ' + (state.currentView === 'tasks' ? 'active' : '') + '">' + renderTasks() + '</div>' +
           '<div class="view ' + (state.currentView === 'candidates' ? 'active' : '') + '">' + renderCandidates() + '</div>' +
         '</main>' +
       '</div>';
+
+    // Auto-scroll the schedule body to ~8 AM on initial render
+    if (state.currentView === 'schedule') {
+      setTimeout(() => {
+        const body = document.querySelector('.sched-body');
+        if (body && body.scrollTop === 0) body.scrollTop = 8 * 48 - 20;
+      }, 0);
+    }
   }
 
   // ============================================================
@@ -2356,6 +2762,7 @@
       { id: 'dashboard', label: 'Dashboard', icon: '◐' },
       { id: 'notes', label: 'Notes', icon: '✎', count: state.notes.length },
       { id: 'calendar', label: 'Calendar', icon: '▦', count: state.events.length },
+      { id: 'schedule', label: 'Schedule', icon: '◷', count: state.scheduleEvents.length },
       { id: 'tasks', label: 'Tasks', icon: '◈', count: openTasks },
       { id: 'candidates', label: 'Candidates', icon: '★', count: state.candidates.length },
     ];
@@ -2417,6 +2824,7 @@
       dashboard: ['Home', ''],
       notes: ['Notes', '& ideas'],
       calendar: ['Calendar', ''],
+      schedule: ['Schedule', '& availability'],
       tasks: ['Tasks', '& to-dos'],
       candidates: ['Candidates', ''],
     };
@@ -2826,6 +3234,8 @@
     renderEventCategoryChips();
     renderNewEventCatColors();
     document.getElementById('newEventCatName').value = '';
+    renderConflictsArea();
+    attachConflictListeners();
 
     document.getElementById('eventModal').classList.add('active');
     setTimeout(() => document.getElementById('eventTitle').focus(), 50);
@@ -3370,6 +3780,685 @@
   };
 
   // ============================================================
+  // SCHEDULE (personal availability week view)
+  // ============================================================
+
+  // Returns the Sunday at the start of the week containing `d`.
+  function weekStart(d) {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    x.setDate(x.getDate() - x.getDay());
+    x.setHours(0, 0, 0, 0);
+    return x;
+  }
+
+  // Returns YYYY-MM-DD in local timezone for a Date.
+  function isoDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
+  // Returns an array of 7 Dates representing the days of the week containing `anchor`.
+  function weekDays(anchor) {
+    const start = weekStart(anchor);
+    const out = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      out.push(d);
+    }
+    return out;
+  }
+
+  // Converts "HH:MM" to minutes-from-midnight.
+  function hmToMinutes(s) {
+    if (!s) return 0;
+    const [h, m] = s.split(':').map(Number);
+    return h * 60 + (m || 0);
+  }
+
+  // Given a series event and a date, returns the effective instance fields
+  // (after applying any per-instance exception). Returns null if skipped.
+  function resolveInstance(ev, dateStr) {
+    if (ev.exceptions && Object.prototype.hasOwnProperty.call(ev.exceptions, dateStr)) {
+      const ex = ev.exceptions[dateStr];
+      if (ex === null) return null; // skipped
+      return Object.assign({}, ev, ex);
+    }
+    return ev;
+  }
+
+  // Returns an array of {event, date, startMin, endMin, instanceDate, isException}
+  // for all instances within [windowStart, windowEnd] (both Dates, inclusive of date).
+  function expandSchedule(windowStart, windowEnd) {
+    const out = [];
+    const ws = new Date(windowStart); ws.setHours(0, 0, 0, 0);
+    const we = new Date(windowEnd); we.setHours(23, 59, 59, 999);
+
+    for (const ev of state.scheduleEvents) {
+      if (ev.recurrence === 'once' || !ev.recurrence) {
+        const d = new Date(ev.date + 'T00:00:00');
+        if (d >= ws && d <= we) {
+          const resolved = resolveInstance(ev, ev.date);
+          if (resolved) {
+            out.push({
+              event: ev,
+              date: new Date(ev.date + 'T00:00:00'),
+              startMin: hmToMinutes(resolved.startTime),
+              endMin: hmToMinutes(resolved.endTime),
+              instanceDate: ev.date,
+              title: resolved.title,
+              location: resolved.location,
+              notes: resolved.notes,
+              isOneTime: true,
+            });
+          }
+        }
+      } else if (ev.recurrence === 'weekly') {
+        const seriesStart = new Date(ev.startDate + 'T00:00:00');
+        const seriesEnd = ev.untilDate ? new Date(ev.untilDate + 'T23:59:59') : we;
+        const iterStart = seriesStart > ws ? seriesStart : ws;
+        const iterEnd = seriesEnd < we ? seriesEnd : we;
+        const wds = ev.weekdays || [];
+        const cursor = new Date(iterStart);
+        cursor.setHours(0, 0, 0, 0);
+        while (cursor <= iterEnd) {
+          if (wds.includes(cursor.getDay())) {
+            const ds = isoDate(cursor);
+            const resolved = resolveInstance(ev, ds);
+            if (resolved) {
+              out.push({
+                event: ev,
+                date: new Date(cursor),
+                startMin: hmToMinutes(resolved.startTime),
+                endMin: hmToMinutes(resolved.endTime),
+                instanceDate: ds,
+                title: resolved.title,
+                location: resolved.location,
+                notes: resolved.notes,
+                isOneTime: false,
+              });
+            }
+          }
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      }
+    }
+    return out;
+  }
+
+  function renderSchedule() {
+    const isMobile = window.innerWidth <= 900;
+    const wstart = weekStart(state.weekDate);
+    const wend = new Date(wstart); wend.setDate(wend.getDate() + 6);
+    const days = weekDays(state.weekDate);
+    const todayStr = new Date().toDateString();
+
+    const ranges = expandSchedule(wstart, wend);
+
+    // Group by [dayIndex][ownerId] so overlapping events from the same person stack.
+    const byDay = [[], [], [], [], [], [], []];
+    for (const r of ranges) {
+      const idx = Math.floor((r.date - wstart) / 86400000);
+      if (idx >= 0 && idx < 7) byDay[idx].push(r);
+    }
+
+    const hours = [];
+    for (let h = 0; h < 24; h++) hours.push(h);
+
+    const monthLabel = wstart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    // Mobile: show one day at a time
+    const activeDayIdx = isMobile ? state.mobileScheduleDay : -1;
+
+    const headers = '<div class="sched-day-headers">' +
+      '<div class="sched-day-header"></div>' +
+      days.map((d, i) => {
+        const isToday = d.toDateString() === todayStr;
+        const isActive = i === activeDayIdx;
+        return '<div class="sched-day-header ' + (isToday ? 'today' : '') + ' ' + (isMobile && !isActive ? '' : 'mobile-active') + '">' +
+          '<span class="day-name">' + d.toLocaleDateString('en-US', { weekday: 'short' }) + '</span>' +
+          '<span class="day-num">' + d.getDate() + '</span>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+
+    // Build hour rows
+    let gridRows = '';
+    for (const h of hours) {
+      const hourLabel = h === 0 ? '12 AM' : h === 12 ? '12 PM' : h < 12 ? h + ' AM' : (h - 12) + ' PM';
+      gridRows += '<div class="sched-hour-label">' + hourLabel + '</div>';
+      for (let di = 0; di < 7; di++) {
+        const d = days[di];
+        const isToday = d.toDateString() === todayStr;
+        const isActiveMobile = di === activeDayIdx;
+        const hideClass = isMobile && !isActiveMobile ? 'hide-mobile' : '';
+        gridRows += '<div class="sched-cell ' + (isToday ? 'today-col' : '') + ' ' + hideClass + '" ' +
+          'data-day="' + di + '" data-hour="' + h + '" ' +
+          'onclick="openSchedModalAt(\'' + isoDate(d) + '\', \'' + String(h).padStart(2, '0') + ':00\')"></div>';
+      }
+    }
+
+    // Position event blocks absolutely over the grid.
+    // Each cell is 48px tall, hour label column is 56px wide.
+    // We'll render events as absolutely positioned divs inside .sched-grid.
+    let eventBlocks = '';
+    for (let di = 0; di < 7; di++) {
+      const dayEvents = byDay[di].slice().sort((a, b) => a.startMin - b.startMin);
+
+      // Compute overlap groups: assign each event a "column index" within its overlap cluster.
+      // Simple algorithm: walk events sorted by start; track active columns and free slots.
+      const placed = [];
+      for (const r of dayEvents) {
+        let col = 0;
+        while (placed.some(p => p.col === col && p.endMin > r.startMin)) col++;
+        placed.push({ r, col, endMin: r.endMin });
+      }
+      // Total columns used for this day = max col + 1
+      const usedCols = placed.reduce((m, p) => Math.max(m, p.col), 0) + 1;
+
+      const isActiveMobile = di === activeDayIdx;
+      if (isMobile && !isActiveMobile) continue;
+
+      for (const p of placed) {
+        const r = p.r;
+        const owner = MEMBERS.find(m => m.id === r.event.ownerId) || MEMBERS[0];
+        const startPx = (r.startMin / 60) * 48;
+        const heightPx = Math.max(20, ((r.endMin - r.startMin) / 60) * 48);
+
+        // Position horizontally: hour label column is 56px (44 mobile),
+        // each day takes (100% - that) / 7 width on desktop, full remaining on mobile day view.
+        // We'll use CSS calc with custom properties.
+        const labelW = isMobile ? 44 : 56;
+        const dayWidthExpr = isMobile
+          ? 'calc(100% - ' + labelW + 'px)'
+          : 'calc((100% - ' + labelW + 'px) / 7)';
+        const dayLeftExpr = isMobile
+          ? labelW + 'px'
+          : 'calc(' + labelW + 'px + ' + dayWidthExpr + ' * ' + di + ')';
+
+        // Split within a day's column: column p.col of usedCols total.
+        const eventLeftInDay = '(' + dayWidthExpr + ' * ' + (p.col / usedCols) + ')';
+        const eventWidthInDay = '(' + dayWidthExpr + ' * ' + (1 / usedCols) + ' - 2px)';
+        const leftStyle = 'calc(' + dayLeftExpr + ' + ' + eventLeftInDay + ')';
+
+        const recurIcon = !r.isOneTime ? '↻' : '';
+        const timeLabel = formatTime12(r.startMin) + ' – ' + formatTime12(r.endMin);
+
+        eventBlocks += '<div class="sched-event" ' +
+          'style="top:' + startPx + 'px; height:' + heightPx + 'px; ' +
+                 'left:' + leftStyle + '; ' +
+                 'width:calc(' + eventWidthInDay + '); ' +
+                 'background:' + owner.color + ';" ' +
+          'onclick="event.stopPropagation(); openSchedModalEdit(\'' + r.event.id + '\', \'' + r.instanceDate + '\')">' +
+          (recurIcon ? '<span class="ev-recur-icon">' + recurIcon + '</span>' : '') +
+          '<div class="ev-title">' + escapeHtml(r.title) + '</div>' +
+          '<div class="ev-time">' + timeLabel + '</div>' +
+        '</div>';
+      }
+    }
+
+    // Now line (only if today is in this week)
+    let nowLine = '';
+    const now = new Date();
+    if (now >= wstart && now <= new Date(wend.getTime() + 86400000)) {
+      const minutesNow = now.getHours() * 60 + now.getMinutes();
+      const topPx = (minutesNow / 60) * 48;
+      nowLine = '<div class="sched-now-line" style="top:' + topPx + 'px"></div>';
+    }
+
+    const weekRangeLabel = wstart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+                          ' – ' + new Date(wend).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    const legend = '<div class="sched-legend">' +
+      '<span>Owners:</span>' +
+      MEMBERS.map(m =>
+        '<span class="sched-legend-item">' +
+          '<span class="sched-legend-swatch" style="background:' + m.color + '"></span>' +
+          escapeHtml(m.name) +
+        '</span>'
+      ).join('') +
+      '<span style="margin-left:auto; opacity: 0.7;">Click an empty slot to add availability</span>' +
+    '</div>';
+
+    const mobileDay = days[activeDayIdx >= 0 ? activeDayIdx : 0];
+    const mobilePager = '<div class="sched-mobile-pager">' +
+      '<button class="btn btn-icon" onclick="schedMobileDay(-1)">‹</button>' +
+      '<div class="sched-mobile-day-label">' +
+        mobileDay.toLocaleDateString('en-US', { weekday: 'long' }) +
+        ' <em>' + mobileDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</em>' +
+      '</div>' +
+      '<button class="btn btn-icon" onclick="schedMobileDay(1)">›</button>' +
+    '</div>';
+
+    return '' +
+      '<div class="sched-header">' +
+        '<div>' +
+          '<div class="sched-title">' + monthLabel.split(' ')[0] + ' <em>' + monthLabel.split(' ')[1] + '</em></div>' +
+          '<div style="font-family: \'JetBrains Mono\', monospace; font-size: 11px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px;">' + weekRangeLabel + '</div>' +
+        '</div>' +
+        '<div class="sched-nav">' +
+          '<button class="btn btn-icon" onclick="schedNav(-1)">‹</button>' +
+          '<button class="btn" onclick="schedToday()">This week</button>' +
+          '<button class="btn btn-icon" onclick="schedNav(1)">›</button>' +
+          '<button class="btn primary" onclick="openSchedModalAt()" style="margin-left:6px">+ Add availability</button>' +
+        '</div>' +
+      '</div>' +
+      mobilePager +
+      legend +
+      '<div class="sched-grid-wrap">' +
+        headers +
+        '<div class="sched-body">' +
+          '<div class="sched-grid">' +
+            gridRows +
+            eventBlocks +
+            nowLine +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function formatTime12(mins) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const ampm = h < 12 ? 'a' : 'p';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    const mStr = m === 0 ? '' : ':' + String(m).padStart(2, '0');
+    return h12 + mStr + ampm;
+  }
+
+  window.schedNav = function(dir) {
+    const d = new Date(state.weekDate);
+    d.setDate(d.getDate() + dir * 7);
+    state.weekDate = d;
+    render();
+    // Scroll to 8am after render
+    setTimeout(() => {
+      const body = document.querySelector('.sched-body');
+      if (body) body.scrollTop = 8 * 48;
+    }, 50);
+  };
+
+  window.schedToday = function() {
+    state.weekDate = new Date();
+    state.mobileScheduleDay = new Date().getDay();
+    render();
+    setTimeout(() => {
+      const body = document.querySelector('.sched-body');
+      if (body) body.scrollTop = 8 * 48;
+    }, 50);
+  };
+
+  window.schedMobileDay = function(dir) {
+    state.mobileScheduleDay = (state.mobileScheduleDay + dir + 7) % 7;
+    render();
+  };
+
+  // -------- Schedule event modal --------
+
+  window.openSchedModalAt = function(dateStr, timeStr) {
+    state.editingSchedId = null;
+    state.editingSchedInstanceDate = null;
+    state.editingSched = { weekdays: [], recurrence: 'once' };
+
+    document.getElementById('schedModalTitle').innerHTML = 'New <em>availability</em>';
+    document.getElementById('schedModalSub').textContent = 'Block off your time';
+    document.getElementById('deleteSchedBtn').style.display = 'none';
+    document.getElementById('schedTitle').value = '';
+    document.getElementById('schedLocation').value = '';
+    document.getElementById('schedNotes').value = '';
+
+    // Pre-fill date/time from click context if given
+    const baseDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+    const dateInput = isoDate(baseDate);
+    document.getElementById('schedOnceDate').value = dateInput;
+    document.getElementById('schedStartDate').value = dateInput;
+    const untilDefault = new Date(baseDate);
+    untilDefault.setMonth(untilDefault.getMonth() + 4);
+    document.getElementById('schedUntilDate').value = isoDate(untilDefault);
+
+    document.getElementById('schedStart').value = timeStr || '09:00';
+    // Default end = start + 1 hour
+    const startMins = hmToMinutes(timeStr || '09:00');
+    const endMins = startMins + 60;
+    const eh = String(Math.floor(endMins / 60) % 24).padStart(2, '0');
+    const em = String(endMins % 60).padStart(2, '0');
+    document.getElementById('schedEnd').value = eh + ':' + em;
+
+    state.editingSched.weekdays = [baseDate.getDay()];
+
+    renderSchedRecurChips();
+    renderSchedWeekdayChips();
+    updateSchedRecurVisibility();
+
+    document.getElementById('schedModal').classList.add('active');
+    setTimeout(() => document.getElementById('schedTitle').focus(), 50);
+  };
+
+  window.openSchedModalEdit = function(eventId, instanceDate) {
+    const ev = state.scheduleEvents.find(e => e.id === eventId);
+    if (!ev) return;
+
+    // If recurring, ask "this one or all?" first
+    if (ev.recurrence === 'weekly') {
+      state._pendingEditEvent = ev;
+      state._pendingEditInstance = instanceDate;
+      document.getElementById('recurChoiceTitle').textContent = 'Edit recurring event';
+      document.getElementById('recurChoiceSub').textContent = 'This event repeats weekly. What do you want to change?';
+      document.getElementById('recurChoiceModal').classList.add('active');
+      return;
+    }
+    openSchedModalForReal(ev, instanceDate, false);
+  };
+
+  window.recurChoicePicked = function(choice) {
+    closeRecurChoice();
+    const ev = state._pendingEditEvent;
+    const inst = state._pendingEditInstance;
+    if (!ev) return;
+    if (choice === 'one') {
+      openSchedModalForReal(ev, inst, true);  // editing exception
+    } else {
+      openSchedModalForReal(ev, inst, false);
+    }
+  };
+
+  window.closeRecurChoice = function() {
+    document.getElementById('recurChoiceModal').classList.remove('active');
+  };
+
+  function openSchedModalForReal(ev, instanceDate, isExceptionEdit) {
+    state.editingSchedId = ev.id;
+    state.editingSchedInstanceDate = isExceptionEdit ? instanceDate : null;
+
+    // If editing an exception, surface the resolved (overridden) fields
+    const resolved = isExceptionEdit ? resolveInstance(ev, instanceDate) : ev;
+    if (!resolved) return; // skipped occurrence — shouldn't happen, can't edit it
+
+    state.editingSched = {
+      weekdays: (ev.weekdays || []).slice(),
+      recurrence: isExceptionEdit ? 'once' : (ev.recurrence || 'once'),
+    };
+
+    document.getElementById('schedModalTitle').innerHTML = isExceptionEdit
+      ? 'Edit <em>this occurrence</em>'
+      : 'Edit <em>availability</em>';
+    document.getElementById('schedModalSub').textContent = isExceptionEdit
+      ? 'Changing only ' + new Date(instanceDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+      : (ev.ownerId === state.currentUser ? 'Your availability' : 'Owned by another member — you can\'t edit');
+    document.getElementById('deleteSchedBtn').style.display = ev.ownerId === state.currentUser ? 'inline-flex' : 'none';
+
+    document.getElementById('schedTitle').value = resolved.title || '';
+    document.getElementById('schedStart').value = resolved.startTime || '09:00';
+    document.getElementById('schedEnd').value = resolved.endTime || '10:00';
+    document.getElementById('schedLocation').value = resolved.location || '';
+    document.getElementById('schedNotes').value = resolved.notes || '';
+
+    if (isExceptionEdit) {
+      document.getElementById('schedOnceDate').value = instanceDate;
+    } else if (ev.recurrence === 'weekly') {
+      document.getElementById('schedStartDate').value = ev.startDate || '';
+      document.getElementById('schedUntilDate').value = ev.untilDate || '';
+    } else {
+      document.getElementById('schedOnceDate').value = ev.date || isoDate(new Date());
+    }
+
+    // Lock recurrence selection if not the owner
+    const lockEdit = ev.ownerId !== state.currentUser;
+    renderSchedRecurChips(lockEdit);
+    renderSchedWeekdayChips(lockEdit);
+    updateSchedRecurVisibility();
+
+    if (lockEdit) {
+      // Disable inputs
+      ['schedTitle', 'schedStart', 'schedEnd', 'schedLocation', 'schedNotes', 'schedOnceDate', 'schedStartDate', 'schedUntilDate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = true;
+      });
+    } else {
+      ['schedTitle', 'schedStart', 'schedEnd', 'schedLocation', 'schedNotes', 'schedOnceDate', 'schedStartDate', 'schedUntilDate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = false;
+      });
+    }
+
+    document.getElementById('schedModal').classList.add('active');
+  }
+
+  window.closeSchedModal = function() {
+    document.getElementById('schedModal').classList.remove('active');
+    state.editingSchedId = null;
+    state.editingSchedInstanceDate = null;
+  };
+
+  function renderSchedRecurChips(locked) {
+    const opts = [
+      { id: 'once', label: 'Just once' },
+      { id: 'weekly', label: 'Every week' },
+    ];
+    const container = document.getElementById('schedRecurChips');
+    container.innerHTML = opts.map(o =>
+      '<button class="chip ' + (state.editingSched.recurrence === o.id ? 'selected' : '') + '" ' +
+              (locked ? 'disabled style="opacity:0.5; cursor:not-allowed"' : 'onclick="pickSchedRecur(\'' + o.id + '\')"') + '>' +
+        o.label +
+      '</button>'
+    ).join('');
+  }
+
+  function renderSchedWeekdayChips(locked) {
+    const labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const container = document.getElementById('schedWeekdayChips');
+    container.innerHTML = labels.map((l, i) =>
+      '<button class="weekday-chip ' + (state.editingSched.weekdays.includes(i) ? 'selected' : '') + '" ' +
+              (locked ? 'disabled style="opacity:0.5; cursor:not-allowed"' : 'onclick="toggleSchedWeekday(' + i + ')"') + '>' +
+        l +
+      '</button>'
+    ).join('');
+  }
+
+  function updateSchedRecurVisibility() {
+    const isWeekly = state.editingSched.recurrence === 'weekly';
+    document.getElementById('schedOnceRow').style.display = isWeekly ? 'none' : 'block';
+    document.getElementById('schedWeeklyRow').style.display = isWeekly ? 'block' : 'none';
+  }
+
+  window.pickSchedRecur = function(id) {
+    state.editingSched.recurrence = id;
+    renderSchedRecurChips();
+    updateSchedRecurVisibility();
+  };
+
+  window.toggleSchedWeekday = function(i) {
+    const arr = state.editingSched.weekdays;
+    const idx = arr.indexOf(i);
+    if (idx >= 0) arr.splice(idx, 1);
+    else arr.push(i);
+    renderSchedWeekdayChips();
+  };
+
+  window.saveSched = async function() {
+    const title = document.getElementById('schedTitle').value.trim();
+    const startTime = document.getElementById('schedStart').value;
+    const endTime = document.getElementById('schedEnd').value;
+    const location = document.getElementById('schedLocation').value.trim();
+    const notes = document.getElementById('schedNotes').value.trim();
+
+    if (!title) { toast('Please enter a title.', 'error'); document.getElementById('schedTitle').focus(); return; }
+    if (!startTime || !endTime) { toast('Please pick start and end times.', 'error'); return; }
+    if (hmToMinutes(endTime) <= hmToMinutes(startTime)) {
+      toast('End time must be after start time.', 'error');
+      return;
+    }
+
+    const isExceptionEdit = !!state.editingSchedInstanceDate;
+
+    if (isExceptionEdit) {
+      // Apply or update an exception for the editing instance date
+      const ev = state.scheduleEvents.find(e => e.id === state.editingSchedId);
+      if (!ev) { toast('Original event not found.', 'error'); return; }
+      ev.exceptions = ev.exceptions || {};
+      ev.exceptions[state.editingSchedInstanceDate] = {
+        title, startTime, endTime, location, notes,
+      };
+      ev.updatedAt = Date.now();
+      await persist('schedule_events', state.scheduleEvents);
+      toast('Updated just this occurrence', 'success');
+      closeSchedModal();
+      render();
+      return;
+    }
+
+    if (state.editingSched.recurrence === 'weekly') {
+      if (state.editingSched.weekdays.length === 0) {
+        toast('Pick at least one weekday.', 'error');
+        return;
+      }
+    }
+
+    if (state.editingSchedId) {
+      // Editing whole series
+      const ev = state.scheduleEvents.find(e => e.id === state.editingSchedId);
+      if (!ev) { toast('Event not found.', 'error'); return; }
+      if (ev.ownerId !== state.currentUser) {
+        toast('You can only edit your own events.', 'error');
+        return;
+      }
+      ev.title = title;
+      ev.startTime = startTime;
+      ev.endTime = endTime;
+      ev.location = location;
+      ev.notes = notes;
+      ev.recurrence = state.editingSched.recurrence;
+      if (state.editingSched.recurrence === 'weekly') {
+        ev.weekdays = state.editingSched.weekdays.slice();
+        ev.startDate = document.getElementById('schedStartDate').value;
+        ev.untilDate = document.getElementById('schedUntilDate').value || null;
+        delete ev.date;
+      } else {
+        ev.date = document.getElementById('schedOnceDate').value;
+        delete ev.weekdays;
+        delete ev.startDate;
+        delete ev.untilDate;
+      }
+      ev.updatedAt = Date.now();
+    } else {
+      // Creating new
+      const newEv = {
+        id: 'se_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        ownerId: state.currentUser,
+        title, startTime, endTime, location, notes,
+        recurrence: state.editingSched.recurrence,
+        exceptions: {},
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      if (state.editingSched.recurrence === 'weekly') {
+        newEv.weekdays = state.editingSched.weekdays.slice();
+        newEv.startDate = document.getElementById('schedStartDate').value;
+        newEv.untilDate = document.getElementById('schedUntilDate').value || null;
+      } else {
+        newEv.date = document.getElementById('schedOnceDate').value;
+      }
+      state.scheduleEvents.push(newEv);
+    }
+    await persist('schedule_events', state.scheduleEvents);
+    toast('Saved', 'success');
+    closeSchedModal();
+    render();
+  };
+
+  window.deleteCurrentSched = async function() {
+    if (!state.editingSchedId) return;
+    const ev = state.scheduleEvents.find(e => e.id === state.editingSchedId);
+    if (!ev) return;
+    if (ev.ownerId !== state.currentUser) {
+      toast('You can only delete your own events.', 'error');
+      return;
+    }
+    if (state.editingSchedInstanceDate) {
+      // Deleting just this occurrence — mark as exception null (skip)
+      if (!confirm('Skip just this occurrence of "' + ev.title + '"?')) return;
+      ev.exceptions = ev.exceptions || {};
+      ev.exceptions[state.editingSchedInstanceDate] = null;
+      ev.updatedAt = Date.now();
+      await persist('schedule_events', state.scheduleEvents);
+      toast('Skipped this occurrence', 'default');
+    } else {
+      if (!confirm('Delete the entire ' + (ev.recurrence === 'weekly' ? 'recurring series' : 'event') + '? This cannot be undone.')) return;
+      state.scheduleEvents = state.scheduleEvents.filter(e => e.id !== state.editingSchedId);
+      await persist('schedule_events', state.scheduleEvents);
+      toast('Deleted', 'default');
+    }
+    closeSchedModal();
+    render();
+  };
+
+  // ============================================================
+  // CONFLICT DETECTION (for rush event modal)
+  // ============================================================
+  // Given a date string (YYYY-MM-DD) and start/end time strings,
+  // returns an array of {memberName, eventTitle, timeRange} conflicts.
+  function detectConflicts(dateStr, startTime, endTime) {
+    if (!dateStr || !startTime || !endTime) return [];
+    const startMin = hmToMinutes(startTime);
+    const endMin = hmToMinutes(endTime);
+    if (endMin <= startMin) return [];
+    const d = new Date(dateStr + 'T00:00:00');
+    const ranges = expandSchedule(d, d);
+
+    const conflicts = [];
+    for (const r of ranges) {
+      if (r.startMin < endMin && r.endMin > startMin) {
+        const owner = MEMBERS.find(m => m.id === r.event.ownerId);
+        conflicts.push({
+          memberName: owner ? owner.name : 'Someone',
+          memberColor: owner ? owner.color : '#6B7280',
+          eventTitle: r.title,
+          timeRange: formatTime12(r.startMin) + ' – ' + formatTime12(r.endMin),
+        });
+      }
+    }
+    return conflicts;
+  }
+
+  function renderConflictsArea() {
+    const area = document.getElementById('eventConflictArea');
+    if (!area) return;
+    const dateStr = document.getElementById('eventDate').value;
+    const startTime = document.getElementById('eventStart').value;
+    const endTime = document.getElementById('eventEnd').value;
+    const conflicts = detectConflicts(dateStr, startTime, endTime);
+    if (conflicts.length === 0) {
+      area.innerHTML = '';
+      return;
+    }
+    area.innerHTML = '<div class="conflict-banner">' +
+      '<div class="conflict-banner-title">⚠ Schedule conflicts</div>' +
+      '<div class="conflict-list">' +
+        conflicts.map(c =>
+          '<div class="conflict-item">' +
+            '<span class="conflict-item-name" style="color:' + c.memberColor + '">' + escapeHtml(c.memberName) + '</span>' +
+            ' is not available — <em>' + escapeHtml(c.eventTitle) + '</em> (' + c.timeRange + ')' +
+          '</div>'
+        ).join('') +
+      '</div>' +
+    '</div>';
+  }
+
+  // Hook conflict detection to rush event modal inputs (wired up after openEventModal opens)
+  function attachConflictListeners() {
+    ['eventDate', 'eventStart', 'eventEnd'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.removeEventListener('input', renderConflictsArea);
+      el.addEventListener('input', renderConflictsArea);
+      el.removeEventListener('change', renderConflictsArea);
+      el.addEventListener('change', renderConflictsArea);
+    });
+  }
+
+  // ============================================================
   // UTILS
   // ============================================================
   function escapeHtml(str) {
@@ -3434,12 +4523,15 @@
       state.editingEventId = null;
       state.editingTaskId = null;
       state.editingCandId = null;
+      state.editingSchedId = null;
+      state.editingSchedInstanceDate = null;
     }
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
       if (document.getElementById('noteModal').classList.contains('active')) { e.preventDefault(); saveNote(); }
       else if (document.getElementById('eventModal').classList.contains('active')) { e.preventDefault(); saveEvent(); }
       else if (document.getElementById('taskModal').classList.contains('active')) { e.preventDefault(); saveTask(); }
       else if (document.getElementById('candidateModal').classList.contains('active')) { e.preventDefault(); saveCandidate(); }
+      else if (document.getElementById('schedModal').classList.contains('active')) { e.preventDefault(); saveSched(); }
     }
   });
 
