@@ -2367,110 +2367,418 @@
     .nametag-preview-pane { width: 100%; position: static; }
   }
 
-  /* ========== DASHBOARD ========== */
+  /* ========== DASHBOARD — polished ========== */
+
+  /* Hero countdown row — large horizontal feature cards */
   .countdown-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
+    gap: 16px;
     margin-bottom: 22px;
   }
-  .countdown-card {
+  .countdown-hero {
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 16px 18px;
+    border-radius: 14px;
+    padding: 22px 24px;
     position: relative;
     overflow: hidden;
+    display: grid;
+    grid-template-columns: 56px 1fr 28px;
+    gap: 18px;
+    align-items: center;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    cursor: default;
   }
-  .countdown-card::before {
+  .countdown-hero::before {
     content: '';
     position: absolute;
     left: 0; top: 0; bottom: 0;
     width: 4px;
     background: var(--navy);
   }
-  .countdown-card.tone-red::before   { background: var(--danger); }
-  .countdown-card.tone-gold::before,
-  .countdown-card.tone-today::before { background: var(--gold); }
-  .countdown-card.tone-past::before  { background: var(--fg-muted); }
-  .countdown-label {
+  .countdown-hero.tone-red::before   { background: var(--danger); }
+  .countdown-hero.tone-gold::before,
+  .countdown-hero.tone-today::before { background: var(--gold); }
+  .countdown-hero.tone-past::before  { background: var(--fg-muted); }
+  .countdown-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    pointer-events: none;
+    background: radial-gradient(circle at 92% 10%, rgba(212, 166, 74, 0.06), transparent 60%);
+  }
+  .countdown-hero:hover {
+    border-color: var(--line-strong);
+    box-shadow: 0 6px 20px rgba(3, 16, 46, 0.04);
+  }
+  [data-theme="dark"] .countdown-hero:hover { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
+  .hero-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--parchment);
+    color: var(--navy);
+    font-size: 22px;
+    line-height: 1;
+    font-family: 'Playfair Display', serif;
+  }
+  [data-theme="dark"] .hero-icon { background: rgba(212, 166, 74, 0.10); color: var(--gold); }
+  .countdown-hero.tone-red  .hero-icon { background: rgba(184, 40, 50, 0.10); color: var(--danger); }
+  .countdown-hero.tone-gold .hero-icon,
+  .countdown-hero.tone-today .hero-icon { background: rgba(212, 166, 74, 0.14); color: var(--gold-dark); }
+  .countdown-hero.tone-past .hero-icon { background: var(--line); color: var(--fg-muted); }
+  .hero-body { min-width: 0; }
+  .hero-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
     color: var(--fg-muted);
+    margin-bottom: 6px;
   }
-  .countdown-value {
+  .hero-value {
     font-family: 'Playfair Display', serif;
-    font-size: 32px; font-weight: 700;
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1;
     letter-spacing: -0.02em;
     color: var(--navy);
-    margin: 4px 0 2px;
+    margin-bottom: 10px;
   }
-  .countdown-card.tone-red   .countdown-value { color: var(--danger); }
-  .countdown-card.tone-gold  .countdown-value,
-  .countdown-card.tone-today .countdown-value { color: var(--gold-dark); }
-  .countdown-card.tone-past  .countdown-value { color: var(--fg-muted); }
-  .countdown-date {
+  .countdown-hero.tone-red   .hero-value { color: var(--danger); }
+  .countdown-hero.tone-gold  .hero-value,
+  .countdown-hero.tone-today .hero-value { color: var(--gold-dark); }
+  .countdown-hero.tone-past  .hero-value { color: var(--fg-muted); }
+  .hero-date {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     color: var(--fg-muted);
+    letter-spacing: 0.02em;
+  }
+  .hero-date em {
+    color: var(--navy);
+    font-style: normal;
+    font-weight: 500;
+  }
+  .countdown-hero.tone-red  .hero-date em { color: var(--danger); }
+  .countdown-hero.tone-gold .hero-date em,
+  .countdown-hero.tone-today .hero-date em { color: var(--gold-dark); }
+  [data-theme="dark"] .hero-date em { color: var(--gold); }
+  .hero-affordance {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    color: var(--fg-muted);
+    opacity: 0.5;
+    transition: opacity 0.18s ease, transform 0.18s ease, color 0.18s ease;
+  }
+  .countdown-hero:hover .hero-affordance {
+    opacity: 1;
+    transform: translateX(3px);
+    color: var(--gold-dark);
   }
 
-  .attention-list { display: flex; flex-direction: column; gap: 6px; }
+  /* Rush Week Progress centerpiece — the live operations card */
+  .rush-centerpiece {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px 28px 56px;
+    margin-bottom: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .rush-centerpiece::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(212, 166, 74, 0.07), transparent 70%);
+    pointer-events: none;
+  }
+  .centerpiece-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  .centerpiece-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .centerpiece-sync {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--success);
+  }
+  .sync-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 0 rgba(63, 138, 92, 0.6);
+    animation: syncPulse 2.4s ease-out infinite;
+  }
+  @keyframes syncPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(63, 138, 92, 0.55); }
+    70%  { box-shadow: 0 0 0 8px rgba(63, 138, 92, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(63, 138, 92, 0); }
+  }
+  .centerpiece-phase { margin-bottom: 32px; }
+  .phase-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+  [data-theme="dark"] .phase-name { color: var(--gold); }
+  .phase-sub {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--fg-soft);
+  }
+  .rush-progress-wrap {
+    position: relative;
+    padding: 0 16px;
+  }
+  .rush-progress-track {
+    position: relative;
+    height: 4px;
+    background: var(--line-strong);
+    border-radius: 2px;
+  }
+  .rush-progress-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: linear-gradient(to right, var(--navy), var(--gold));
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+  .rush-milestone {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .milestone-marker {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--navy);
+    box-shadow: 0 0 0 3px var(--surface);
+  }
+  .milestone-marker.bfc {
+    background: var(--gold);
+    border-color: var(--gold-dark);
+  }
+  [data-theme="dark"] .milestone-marker { box-shadow: 0 0 0 3px var(--surface); }
+  .milestone-label {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+  .rush-today {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    z-index: 2;
+  }
+  .today-line {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 36px;
+    background: var(--danger);
+    border-radius: 1px;
+  }
+  .today-label {
+    position: absolute;
+    top: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--danger);
+    color: #FFFFFF;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  /* KPI row — relabeled, lighter weight than countdown hero */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: border-color 0.18s ease, transform 0.18s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card:hover {
+    border-color: var(--line-strong);
+    transform: translateY(-1px);
+  }
+  .kpi-card::after {
+    content: '→';
+    position: absolute;
+    top: 16px; right: 18px;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--fg-muted);
+    opacity: 0.35;
+    transition: opacity 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  }
+  .kpi-card:hover::after {
+    opacity: 1;
+    color: var(--gold-dark);
+    transform: translateX(2px);
+  }
+  .kpi-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--navy);
+  }
+  [data-theme="dark"] .kpi-value { color: var(--gold); }
+  .kpi-value em {
+    font-style: italic;
+    color: var(--gold-dark);
+    font-weight: 500;
+  }
+  [data-theme="dark"] .kpi-value em { color: var(--gold); }
+  .kpi-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--fg-muted);
+    margin-top: 6px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Attention list (unchanged structure, polished spacing) */
+  .attention-list { display: flex; flex-direction: column; gap: 7px; }
   .attention-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    border-radius: 7px;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 8px;
     border: 1px solid var(--line);
     background: var(--surface);
     cursor: pointer;
-    transition: border-color 0.15s;
+    transition: border-color 0.15s, transform 0.15s;
   }
-  .attention-item:hover { border-color: var(--gold); }
+  .attention-item:hover { border-color: var(--gold); transform: translateX(2px); }
   .attention-dot {
-    width: 8px; height: 8px;
+    width: 9px; height: 9px;
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .attention-dot.urgency-overdue { background: var(--danger); }
-  .attention-dot.urgency-today   { background: var(--gold); }
-  .attention-dot.urgency-week    { background: var(--navy); }
+  .attention-dot.urgency-overdue { background: var(--danger); box-shadow: 0 0 0 3px rgba(184, 40, 50, 0.10); }
+  .attention-dot.urgency-today   { background: var(--gold);   box-shadow: 0 0 0 3px rgba(212, 166, 74, 0.15); }
+  .attention-dot.urgency-week    { background: var(--navy);   box-shadow: 0 0 0 3px rgba(10, 36, 99, 0.10); }
   .attention-dot.urgency-future  { background: var(--fg-muted); }
   .attention-text { flex: 1; min-width: 0; font-size: 13px; }
   .attention-text .item-title { font-weight: 500; color: var(--fg); }
   .attention-text .item-meta  {
     font-size: 11px;
     color: var(--fg-muted);
-    margin-top: 2px;
+    margin-top: 3px;
     font-family: 'JetBrains Mono', monospace;
     letter-spacing: 0.02em;
   }
-  .attention-empty {
+
+  /* Empty states — Playfair italic + geometric anchor + hairline rule */
+  .empty-state-polished {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
+    padding: 28px 16px;
     color: var(--fg-muted);
-    font-style: italic;
+    position: relative;
+  }
+  .empty-state-polished::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--line-strong);
+    margin-bottom: 14px;
+  }
+  .empty-state-polished .empty-glyph {
     font-family: 'Playfair Display', serif;
-    padding: 14px 0;
+    font-size: 28px;
+    color: var(--line-strong);
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+  .empty-state-polished .empty-text {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
     font-size: 14px;
+    color: var(--fg-muted);
   }
 
+  /* Activity grid — polished spacing */
   .activity-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
-    margin-top: 18px;
+    margin-top: 20px;
   }
   .activity-column {
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 14px 16px;
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .activity-column .section-title {
+    margin-bottom: 10px;
+    font-size: 13px;
   }
   .activity-item {
-    padding: 8px 0;
+    padding: 9px 0;
     border-bottom: 1px solid var(--line);
     font-size: 12px;
     cursor: pointer;
@@ -2481,6 +2789,7 @@
     font-weight: 500;
     color: var(--fg);
     transition: color 0.15s;
+    line-height: 1.35;
   }
   .activity-item-meta {
     font-family: 'JetBrains Mono', monospace;
@@ -2488,14 +2797,47 @@
     color: var(--fg-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin-top: 3px;
+    margin-top: 4px;
   }
+
+  /* Dashboard section card polish (scoped — does not affect other views) */
+  .view-dashboard .section-card {
+    padding: 20px 22px;
+  }
+  .view-dashboard .section-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+  }
+  [data-theme="dark"] .view-dashboard .section-title { color: var(--gold); }
+  .view-dashboard .section-title .btn.small {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .view-dashboard .section-title .btn.small:hover { color: var(--gold-dark); }
 
   @media (max-width: 900px) {
     .countdown-row { grid-template-columns: 1fr; }
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
     .activity-grid { grid-template-columns: 1fr; }
+    .rush-centerpiece { padding: 20px 18px 56px; }
+    .phase-name { font-size: 24px; }
+    .hero-value { font-size: 34px; }
+    .kpi-value { font-size: 30px; }
   }
-
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -3355,7 +3697,7 @@
   // DASHBOARD
   // ============================================================
   // ============================================================
-  // DASHBOARD (Phase 0 #3) — chair landing page
+  // DASHBOARD (Phase 0 #3) — chair landing page, visually polished
   //
   // Pure render layer: reads only from existing state (brothers,
   // candidates, tasks, events, notes, nametagPrints). No new queries,
@@ -3366,10 +3708,14 @@
   // BFC Mixer is approximate; everything else is locked.
   // ============================================================
   const DASHBOARD_DATES = {
-    softLaunch:   { label: 'Soft launch',   iso: '2026-08-15' },
-    hardDeadline: { label: 'Hard deadline', iso: '2026-08-25' },
-    bfcMixer:     { label: 'BFC Mixer',     iso: '2026-09-08' },
+    softLaunch:   { label: 'Soft launch',   iso: '2026-08-15', icon: '◴', sub: 'Forms open · outreach begins' },
+    hardDeadline: { label: 'Hard deadline', iso: '2026-08-25', icon: '⬢', sub: 'Last day for submissions' },
+    bfcMixer:     { label: 'BFC Mixer',     iso: '2026-09-08', icon: '✦', sub: 'Bid for Connection event' },
   };
+  // Rush calendar timeline window: 6 months ending at BFC Mixer.
+  // Frames the centerpiece progress bar so "today" sits visibly inside
+  // the timeline even months out from the soft launch.
+  const RUSH_TIMELINE_DAYS = 180;
 
   function getCountdownState(targetIso) {
     const target = new Date(targetIso + 'T00:00:00');
@@ -3391,14 +3737,86 @@
     return { value: dayDiff + 'd', tone };
   }
 
-  function renderCountdownCard(label, iso) {
+  function countdownSubtext(tone) {
+    if (tone === 'past')  return 'Elapsed';
+    if (tone === 'today') return 'Happening today';
+    if (tone === 'red')   return 'Imminent';
+    if (tone === 'gold')  return 'Approaching';
+    return 'On the calendar';
+  }
+
+  function renderCountdownCard(label, iso, icon) {
     const st = getCountdownState(iso);
     const d = new Date(iso + 'T00:00:00');
     const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    return '<div class="countdown-card tone-' + st.tone + '">' +
-      '<div class="countdown-label">' + escapeHtml(label) + '</div>' +
-      '<div class="countdown-value">' + escapeHtml(st.value) + '</div>' +
-      '<div class="countdown-date">' + escapeHtml(dateStr) + '</div>' +
+    const sub = countdownSubtext(st.tone);
+    return '<div class="countdown-hero tone-' + st.tone + '">' +
+      '<div class="hero-icon">' + escapeHtml(icon) + '</div>' +
+      '<div class="hero-body">' +
+        '<div class="hero-label">' + escapeHtml(label) + '</div>' +
+        '<div class="hero-value">' + escapeHtml(st.value) + '</div>' +
+        '<div class="hero-date">' + escapeHtml(dateStr) + ' · <em>' + escapeHtml(sub) + '</em></div>' +
+      '</div>' +
+      '<div class="hero-affordance">→</div>' +
+    '</div>';
+  }
+
+  function getRushPhase() {
+    const now = Date.now();
+    const sl  = new Date(DASHBOARD_DATES.softLaunch.iso   + 'T00:00:00').getTime();
+    const hd  = new Date(DASHBOARD_DATES.hardDeadline.iso + 'T00:00:00').getTime();
+    const bfc = new Date(DASHBOARD_DATES.bfcMixer.iso     + 'T00:00:00').getTime();
+    if (now < sl)  return { id: 'pre-launch',    label: 'Pre-launch',           sub: 'Building the roster and groundwork before the soft launch.' };
+    if (now < hd)  return { id: 'soft-launch',   label: 'Soft launch window',   sub: 'Open enrollment is live. Active outreach phase.' };
+    if (now < bfc) return { id: 'final-stretch', label: 'Final stretch to BFC', sub: 'Hard deadline closing. Logistics locking down.' };
+    return            { id: 'active-rush',  label: 'Active rush',          sub: 'Events underway. PNM evaluations in motion.' };
+  }
+
+  function getRushTimelinePct(t) {
+    const bfc = new Date(DASHBOARD_DATES.bfcMixer.iso + 'T00:00:00').getTime();
+    const start = bfc - RUSH_TIMELINE_DAYS * 86400000;
+    const ms = (typeof t === 'string') ? new Date(t + 'T00:00:00').getTime() : t;
+    if (ms < start) return 0;
+    if (ms > bfc)   return 100;
+    return ((ms - start) / (bfc - start)) * 100;
+  }
+
+  function renderRushCenterpiece() {
+    const phase = getRushPhase();
+    const todayPct = getRushTimelinePct(Date.now());
+    const slPct  = getRushTimelinePct(DASHBOARD_DATES.softLaunch.iso);
+    const hdPct  = getRushTimelinePct(DASHBOARD_DATES.hardDeadline.iso);
+    const bfcPct = getRushTimelinePct(DASHBOARD_DATES.bfcMixer.iso);
+    return '<div class="rush-centerpiece phase-' + phase.id + '">' +
+      '<div class="centerpiece-head">' +
+        '<div class="centerpiece-eyebrow">Rush Week Progress</div>' +
+        '<div class="centerpiece-sync"><span class="sync-dot"></span><span class="sync-text">Live · synced</span></div>' +
+      '</div>' +
+      '<div class="centerpiece-phase">' +
+        '<div class="phase-name">' + escapeHtml(phase.label) + '</div>' +
+        '<div class="phase-sub">' + escapeHtml(phase.sub) + '</div>' +
+      '</div>' +
+      '<div class="rush-progress-wrap">' +
+        '<div class="rush-progress-track">' +
+          '<div class="rush-progress-fill" style="width:' + todayPct.toFixed(1) + '%"></div>' +
+          '<div class="rush-milestone" style="left:' + slPct.toFixed(1) + '%">' +
+            '<div class="milestone-marker"></div>' +
+            '<div class="milestone-label">Soft launch · Aug 15</div>' +
+          '</div>' +
+          '<div class="rush-milestone" style="left:' + hdPct.toFixed(1) + '%">' +
+            '<div class="milestone-marker"></div>' +
+            '<div class="milestone-label">Hard deadline · Aug 25</div>' +
+          '</div>' +
+          '<div class="rush-milestone" style="left:' + bfcPct.toFixed(1) + '%">' +
+            '<div class="milestone-marker bfc"></div>' +
+            '<div class="milestone-label">BFC Mixer · Sep 8</div>' +
+          '</div>' +
+          '<div class="rush-today" style="left:' + todayPct.toFixed(1) + '%">' +
+            '<div class="today-line"></div>' +
+            '<div class="today-label">TODAY</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
     '</div>';
   }
 
@@ -3422,13 +3840,20 @@
     '</div>';
   }
 
+  function renderEmptyState(glyph, text) {
+    return '<div class="empty-state-polished">' +
+      '<div class="empty-glyph">' + escapeHtml(glyph) + '</div>' +
+      '<div class="empty-text">' + escapeHtml(text) + '</div>' +
+    '</div>';
+  }
+
   function renderDashboard() {
     const me = MEMBERS.find(m => m.id === state.currentUser);
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
     const now = Date.now();
 
-    // ----- Pinned notes (preserved from old dashboard) -----
+    // ----- Pinned notes (preserved) -----
     const pinnedNotes = state.notes.filter(n => n.pinned).slice(0, 2);
     const pinnedBanner = pinnedNotes.length > 0
       ? '<div class="pinned-banner">' +
@@ -3442,38 +3867,45 @@
         '</div>'
       : '';
 
-    // ----- Countdown row -----
+    // ----- Hero countdown row -----
     const countdownRow = '<div class="countdown-row">' +
-      renderCountdownCard(DASHBOARD_DATES.softLaunch.label,   DASHBOARD_DATES.softLaunch.iso) +
-      renderCountdownCard(DASHBOARD_DATES.hardDeadline.label, DASHBOARD_DATES.hardDeadline.iso) +
-      renderCountdownCard(DASHBOARD_DATES.bfcMixer.label,     DASHBOARD_DATES.bfcMixer.iso) +
+      renderCountdownCard(DASHBOARD_DATES.softLaunch.label,   DASHBOARD_DATES.softLaunch.iso,   DASHBOARD_DATES.softLaunch.icon) +
+      renderCountdownCard(DASHBOARD_DATES.hardDeadline.label, DASHBOARD_DATES.hardDeadline.iso, DASHBOARD_DATES.hardDeadline.icon) +
+      renderCountdownCard(DASHBOARD_DATES.bfcMixer.label,     DASHBOARD_DATES.bfcMixer.iso,     DASHBOARD_DATES.bfcMixer.icon) +
     '</div>';
 
-    // ----- Status cards (4) -----
+    // ----- Rush Week Progress centerpiece -----
+    const centerpiece = renderRushCenterpiece();
+
+    // ----- KPI row (4 cards, relabeled, 7-day window) -----
     const activeBrothers = state.brothers.filter(b => (b.status || 'active') === 'active').length;
     const activeCands = state.candidates.filter(c => c.status !== 'rejected').length;
     const openTasks = state.tasks.filter(t => t.status !== 'done').length;
     const upcomingEventsCount = state.events.filter(e => {
       const s = new Date(e.startISO).getTime();
-      return s >= now && s <= now + 14 * 86400000;
+      return s >= now && s <= now + 7 * 86400000;
     }).length;
 
-    const statRow = '<div class="stat-row">' +
-      '<div class="stat-card" onclick="switchView(\'brothers\')" style="cursor:pointer;">' +
-        '<div class="stat-label">Brothers</div>' +
-        '<div class="stat-value">' + activeBrothers + '</div>' +
+    const kpiRow = '<div class="kpi-row">' +
+      '<div class="kpi-card" onclick="switchView(\'brothers\')">' +
+        '<div class="kpi-label">Active members</div>' +
+        '<div class="kpi-value">' + activeBrothers + '</div>' +
+        '<div class="kpi-meta">in chapter</div>' +
       '</div>' +
-      '<div class="stat-card" onclick="switchView(\'candidates\')" style="cursor:pointer;">' +
-        '<div class="stat-label">Candidates</div>' +
-        '<div class="stat-value">' + activeCands + '</div>' +
+      '<div class="kpi-card" onclick="switchView(\'candidates\')">' +
+        '<div class="kpi-label">In pipeline</div>' +
+        '<div class="kpi-value">' + activeCands + '</div>' +
+        '<div class="kpi-meta">candidates tracked</div>' +
       '</div>' +
-      '<div class="stat-card" onclick="switchView(\'tasks\')" style="cursor:pointer;">' +
-        '<div class="stat-label">Open tasks</div>' +
-        '<div class="stat-value"><em>' + openTasks + '</em></div>' +
+      '<div class="kpi-card" onclick="switchView(\'tasks\')">' +
+        '<div class="kpi-label">Needs attention</div>' +
+        '<div class="kpi-value"><em>' + openTasks + '</em></div>' +
+        '<div class="kpi-meta">open tasks</div>' +
       '</div>' +
-      '<div class="stat-card" onclick="switchView(\'calendar\')" style="cursor:pointer;">' +
-        '<div class="stat-label">Upcoming (14d)</div>' +
-        '<div class="stat-value">' + upcomingEventsCount + '</div>' +
+      '<div class="kpi-card" onclick="switchView(\'calendar\')">' +
+        '<div class="kpi-label">Next 7 days</div>' +
+        '<div class="kpi-value">' + upcomingEventsCount + '</div>' +
+        '<div class="kpi-meta">events scheduled</div>' +
       '</div>' +
     '</div>';
 
@@ -3502,18 +3934,14 @@
     };
 
     const attentionTasks = (overdue.length === 0 && dueSoon.length === 0)
-      ? '<div class="attention-empty">No tasks needing attention.</div>'
+      ? renderEmptyState('✓', 'Nothing on fire. Catch your breath.')
       : '<div class="attention-list">' +
-          overdue.map(t =>
-            renderAttentionItem(t.text || '(untitled task)', taskMeta(t), 'overdue', 'openTaskModal(\'' + t.id + '\')')
-          ).join('') +
-          dueSoon.map(t =>
-            renderAttentionItem(t.text || '(untitled task)', taskMeta(t), getTaskUrgency(t), 'openTaskModal(\'' + t.id + '\')')
-          ).join('') +
+          overdue.map(t => renderAttentionItem(t.text || '(untitled task)', taskMeta(t), 'overdue', 'openTaskModal(\'' + t.id + '\')')).join('') +
+          dueSoon.map(t => renderAttentionItem(t.text || '(untitled task)', taskMeta(t), getTaskUrgency(t), 'openTaskModal(\'' + t.id + '\')')).join('') +
         '</div>';
 
     const attentionEvents = eventsThisWeek.length === 0
-      ? '<div class="attention-empty">Nothing scheduled this week.</div>'
+      ? renderEmptyState('◷', 'Nothing on the calendar this week.')
       : '<div class="attention-list">' +
           eventsThisWeek.map(e => {
             const d = new Date(e.startISO);
@@ -3526,16 +3954,16 @@
 
     const attentionGrid = '<div class="dash-grid">' +
       '<div class="section-card">' +
-        '<div class="section-title">Tasks needing attention <button class="btn small" onclick="switchView(\'tasks\')">→</button></div>' +
+        '<div class="section-title">Needs attention <button class="btn small" onclick="switchView(\'tasks\')">view tasks →</button></div>' +
         attentionTasks +
       '</div>' +
       '<div class="section-card">' +
-        '<div class="section-title">Events this week <button class="btn small" onclick="switchView(\'calendar\')">→</button></div>' +
+        '<div class="section-title">Events this week <button class="btn small" onclick="switchView(\'calendar\')">view calendar →</button></div>' +
         attentionEvents +
       '</div>' +
     '</div>';
 
-    // ----- Recent activity -----
+    // ----- Recent activity (3-column feed) -----
     const recentNotes = state.notes
       .filter(n => !n.pinned)
       .slice()
@@ -3546,12 +3974,12 @@
       .slice()
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
       .slice(0, 5);
-    const recentPrints = state.nametagPrints.slice(0, 5); // already DESC by printed_at from loader
+    const recentPrints = state.nametagPrints.slice(0, 5);
 
     const recentNotesCol = '<div class="activity-column">' +
-      '<div class="section-title" style="margin-bottom:8px;">Recent notes</div>' +
+      '<div class="section-title">Recent notes</div>' +
       (recentNotes.length === 0
-        ? '<div class="attention-empty" style="padding:8px 0;">No notes yet.</div>'
+        ? renderEmptyState('✎', 'No notes yet.')
         : recentNotes.map(n => {
             const author = MEMBERS.find(m => m.id === n.authorId);
             return '<div class="activity-item" onclick="openNoteEditor(\'' + n.id + '\')">' +
@@ -3562,9 +3990,9 @@
     '</div>';
 
     const completedTasksCol = '<div class="activity-column">' +
-      '<div class="section-title" style="margin-bottom:8px;">Recently completed</div>' +
+      '<div class="section-title">Recently completed</div>' +
       (completedTasks.length === 0
-        ? '<div class="attention-empty" style="padding:8px 0;">No completed tasks yet.</div>'
+        ? renderEmptyState('◈', 'Nothing completed yet.')
         : completedTasks.map(t => {
             const assignee = MEMBERS.find(m => m.id === t.assigneeId);
             return '<div class="activity-item" onclick="openTaskModal(\'' + t.id + '\')">' +
@@ -3575,9 +4003,9 @@
     '</div>';
 
     const recentPrintsCol = '<div class="activity-column">' +
-      '<div class="section-title" style="margin-bottom:8px;">Recent nametag prints</div>' +
+      '<div class="section-title">Recent nametag prints</div>' +
       (recentPrints.length === 0
-        ? '<div class="attention-empty" style="padding:8px 0;">No prints yet.</div>'
+        ? renderEmptyState('◇', 'No prints yet.')
         : recentPrints.map(p => {
             const b = state.brothers.find(x => x.id === p.brother_id);
             const brotherName = b ? ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim() : '(unknown)';
@@ -3591,15 +4019,17 @@
 
     const activityGrid = '<div class="activity-grid">' + recentNotesCol + completedTasksCol + recentPrintsCol + '</div>';
 
-    return '' +
+    return '<div class="view-dashboard">' +
       '<div style="font-family:\'Playfair Display\',serif; font-size:22px; font-style:italic; color:var(--fg-soft); margin-bottom:22px;">' +
         greeting + ', ' + (me ? escapeHtml(me.name) : '') + '.' +
       '</div>' +
       pinnedBanner +
       countdownRow +
-      statRow +
+      centerpiece +
+      kpiRow +
       attentionGrid +
-      activityGrid;
+      activityGrid +
+    '</div>';
   }
 
   // ============================================================
