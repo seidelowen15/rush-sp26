@@ -2156,8 +2156,220 @@
     white-space: pre-wrap;
   }
   [data-theme="dark"] .brother-internal-notes { background: rgba(212, 166, 74, 0.06); }
+
+  /* ========== NAMETAGS ========== */
+  .nametag-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  .nametag-picker-pane { flex: 1; min-width: 0; }
+  .nametag-preview-pane {
+    width: 360px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 20px;
+  }
+  .nametag-template-strip {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .nametag-template-chip {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 12px 18px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.15s;
+    font: inherit;
+    color: var(--fg);
+  }
+  .nametag-template-chip:hover { border-color: var(--gold); }
+  .nametag-template-chip.selected {
+    border-color: var(--navy);
+    box-shadow: 0 0 0 2px var(--navy) inset;
+  }
+  .nametag-template-chip .chip-swatch {
+    width: 56px; height: 32px;
+    border-radius: 4px;
+    background: var(--chip-bg);
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .nametag-template-chip .chip-swatch::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    background: var(--chip-accent);
+  }
+  .nametag-template-chip .chip-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .nametag-overrides-panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .nametag-overrides-panel .overrides-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--fg-muted);
+    margin-bottom: 10px;
+  }
+  .nametag-overrides-panel .overrides-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    align-items: end;
+  }
+  .nametag-overrides-panel .override-field {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .nametag-overrides-panel .field-label {
+    font-size: 11px; color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .nametag-overrides-panel .field-input,
+  .nametag-overrides-panel .field-select {
+    font-size: 13px; padding: 7px 9px;
+  }
+  .nametag-overrides-panel input[type="color"] {
+    height: 32px; padding: 2px; cursor: pointer;
+  }
+  .nametag-picker-actions {
+    display: flex; gap: 10px; align-items: center;
+    margin: 10px 0;
+  }
+  .nametag-picker-actions .selection-count {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .nametag-picker-table tbody tr.selected-row {
+    background: rgba(212, 166, 74, 0.10);
+  }
+  [data-theme="dark"] .nametag-picker-table tbody tr.selected-row {
+    background: rgba(212, 166, 74, 0.16);
+  }
+  .nametag-checkbox {
+    width: 16px; height: 16px;
+    accent-color: var(--navy);
+    cursor: pointer;
+  }
+  .nametag-printed-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: rgba(212, 166, 74, 0.18);
+    color: var(--gold-dark);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .nametag-reprint-on {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: rgba(63, 138, 92, 0.18);
+    color: #2c6b46;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .nametag-reprint-toggle {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--fg-muted);
+    font: inherit;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    cursor: pointer;
+    margin-left: 4px;
+  }
+  .nametag-reprint-toggle:hover {
+    border-color: var(--navy);
+    color: var(--navy);
+  }
+  .nametag-preview-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .nametag-preview-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    background: var(--parchment);
+    display: flex; justify-content: center; align-items: center;
+    margin-bottom: 10px;
+    min-height: 270px;
+  }
+  [data-theme="dark"] .nametag-preview-card {
+    background: rgba(212, 166, 74, 0.06);
+  }
+  .nametag-preview-empty {
+    border: 1px dashed var(--line-strong);
+    border-radius: 10px;
+    padding: 60px 24px;
+    text-align: center;
+    color: var(--fg-muted);
+  }
+  .nametag-preview-help {
+    font-size: 11px;
+    color: var(--fg-muted);
+    margin-bottom: 14px;
+    font-style: italic;
+  }
+  .nametag-generate-bar {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .nametag-print-plan {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 8px 12px;
+    background: var(--parchment);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  [data-theme="dark"] .nametag-print-plan {
+    background: rgba(212, 166, 74, 0.06);
+  }
+  .nametag-print-plan .plan-line { color: var(--fg); }
+  .nametag-print-plan .plan-skipped { color: var(--gold-dark); }
+  .nametag-generate-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .nametag-generate-btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  @media (max-width: 900px) {
+    .nametag-layout { flex-direction: column; }
+    .nametag-preview-pane { width: 100%; position: static; }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -2587,6 +2799,15 @@
         render();
       }, 250);
     });
+    // Nametag prints — same pattern. Triggers when another chair runs
+    // the generator so the printed-badge in our picker stays current.
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'nametag_prints' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => {
+        await loadNametagPrints();
+        render();
+      }, 250);
+    });
     channel.subscribe();
   }
 
@@ -2690,6 +2911,21 @@
     brothersLoaded: false,
     brotherFilter: { search: '', pc: 'all', role: 'all', status: 'active' },
     viewingBrotherId: null,
+
+    // Nametags v1. Picker selection + print tracking + per-job overrides.
+    // Demographics never appear here -- nametag rendering consumes only
+    // name + PC + (whitelisted role), and the constant NAMETAG_ROLE_WHITELIST
+    // is the single gatekeeper for which roles surface on the printed card.
+    nametagPrints: [],
+    nametagPrintsLoaded: false,
+    nametagSelected: new Set(),
+    nametagReprint: new Set(),
+    nametagFilter: { search: '', pc: 'all', role: 'all', status: 'active' },
+    nametagTemplate: 'bfc-mixer',
+    nametagOverrides: { averyPreset: '5395', dimensions: null, nameStyle: null, roleVisible: 'auto', bgColor: null, accentColor: null },
+    nametagEventLabel: '',
+    nametagPreviewBrotherId: null,
+    nametagGenerating: false,
   };
 
   // ============================================================
@@ -2724,6 +2960,9 @@
       // properly-typed table. Awaited separately so a brothers load
       // failure doesn't block the rest of the workspace from booting.
       await loadBrothers();
+      // Nametag print history -- typed table like brothers. Awaited
+      // separately for the same boot-isolation reason.
+      await loadNametagPrints();
       state.notes = notes || [];
       state.tasks = tasks || [];
       state.events = events || [];
@@ -2819,6 +3058,7 @@
           '<div class="view ' + (state.currentView === 'tasks' ? 'active' : '') + '">' + renderTasks() + '</div>' +
           '<div class="view ' + (state.currentView === 'candidates' ? 'active' : '') + '">' + renderCandidates() + '</div>' +
           '<div class="view ' + (state.currentView === 'brothers' ? 'active' : '') + '">' + renderBrothers() + '</div>' +
+          '<div class="view ' + (state.currentView === 'nametags' ? 'active' : '') + '">' + renderNametagsView() + '</div>' +
         '</main>' +
       '</div>';
 
@@ -2901,6 +3141,7 @@
       { id: 'tasks', label: 'Tasks', icon: '◈', count: openTasks },
       { id: 'candidates', label: 'Candidates', icon: '★', count: state.candidates.length },
       { id: 'brothers', label: 'Brothers', icon: '◍', count: state.brothers.length },
+      { id: 'nametags', label: 'Nametags', icon: '◇', count: state.nametagSelected.size || undefined },
     ];
 
     return '' +
@@ -2964,6 +3205,7 @@
       tasks: ['Tasks', '& to-dos'],
       candidates: ['Candidates', ''],
       brothers: ['Brothers', '& chapter'],
+      nametags: ['Nametags', '& print'],
     };
     const parts = titles[state.currentView];
     const main = parts[0], em = parts[1];
@@ -4840,6 +5082,7 @@
       renderBrotherProfileRow('Address', b.address) +
       renderBrotherProfileRow('Birthday', b.birthday) +
       renderBrotherProfileRow('Verified', verifiedDisplay) +
+      renderNametagHistoryRow(b.id) +
       demoBlock +
       internalNotesBlock;
   }
@@ -4871,6 +5114,567 @@
     document.getElementById('brotherModal').classList.remove('active');
     state.viewingBrotherId = null;
   };
+
+  // ============================================================
+  // NAMETAGS  (Phase 0 item #2, chair-facing only)
+  //
+  // Three things working together:
+  //   1. NAMETAG_ROLE_WHITELIST -- single source of truth for which
+  //      roles surface on PNM-facing nametags. Locked decision: PM is
+  //      NOT in this set, exec board + Rush Chair only.
+  //   2. NAMETAG_TEMPLATES -- JSON-driven card layouts. Add a key to
+  //      ship a new template; no renderer changes needed.
+  //   3. renderNametagCardHTML -- one function produces the card DOM
+  //      used for BOTH the live preview AND the html2canvas snapshot
+  //      fed into jsPDF. No drift between what you see and what prints.
+  //
+  // Demographics never touch this slice -- card consumes name + PC +
+  // (whitelisted role) only.
+  // ============================================================
+
+  const NAMETAG_ROLE_WHITELIST = new Set([
+    'President', 'VPF', 'VPO', 'VPP', 'VPCC', 'VPM', 'Secretary', 'Rush Chair'
+  ]);
+
+  function shouldShowRoleOnNametag(role) {
+    return !!role && NAMETAG_ROLE_WHITELIST.has(role);
+  }
+
+  const AVERY_PRESETS = {
+    '5395': {
+      label: 'Avery 5395 — 8 per page',
+      cardW: 3.375, cardH: 2.333,
+      pageW: 8.5, pageH: 11,
+      cols: 2, rows: 4,
+      marginTop: 0.5, marginLeft: 0.75,
+      cardGapX: 0.125, cardGapY: 0.167,
+    },
+  };
+
+  const NAMETAG_TEMPLATES = {
+    'bfc-mixer': {
+      label: 'BFC Mixer',
+      bg: '#FAF6EC', accent: '#0A2463',
+      nameFont: "'Playfair Display', serif", nameWeight: 700,
+      nameStyle: 'first-last-initial',
+      metaFont: "'JetBrains Mono', monospace",
+      accentStyle: 'top-stripe',
+      showAkpsi: true, showPC: true,
+    },
+    'speed-dating': {
+      label: 'Speed Dating',
+      bg: '#FFFFFF', accent: '#D4A64A',
+      nameFont: "'Inter', sans-serif", nameWeight: 700,
+      nameStyle: 'first',
+      metaFont: "'JetBrains Mono', monospace",
+      accentStyle: 'left-bar',
+      showAkpsi: true, showPC: true,
+    },
+    'generic': {
+      label: 'Generic',
+      bg: '#FFFFFF', accent: '#0A2463',
+      nameFont: "'Inter', sans-serif", nameWeight: 600,
+      nameStyle: 'first-last-initial',
+      metaFont: "'JetBrains Mono', monospace",
+      accentStyle: 'bottom-line',
+      showAkpsi: true, showPC: true,
+    },
+  };
+
+  // ----- Data -----
+  async function loadNametagPrints() {
+    if (!sb) return;
+    try {
+      const { data, error } = await sb
+        .from('nametag_prints')
+        .select('id, brother_id, event_label, template_name, printed_at, printed_by, notes')
+        .order('printed_at', { ascending: false });
+      if (error) throw error;
+      state.nametagPrints = data || [];
+      state.nametagPrintsLoaded = true;
+    } catch (e) {
+      console.error('loadNametagPrints failed', e);
+      state.nametagPrints = [];
+      state.nametagPrintsLoaded = true;
+    }
+  }
+
+  async function recordNametagPrints(brotherIds, eventLabel, templateName) {
+    if (!sb || brotherIds.length === 0) return;
+    const rows = brotherIds.map(id => ({
+      brother_id: id,
+      event_label: eventLabel,
+      template_name: templateName,
+      printed_by: state.currentUser || null,
+    }));
+    const { error } = await sb.from('nametag_prints').insert(rows);
+    if (error) {
+      console.error('recordNametagPrints failed', error);
+      toast('Saved PDF but failed to log prints — check console.', 'error');
+      return;
+    }
+    await loadNametagPrints();
+  }
+
+  // ----- Helpers -----
+  function getActiveDimensions() {
+    const ov = state.nametagOverrides;
+    const base = AVERY_PRESETS[ov.averyPreset] || AVERY_PRESETS['5395'];
+    if (ov.dimensions) {
+      return Object.assign({}, base, { cardW: ov.dimensions.wIn, cardH: ov.dimensions.hIn });
+    }
+    return base;
+  }
+
+  function getDisplayName(b, style) {
+    const f = b.preferred_name || b.first_name || '';
+    const l = b.last_name || '';
+    if (style === 'first') return f;
+    if (style === 'preferred') return b.preferred_name || f;
+    return f + (l ? ' ' + l[0] + '.' : '');
+  }
+
+  function isPrintedForEvent(brotherId, label) {
+    const target = (label || '').trim();
+    if (!target) return false;
+    return state.nametagPrints.some(p => p.brother_id === brotherId && p.event_label === target);
+  }
+
+  function getNametagPrintsForBrother(brotherId) {
+    return state.nametagPrints.filter(p => p.brother_id === brotherId);
+  }
+
+  function getKnownEventLabels() {
+    const set = new Set(state.nametagPrints.map(p => p.event_label).filter(Boolean));
+    return Array.from(set).sort();
+  }
+
+  function getNametagFilteredBrothers() {
+    const f = state.nametagFilter;
+    return state.brothers.filter(b => {
+      if (f.pc !== 'all' && b.pledge_class_code !== f.pc) return false;
+      if (f.role === 'exec' && !isExecRole(b.role)) return false;
+      if (f.role === 'pm' && b.role !== 'PM') return false;
+      if (f.role === 'brother' && (isExecRole(b.role) || b.role === 'PM')) return false;
+      if (f.status !== 'all' && (b.status || 'active') !== f.status) return false;
+      if (f.search) {
+        const q = f.search.trim().toLowerCase();
+        const hay = [b.first_name, b.last_name, b.preferred_name, b.psu_id, b.major_primary]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function getNametagPrintPlan() {
+    // Real-time plan: drives the generate-bar count display, not just executed at PDF time.
+    const label = state.nametagEventLabel.trim();
+    const toPrint = [];
+    const skipped = [];
+    state.nametagSelected.forEach(id => {
+      if (label && isPrintedForEvent(id, label) && !state.nametagReprint.has(id)) skipped.push(id);
+      else toPrint.push(id);
+    });
+    return { toPrint, skipped };
+  }
+
+  // ----- Card renderer (single source of truth) -----
+  function renderNametagCardHTML(brother) {
+    const tmpl = NAMETAG_TEMPLATES[state.nametagTemplate] || NAMETAG_TEMPLATES['generic'];
+    const ov = state.nametagOverrides;
+    const dims = getActiveDimensions();
+    const bg = ov.bgColor || tmpl.bg;
+    const accent = ov.accentColor || tmpl.accent;
+    const nameStyle = ov.nameStyle || tmpl.nameStyle;
+    const roleVisible = ov.roleVisible === 'hide' ? false : shouldShowRoleOnNametag(brother.role);
+
+    const displayName = getDisplayName(brother, nameStyle);
+    const pc = brother.pledge_class_code || '';
+    const role = roleVisible ? brother.role : '';
+    const meta = [pc, role].filter(Boolean).join(' · ');
+
+    let accentEl = '';
+    let padding = '0.35in 0.3in 0.3in';
+    if (tmpl.accentStyle === 'top-stripe') {
+      accentEl = '<div style="position:absolute; top:0; left:0; right:0; height:0.18in; background:' + accent + ';"></div>';
+    } else if (tmpl.accentStyle === 'left-bar') {
+      accentEl = '<div style="position:absolute; top:0; bottom:0; left:0; width:0.16in; background:' + accent + ';"></div>';
+      padding = '0.25in 0.3in 0.25in 0.45in';
+    } else {
+      accentEl = '<div style="position:absolute; bottom:0; left:0.4in; right:0.4in; height:0.04in; background:' + accent + ';"></div>';
+    }
+    const nameSize = nameStyle === 'first' ? '0.65in' : '0.5in';
+
+    return '<div class="nametag-card" style="position:relative;' +
+      ' width:' + dims.cardW + 'in; height:' + dims.cardH + 'in;' +
+      ' background:' + bg + '; box-sizing:border-box;' +
+      ' padding:' + padding + ';' +
+      ' display:flex; flex-direction:column; justify-content:center; align-items:center;' +
+      ' text-align:center; font-family:' + tmpl.metaFont + '; color:' + accent + '; overflow:hidden;">' +
+      accentEl +
+      '<div style="font-family:' + tmpl.nameFont + '; font-weight:' + tmpl.nameWeight + ';' +
+      ' font-size:' + nameSize + '; line-height:1; letter-spacing:-0.01em;' +
+      ' color:#0F1419; margin-bottom:0.08in;">' + escapeHtml(displayName) + '</div>' +
+      '<div style="font-size:0.13in; letter-spacing:0.15em; text-transform:uppercase; color:' + accent + ';">' +
+      escapeHtml(meta) + '</div>' +
+      (tmpl.showAkpsi
+        ? '<div style="position:absolute; bottom:0.12in; right:0.18in;' +
+          ' font-family:' + tmpl.metaFont + '; font-size:0.1in;' +
+          ' letter-spacing:0.2em; color:' + accent + '; opacity:0.7;">ΑΚΨ</div>'
+        : '') +
+    '</div>';
+  }
+
+  // ----- View rendering -----
+  function renderNametagsView() {
+    return '<div class="nametag-layout">' +
+      '<div class="nametag-picker-pane">' +
+        renderNametagTemplateStrip() +
+        renderNametagOverridesPanel() +
+        renderNametagPicker() +
+      '</div>' +
+      '<div class="nametag-preview-pane">' +
+        renderNametagPreviewPane() +
+        renderNametagGenerateBar() +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderNametagTemplateStrip() {
+    return '<div class="nametag-template-strip">' +
+      Object.entries(NAMETAG_TEMPLATES).map(function(entry) {
+        var key = entry[0]; var tmpl = entry[1];
+        var sel = state.nametagTemplate === key;
+        return '<button class="nametag-template-chip' + (sel ? ' selected' : '') + '" ' +
+          'onclick="setNametagTemplate(\'' + key + '\')" ' +
+          'style="--chip-accent:' + tmpl.accent + '; --chip-bg:' + tmpl.bg + ';">' +
+          '<div class="chip-swatch"></div>' +
+          '<div class="chip-label">' + escapeHtml(tmpl.label) + '</div>' +
+        '</button>';
+      }).join('') +
+    '</div>';
+  }
+
+  function renderNametagOverridesPanel() {
+    var ov = state.nametagOverrides;
+    var tmpl = NAMETAG_TEMPLATES[state.nametagTemplate];
+    return '<div class="nametag-overrides-panel">' +
+      '<div class="overrides-label">Overrides (this print job only)</div>' +
+      '<div class="overrides-grid">' +
+        '<label class="override-field">' +
+          '<span class="field-label">Dimensions</span>' +
+          '<select class="field-select" onchange="setNametagOverride(\'averyPreset\', this.value)">' +
+            '<option value="5395"' + (ov.averyPreset === '5395' ? ' selected' : '') + '>Avery 5395 (3.375 × 2.333 in)</option>' +
+          '</select>' +
+        '</label>' +
+        '<label class="override-field">' +
+          '<span class="field-label">Name style</span>' +
+          '<select class="field-select" onchange="setNametagOverride(\'nameStyle\', this.value)">' +
+            '<option value=""' + (!ov.nameStyle ? ' selected' : '') + '>Template default (' + escapeHtml(tmpl.nameStyle) + ')</option>' +
+            '<option value="first"' + (ov.nameStyle === 'first' ? ' selected' : '') + '>First only</option>' +
+            '<option value="first-last-initial"' + (ov.nameStyle === 'first-last-initial' ? ' selected' : '') + '>First L.</option>' +
+            '<option value="preferred"' + (ov.nameStyle === 'preferred' ? ' selected' : '') + '>Preferred</option>' +
+          '</select>' +
+        '</label>' +
+        '<label class="override-field">' +
+          '<span class="field-label">Role display</span>' +
+          '<select class="field-select" onchange="setNametagOverride(\'roleVisible\', this.value)">' +
+            '<option value="auto"' + (ov.roleVisible === 'auto' ? ' selected' : '') + '>Auto (whitelist)</option>' +
+            '<option value="hide"' + (ov.roleVisible === 'hide' ? ' selected' : '') + '>Hide for all</option>' +
+          '</select>' +
+        '</label>' +
+        '<label class="override-field">' +
+          '<span class="field-label">Background</span>' +
+          '<input type="color" class="field-input" value="' + (ov.bgColor || tmpl.bg) + '" ' +
+            'oninput="setNametagOverride(\'bgColor\', this.value)">' +
+        '</label>' +
+        '<label class="override-field">' +
+          '<span class="field-label">Accent</span>' +
+          '<input type="color" class="field-input" value="' + (ov.accentColor || tmpl.accent) + '" ' +
+            'oninput="setNametagOverride(\'accentColor\', this.value)">' +
+        '</label>' +
+        '<button class="btn small" onclick="resetNametagOverrides()" style="align-self:end;">Reset overrides</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderNametagPicker() {
+    var f = state.nametagFilter;
+    var filtered = getNametagFilteredBrothers();
+    var allPcCodes = Array.from(new Set(state.brothers.map(function(b){return b.pledge_class_code;}).filter(Boolean))).sort();
+    var eventLabel = state.nametagEventLabel.trim();
+
+    return '<div class="nametag-picker">' +
+      '<div class="brothers-toolbar">' +
+        '<input type="search" class="field-input search" placeholder="Search name, PSU ID, major..." ' +
+          'value="' + escapeHtml(f.search) + '" oninput="setNametagFilter(\'search\', this.value)">' +
+        '<select class="field-select" onchange="setNametagFilter(\'pc\', this.value)">' +
+          '<option value="all"' + (f.pc === 'all' ? ' selected' : '') + '>All PCs</option>' +
+          allPcCodes.map(function(c){return '<option value="' + escapeHtml(c) + '"' + (f.pc === c ? ' selected' : '') + '>' + escapeHtml(c) + '</option>';}).join('') +
+        '</select>' +
+        '<select class="field-select" onchange="setNametagFilter(\'role\', this.value)">' +
+          '<option value="all"' + (f.role === 'all' ? ' selected' : '') + '>All roles</option>' +
+          '<option value="exec"' + (f.role === 'exec' ? ' selected' : '') + '>Exec</option>' +
+          '<option value="pm"' + (f.role === 'pm' ? ' selected' : '') + '>PM</option>' +
+          '<option value="brother"' + (f.role === 'brother' ? ' selected' : '') + '>Brother</option>' +
+        '</select>' +
+        '<select class="field-select" onchange="setNametagFilter(\'status\', this.value)">' +
+          '<option value="active"' + (f.status === 'active' ? ' selected' : '') + '>Active</option>' +
+          '<option value="all"' + (f.status === 'all' ? ' selected' : '') + '>All statuses</option>' +
+          '<option value="on_leave"' + (f.status === 'on_leave' ? ' selected' : '') + '>On leave</option>' +
+          '<option value="alumnus"' + (f.status === 'alumnus' ? ' selected' : '') + '>Alumnus</option>' +
+        '</select>' +
+        '<span class="brothers-count">' + filtered.length + ' brothers</span>' +
+      '</div>' +
+      '<div class="nametag-picker-actions">' +
+        '<button class="btn small" onclick="selectAllVisibleForNametag()">Select all visible</button>' +
+        '<button class="btn small" onclick="clearNametagSelection()">Clear selection</button>' +
+        '<span class="selection-count">' + state.nametagSelected.size + ' selected</span>' +
+      '</div>' +
+      '<table class="brothers-table nametag-picker-table">' +
+        '<thead><tr>' +
+          '<th style="width:34px"></th>' +
+          '<th>Name</th><th>PC</th><th>Role</th>' +
+          '<th>' + (eventLabel ? 'Status for "' + escapeHtml(eventLabel) + '"' : 'Print history') + '</th>' +
+        '</tr></thead><tbody>' +
+        filtered.map(function(b) {
+          var selected = state.nametagSelected.has(b.id);
+          var printedHere = eventLabel && isPrintedForEvent(b.id, eventLabel);
+          var reprint = state.nametagReprint.has(b.id);
+          var nameRaw = ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim();
+          var name = nameRaw ? escapeHtml(nameRaw) : '<span style="color:var(--fg-muted)">(unnamed)</span>';
+          var roleCell = b.role
+            ? '<span class="brother-badge ' + (b.role === 'PM' ? 'role-pm' : isExecRole(b.role) ? 'role-exec' : '') + '">' + escapeHtml(b.role) + '</span>'
+            : '';
+          var statusCell = '';
+          if (eventLabel) {
+            if (printedHere && !reprint) {
+              statusCell = '<span class="nametag-printed-badge">✓ printed</span>' +
+                ' <button class="nametag-reprint-toggle" onclick="event.stopPropagation(); toggleReprintForBrother(\'' + b.id + '\')">Reprint</button>';
+            } else if (printedHere && reprint) {
+              statusCell = '<span class="nametag-reprint-on">↺ will reprint</span>' +
+                ' <button class="nametag-reprint-toggle" onclick="event.stopPropagation(); toggleReprintForBrother(\'' + b.id + '\')">Cancel</button>';
+            } else {
+              statusCell = '<span style="color:var(--fg-muted); font-size:11px;">—</span>';
+            }
+          } else {
+            var total = getNametagPrintsForBrother(b.id).length;
+            statusCell = total
+              ? '<span style="font-size:11px; color:var(--fg-muted);">' + total + ' prior print' + (total === 1 ? '' : 's') + '</span>'
+              : '<span style="color:var(--fg-muted); font-size:11px;">—</span>';
+          }
+          return '<tr class="' + (selected ? 'selected-row' : '') + '" onclick="toggleBrotherSelectionForNametag(\'' + b.id + '\')">' +
+            '<td><input type="checkbox" class="nametag-checkbox" ' + (selected ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleBrotherSelectionForNametag(\'' + b.id + '\')"></td>' +
+            '<td class="brother-name">' + name + '</td>' +
+            '<td>' + escapeHtml(b.pledge_class_code || '—') + '</td>' +
+            '<td>' + roleCell + '</td>' +
+            '<td>' + statusCell + '</td>' +
+          '</tr>';
+        }).join('') +
+      '</tbody></table>' +
+    '</div>';
+  }
+
+  function renderNametagPreviewPane() {
+    if (!state.brothersLoaded) {
+      return '<div class="nametag-preview-empty">Loading brothers…</div>';
+    }
+    var filtered = getNametagFilteredBrothers();
+    var previewId = state.nametagPreviewBrotherId;
+    if (!previewId || !state.brothers.find(function(b){return b.id === previewId;})) {
+      var firstSelected = Array.from(state.nametagSelected)[0];
+      previewId = firstSelected || (filtered[0] && filtered[0].id);
+    }
+    var b = state.brothers.find(function(x){return x.id === previewId;});
+    if (!b) {
+      return '<div class="nametag-preview-empty">' +
+        '<div style="font-family:\'Playfair Display\',serif; font-style:italic;">Pick a brother to preview</div>' +
+        '<div style="font-size:11px; margin-top:6px;">Click any row in the picker.</div>' +
+      '</div>';
+    }
+    return '<div class="nametag-preview-label">Preview · ' + escapeHtml((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')) + '</div>' +
+      '<div class="nametag-preview-card">' +
+        renderNametagCardHTML(b) +
+      '</div>' +
+      '<div class="nametag-preview-help">Updates in real time as you change template/overrides. Click a row to preview that brother.</div>';
+  }
+
+  function renderNametagGenerateBar() {
+    var plan = getNametagPrintPlan();
+    var label = state.nametagEventLabel.trim();
+    var knownLabels = getKnownEventLabels();
+    var canGenerate = label.length > 0 && plan.toPrint.length > 0 && !state.nametagGenerating;
+    return '<div class="nametag-generate-bar">' +
+      '<label class="override-field">' +
+        '<span class="field-label">Event label (required)</span>' +
+        '<input type="text" class="field-input" list="nametag-event-labels" ' +
+          'placeholder="e.g. BFC Mixer 2026" ' +
+          'value="' + escapeHtml(state.nametagEventLabel) + '" ' +
+          'oninput="setNametagEventLabel(this.value)">' +
+        '<datalist id="nametag-event-labels">' +
+          knownLabels.map(function(l){return '<option value="' + escapeHtml(l) + '"></option>';}).join('') +
+        '</datalist>' +
+      '</label>' +
+      '<div class="nametag-print-plan">' +
+        '<div class="plan-line"><strong>' + plan.toPrint.length + '</strong> to print</div>' +
+        (plan.skipped.length
+          ? '<div class="plan-line plan-skipped">' + plan.skipped.length + ' skipped (already printed)</div>'
+          : '<div class="plan-line" style="color:var(--fg-muted)">0 skipped</div>') +
+      '</div>' +
+      '<button class="btn primary nametag-generate-btn" ' +
+        (canGenerate ? '' : 'disabled ') +
+        'onclick="generateNametagPDF()">' +
+        (state.nametagGenerating ? 'Generating…' : 'Generate PDF') +
+      '</button>' +
+    '</div>';
+  }
+
+  function renderNametagHistoryRow(brotherId) {
+    var prints = getNametagPrintsForBrother(brotherId);
+    if (prints.length === 0) return '';
+    var latest = prints[0]; // sorted DESC by printed_at in loader
+    var latestDate = new Date(latest.printed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return '<div class="brother-profile-row">' +
+      '<div class="key">Nametag prints</div>' +
+      '<div>' + prints.length + ' total · most recent: ' + escapeHtml(latest.event_label) + ' (' + latestDate + ')</div>' +
+    '</div>';
+  }
+
+  // ----- PDF generation -----
+  async function generateNametagPDF() {
+    if (!window.jspdf || !window.html2canvas) {
+      toast('PDF libraries not loaded — refresh the page and try again.', 'error');
+      return;
+    }
+    var eventLabel = state.nametagEventLabel.trim();
+    if (!eventLabel) {
+      toast('Set an event label before generating.', 'error');
+      return;
+    }
+    var plan = getNametagPrintPlan();
+    if (plan.toPrint.length === 0) {
+      toast('Nothing to print. Select brothers, or toggle Reprint on already-printed rows.', 'error');
+      return;
+    }
+
+    state.nametagGenerating = true;
+    render();
+
+    try {
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      var jsPDF = window.jspdf.jsPDF;
+      var dims = getActiveDimensions();
+      var doc = new jsPDF({ unit: 'in', format: [dims.pageW, dims.pageH], orientation: 'portrait' });
+      var perPage = dims.cols * dims.rows;
+
+      var stage = document.createElement('div');
+      stage.style.cssText = 'position:absolute; left:-9999px; top:0; visibility:hidden;';
+      document.body.appendChild(stage);
+
+      for (var i = 0; i < plan.toPrint.length; i++) {
+        var b = state.brothers.find(function(x) { return x.id === plan.toPrint[i]; });
+        if (!b) continue;
+        stage.innerHTML = renderNametagCardHTML(b);
+        var cardEl = stage.firstElementChild;
+        // eslint-disable-next-line no-await-in-loop
+        var canvas = await window.html2canvas(cardEl, { scale: 3, backgroundColor: null, logging: false });
+        var posInPage = i % perPage;
+        if (posInPage === 0 && i > 0) doc.addPage();
+        var col = posInPage % dims.cols;
+        var row = Math.floor(posInPage / dims.cols);
+        var x = dims.marginLeft + col * (dims.cardW + dims.cardGapX);
+        var y = dims.marginTop  + row * (dims.cardH + dims.cardGapY);
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, dims.cardW, dims.cardH);
+      }
+      stage.remove();
+
+      var safeLabel = eventLabel.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      var today = new Date().toISOString().slice(0, 10);
+      doc.save('nametags_' + safeLabel + '_' + today + '.pdf');
+
+      await recordNametagPrints(plan.toPrint, eventLabel, NAMETAG_TEMPLATES[state.nametagTemplate].label);
+
+      state.nametagSelected.clear();
+      state.nametagReprint.clear();
+      toast('Printed ' + plan.toPrint.length + ' nametag' + (plan.toPrint.length === 1 ? '' : 's') +
+            (plan.skipped.length ? ' · skipped ' + plan.skipped.length + ' already-printed' : ''));
+    } catch (e) {
+      console.error('PDF generation failed', e);
+      toast('PDF generation failed — check console.', 'error');
+    } finally {
+      state.nametagGenerating = false;
+      render();
+    }
+  }
+
+  // ----- Window-exposed handlers -----
+  window.setNametagFilter = function(key, value) {
+    state.nametagFilter = Object.assign({}, state.nametagFilter, { [key]: value });
+    render();
+    if (key === 'search') {
+      var el = document.querySelector('.nametag-picker .brothers-toolbar .search');
+      if (el) { el.focus(); el.setSelectionRange(value.length, value.length); }
+    }
+  };
+
+  window.setNametagTemplate = function(key) {
+    if (!NAMETAG_TEMPLATES[key]) return;
+    state.nametagTemplate = key;
+    state.nametagOverrides.bgColor = null;
+    state.nametagOverrides.accentColor = null;
+    render();
+  };
+
+  window.setNametagOverride = function(key, value) {
+    if (value === '') value = null;
+    state.nametagOverrides = Object.assign({}, state.nametagOverrides, { [key]: value });
+    render();
+  };
+
+  window.resetNametagOverrides = function() {
+    state.nametagOverrides = { averyPreset: '5395', dimensions: null, nameStyle: null, roleVisible: 'auto', bgColor: null, accentColor: null };
+    render();
+  };
+
+  window.toggleBrotherSelectionForNametag = function(id) {
+    if (state.nametagSelected.has(id)) state.nametagSelected.delete(id);
+    else state.nametagSelected.add(id);
+    state.nametagPreviewBrotherId = id;
+    render();
+  };
+
+  window.selectAllVisibleForNametag = function() {
+    getNametagFilteredBrothers().forEach(function(b) { state.nametagSelected.add(b.id); });
+    render();
+  };
+
+  window.clearNametagSelection = function() {
+    state.nametagSelected.clear();
+    state.nametagReprint.clear();
+    render();
+  };
+
+  window.toggleReprintForBrother = function(id) {
+    if (state.nametagReprint.has(id)) state.nametagReprint.delete(id);
+    else state.nametagReprint.add(id);
+    render();
+  };
+
+  window.setNametagEventLabel = function(value) {
+    state.nametagEventLabel = value;
+    render();
+    var el = document.querySelector('.nametag-generate-bar input[type="text"]');
+    if (el) { el.focus(); el.setSelectionRange(value.length, value.length); }
+  };
+
+  window.setNametagPreviewBrother = function(id) {
+    state.nametagPreviewBrotherId = id;
+    render();
+  };
+
 
   if (sb) init();
 </script>
