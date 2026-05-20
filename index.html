@@ -2366,6 +2366,136 @@
     .nametag-layout { flex-direction: column; }
     .nametag-preview-pane { width: 100%; position: static; }
   }
+
+  /* ========== DASHBOARD ========== */
+  .countdown-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .countdown-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .countdown-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: var(--navy);
+  }
+  .countdown-card.tone-red::before   { background: var(--danger); }
+  .countdown-card.tone-gold::before,
+  .countdown-card.tone-today::before { background: var(--gold); }
+  .countdown-card.tone-past::before  { background: var(--fg-muted); }
+  .countdown-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-muted);
+  }
+  .countdown-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px; font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--navy);
+    margin: 4px 0 2px;
+  }
+  .countdown-card.tone-red   .countdown-value { color: var(--danger); }
+  .countdown-card.tone-gold  .countdown-value,
+  .countdown-card.tone-today .countdown-value { color: var(--gold-dark); }
+  .countdown-card.tone-past  .countdown-value { color: var(--fg-muted); }
+  .countdown-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+  }
+
+  .attention-list { display: flex; flex-direction: column; gap: 6px; }
+  .attention-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .attention-item:hover { border-color: var(--gold); }
+  .attention-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .attention-dot.urgency-overdue { background: var(--danger); }
+  .attention-dot.urgency-today   { background: var(--gold); }
+  .attention-dot.urgency-week    { background: var(--navy); }
+  .attention-dot.urgency-future  { background: var(--fg-muted); }
+  .attention-text { flex: 1; min-width: 0; font-size: 13px; }
+  .attention-text .item-title { font-weight: 500; color: var(--fg); }
+  .attention-text .item-meta  {
+    font-size: 11px;
+    color: var(--fg-muted);
+    margin-top: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.02em;
+  }
+  .attention-empty {
+    text-align: center;
+    color: var(--fg-muted);
+    font-style: italic;
+    font-family: 'Playfair Display', serif;
+    padding: 14px 0;
+    font-size: 14px;
+  }
+
+  .activity-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 18px;
+  }
+  .activity-column {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .activity-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-item:hover .activity-item-title { color: var(--gold-dark); }
+  .activity-item-title {
+    font-weight: 500;
+    color: var(--fg);
+    transition: color 0.15s;
+  }
+  .activity-item-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 3px;
+  }
+
+  @media (max-width: 900px) {
+    .countdown-row { grid-template-columns: 1fr; }
+    .activity-grid { grid-template-columns: 1fr; }
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -3224,82 +3354,252 @@
   // ============================================================
   // DASHBOARD
   // ============================================================
+  // ============================================================
+  // DASHBOARD (Phase 0 #3) — chair landing page
+  //
+  // Pure render layer: reads only from existing state (brothers,
+  // candidates, tasks, events, notes, nametagPrints). No new queries,
+  // no new tables.
+  //
+  // DASHBOARD_DATES is the single source of truth for the countdown
+  // panel — edit ISO strings here when the president confirms a date.
+  // BFC Mixer is approximate; everything else is locked.
+  // ============================================================
+  const DASHBOARD_DATES = {
+    softLaunch:   { label: 'Soft launch',   iso: '2026-08-15' },
+    hardDeadline: { label: 'Hard deadline', iso: '2026-08-25' },
+    bfcMixer:     { label: 'BFC Mixer',     iso: '2026-09-08' },
+  };
+
+  function getCountdownState(targetIso) {
+    const target = new Date(targetIso + 'T00:00:00');
+    const todayLocal = new Date();
+    todayLocal.setHours(0, 0, 0, 0);
+    const diffMs = target.getTime() - Date.now();
+    const dayDiff = Math.round((target.getTime() - todayLocal.getTime()) / 86400000);
+
+    if (dayDiff < 0)  return { value: 'PAST',  tone: 'past' };
+    if (dayDiff === 0) return { value: 'TODAY', tone: 'today' };
+    if (diffMs > 0 && diffMs <= 48 * 3600000) {
+      const hours = Math.max(1, Math.ceil(diffMs / 3600000));
+      return { value: hours + 'h', tone: 'red' };
+    }
+    let tone;
+    if (dayDiff <= 7)       tone = 'red';
+    else if (dayDiff <= 14) tone = 'gold';
+    else                    tone = 'navy';
+    return { value: dayDiff + 'd', tone };
+  }
+
+  function renderCountdownCard(label, iso) {
+    const st = getCountdownState(iso);
+    const d = new Date(iso + 'T00:00:00');
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return '<div class="countdown-card tone-' + st.tone + '">' +
+      '<div class="countdown-label">' + escapeHtml(label) + '</div>' +
+      '<div class="countdown-value">' + escapeHtml(st.value) + '</div>' +
+      '<div class="countdown-date">' + escapeHtml(dateStr) + '</div>' +
+    '</div>';
+  }
+
+  function getTaskUrgency(t) {
+    if (!t.dueISO || t.status === 'done') return 'future';
+    const due = new Date(t.dueISO).getTime();
+    if (due < Date.now()) return 'overdue';
+    const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+    if (due <= todayEnd.getTime()) return 'today';
+    if (due <= Date.now() + 7 * 86400000) return 'week';
+    return 'future';
+  }
+
+  function renderAttentionItem(label, meta, urgency, onclick) {
+    return '<div class="attention-item" onclick="' + onclick + '">' +
+      '<div class="attention-dot urgency-' + urgency + '"></div>' +
+      '<div class="attention-text">' +
+        '<div class="item-title">' + escapeHtml(label) + '</div>' +
+        (meta ? '<div class="item-meta">' + escapeHtml(meta) + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
   function renderDashboard() {
     const me = MEMBERS.find(m => m.id === state.currentUser);
-    const openTasks = state.tasks.filter(t => t.status !== 'done').length;
-    const myTasks = state.tasks.filter(t => (t.assigneeId === state.currentUser || t.assigneeId === 'all') && t.status !== 'done').length;
-    const doneTasks = state.tasks.filter(t => t.status === 'done').length;
-    const activeCands = state.candidates.filter(c => c.status !== 'rejected').length;
-    const now = Date.now();
-    const upcomingEvents = state.events
-      .filter(e => eventEndTime(e) >= now - 3600000)
-      .sort((a, b) => new Date(a.startISO) - new Date(b.startISO))
-      .slice(0, 4);
-    const pinnedNotes = state.notes.filter(n => n.pinned).slice(0, 2);
-    const recentNotes = state.notes.slice().filter(n => !n.pinned).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5);
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    const now = Date.now();
 
-    const pinnedBanner = pinnedNotes.length > 0 ?
-      '<div class="pinned-banner">' +
-        '<div class="pinned-banner-title">✦ Pinned · ' + pinnedNotes.length + ' note' + (pinnedNotes.length > 1 ? 's' : '') + '</div>' +
-        pinnedNotes.map(n =>
-          '<div style="cursor:pointer; padding:4px 0;" onclick="openNoteEditor(\'' + n.id + '\')">' +
-            '<h3>' + escapeHtml(n.title || 'Untitled') + '</h3>' +
-            '<p>' + escapeHtml((n.body || '').slice(0, 120)) + ((n.body || '').length > 120 ? '…' : '') + '</p>' +
-          '</div>'
-        ).join('') +
-      '</div>' : '';
+    // ----- Pinned notes (preserved from old dashboard) -----
+    const pinnedNotes = state.notes.filter(n => n.pinned).slice(0, 2);
+    const pinnedBanner = pinnedNotes.length > 0
+      ? '<div class="pinned-banner">' +
+          '<div class="pinned-banner-title">✦ Pinned · ' + pinnedNotes.length + ' note' + (pinnedNotes.length > 1 ? 's' : '') + '</div>' +
+          pinnedNotes.map(n =>
+            '<div style="cursor:pointer; padding:4px 0;" onclick="openNoteEditor(\'' + n.id + '\')">' +
+              '<h3>' + escapeHtml(n.title || 'Untitled') + '</h3>' +
+              '<p>' + escapeHtml((n.body || '').slice(0, 120)) + ((n.body || '').length > 120 ? '…' : '') + '</p>' +
+            '</div>'
+          ).join('') +
+        '</div>'
+      : '';
+
+    // ----- Countdown row -----
+    const countdownRow = '<div class="countdown-row">' +
+      renderCountdownCard(DASHBOARD_DATES.softLaunch.label,   DASHBOARD_DATES.softLaunch.iso) +
+      renderCountdownCard(DASHBOARD_DATES.hardDeadline.label, DASHBOARD_DATES.hardDeadline.iso) +
+      renderCountdownCard(DASHBOARD_DATES.bfcMixer.label,     DASHBOARD_DATES.bfcMixer.iso) +
+    '</div>';
+
+    // ----- Status cards (4) -----
+    const activeBrothers = state.brothers.filter(b => (b.status || 'active') === 'active').length;
+    const activeCands = state.candidates.filter(c => c.status !== 'rejected').length;
+    const openTasks = state.tasks.filter(t => t.status !== 'done').length;
+    const upcomingEventsCount = state.events.filter(e => {
+      const s = new Date(e.startISO).getTime();
+      return s >= now && s <= now + 14 * 86400000;
+    }).length;
+
+    const statRow = '<div class="stat-row">' +
+      '<div class="stat-card" onclick="switchView(\'brothers\')" style="cursor:pointer;">' +
+        '<div class="stat-label">Brothers</div>' +
+        '<div class="stat-value">' + activeBrothers + '</div>' +
+      '</div>' +
+      '<div class="stat-card" onclick="switchView(\'candidates\')" style="cursor:pointer;">' +
+        '<div class="stat-label">Candidates</div>' +
+        '<div class="stat-value">' + activeCands + '</div>' +
+      '</div>' +
+      '<div class="stat-card" onclick="switchView(\'tasks\')" style="cursor:pointer;">' +
+        '<div class="stat-label">Open tasks</div>' +
+        '<div class="stat-value"><em>' + openTasks + '</em></div>' +
+      '</div>' +
+      '<div class="stat-card" onclick="switchView(\'calendar\')" style="cursor:pointer;">' +
+        '<div class="stat-label">Upcoming (14d)</div>' +
+        '<div class="stat-value">' + upcomingEventsCount + '</div>' +
+      '</div>' +
+    '</div>';
+
+    // ----- Needs attention -----
+    const openTasksWithDue = state.tasks.filter(t => t.status !== 'done' && t.dueISO);
+    const overdue = openTasksWithDue
+      .filter(t => getTaskUrgency(t) === 'overdue')
+      .sort((a, b) => new Date(a.dueISO) - new Date(b.dueISO))
+      .slice(0, 5);
+    const dueSoon = openTasksWithDue
+      .filter(t => { const u = getTaskUrgency(t); return u === 'today' || u === 'week'; })
+      .sort((a, b) => new Date(a.dueISO) - new Date(b.dueISO))
+      .slice(0, 5);
+    const eventsThisWeek = state.events
+      .filter(e => {
+        const s = new Date(e.startISO).getTime();
+        return s >= now && s <= now + 7 * 86400000;
+      })
+      .sort((a, b) => new Date(a.startISO) - new Date(b.startISO));
+
+    const taskMeta = (t) => {
+      const due = new Date(t.dueISO);
+      const dueStr = due.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const assignee = MEMBERS.find(m => m.id === t.assigneeId);
+      return dueStr + (assignee ? ' · ' + assignee.name : '');
+    };
+
+    const attentionTasks = (overdue.length === 0 && dueSoon.length === 0)
+      ? '<div class="attention-empty">No tasks needing attention.</div>'
+      : '<div class="attention-list">' +
+          overdue.map(t =>
+            renderAttentionItem(t.text || '(untitled task)', taskMeta(t), 'overdue', 'openTaskModal(\'' + t.id + '\')')
+          ).join('') +
+          dueSoon.map(t =>
+            renderAttentionItem(t.text || '(untitled task)', taskMeta(t), getTaskUrgency(t), 'openTaskModal(\'' + t.id + '\')')
+          ).join('') +
+        '</div>';
+
+    const attentionEvents = eventsThisWeek.length === 0
+      ? '<div class="attention-empty">Nothing scheduled this week.</div>'
+      : '<div class="attention-list">' +
+          eventsThisWeek.map(e => {
+            const d = new Date(e.startISO);
+            const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const isToday = d.toDateString() === new Date().toDateString();
+            const urgency = isToday ? 'today' : 'week';
+            return renderAttentionItem(e.title, dateStr + ' · ' + formatEventTime(e), urgency, 'openEventModal(null, \'' + e.id + '\')');
+          }).join('') +
+        '</div>';
+
+    const attentionGrid = '<div class="dash-grid">' +
+      '<div class="section-card">' +
+        '<div class="section-title">Tasks needing attention <button class="btn small" onclick="switchView(\'tasks\')">→</button></div>' +
+        attentionTasks +
+      '</div>' +
+      '<div class="section-card">' +
+        '<div class="section-title">Events this week <button class="btn small" onclick="switchView(\'calendar\')">→</button></div>' +
+        attentionEvents +
+      '</div>' +
+    '</div>';
+
+    // ----- Recent activity -----
+    const recentNotes = state.notes
+      .filter(n => !n.pinned)
+      .slice()
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      .slice(0, 5);
+    const completedTasks = state.tasks
+      .filter(t => t.status === 'done')
+      .slice()
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      .slice(0, 5);
+    const recentPrints = state.nametagPrints.slice(0, 5); // already DESC by printed_at from loader
+
+    const recentNotesCol = '<div class="activity-column">' +
+      '<div class="section-title" style="margin-bottom:8px;">Recent notes</div>' +
+      (recentNotes.length === 0
+        ? '<div class="attention-empty" style="padding:8px 0;">No notes yet.</div>'
+        : recentNotes.map(n => {
+            const author = MEMBERS.find(m => m.id === n.authorId);
+            return '<div class="activity-item" onclick="openNoteEditor(\'' + n.id + '\')">' +
+              '<div class="activity-item-title">' + escapeHtml(n.title || 'Untitled') + '</div>' +
+              '<div class="activity-item-meta">' + (author ? escapeHtml(author.name) : '—') + ' · ' + timeAgo(n.updatedAt) + '</div>' +
+            '</div>';
+          }).join('')) +
+    '</div>';
+
+    const completedTasksCol = '<div class="activity-column">' +
+      '<div class="section-title" style="margin-bottom:8px;">Recently completed</div>' +
+      (completedTasks.length === 0
+        ? '<div class="attention-empty" style="padding:8px 0;">No completed tasks yet.</div>'
+        : completedTasks.map(t => {
+            const assignee = MEMBERS.find(m => m.id === t.assigneeId);
+            return '<div class="activity-item" onclick="openTaskModal(\'' + t.id + '\')">' +
+              '<div class="activity-item-title">' + escapeHtml(t.text || '(untitled)') + '</div>' +
+              '<div class="activity-item-meta">' + (assignee ? escapeHtml(assignee.name) : '—') + ' · ' + timeAgo(t.updatedAt || t.createdAt) + '</div>' +
+            '</div>';
+          }).join('')) +
+    '</div>';
+
+    const recentPrintsCol = '<div class="activity-column">' +
+      '<div class="section-title" style="margin-bottom:8px;">Recent nametag prints</div>' +
+      (recentPrints.length === 0
+        ? '<div class="attention-empty" style="padding:8px 0;">No prints yet.</div>'
+        : recentPrints.map(p => {
+            const b = state.brothers.find(x => x.id === p.brother_id);
+            const brotherName = b ? ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim() : '(unknown)';
+            const printedMs = new Date(p.printed_at).getTime();
+            return '<div class="activity-item" onclick="openBrotherModal(\'' + p.brother_id + '\')">' +
+              '<div class="activity-item-title">' + escapeHtml(brotherName) + ' · ' + escapeHtml(p.event_label) + '</div>' +
+              '<div class="activity-item-meta">' + timeAgo(printedMs) + '</div>' +
+            '</div>';
+          }).join('')) +
+    '</div>';
+
+    const activityGrid = '<div class="activity-grid">' + recentNotesCol + completedTasksCol + recentPrintsCol + '</div>';
 
     return '' +
       '<div style="font-family:\'Playfair Display\',serif; font-size:22px; font-style:italic; color:var(--fg-soft); margin-bottom:22px;">' +
         greeting + ', ' + (me ? escapeHtml(me.name) : '') + '.' +
       '</div>' +
       pinnedBanner +
-      '<div class="stat-row">' +
-        '<div class="stat-card"><div class="stat-label">Candidates</div><div class="stat-value">' + activeCands + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">My open tasks</div><div class="stat-value"><em>' + myTasks + '</em></div></div>' +
-        '<div class="stat-card"><div class="stat-label">Team open</div><div class="stat-value">' + openTasks + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Done</div><div class="stat-value">' + doneTasks + '</div></div>' +
-      '</div>' +
-      '<div class="dash-grid">' +
-        '<div class="section-card">' +
-          '<div class="section-title">Recent notes <button class="btn small" onclick="switchView(\'notes\')">View all →</button></div>' +
-          (recentNotes.length === 0
-            ? '<div style="color:var(--fg-muted); font-style:italic; font-family:Playfair Display,serif; padding: 16px 0;">No notes yet.</div>'
-            : recentNotes.map(n => {
-                const author = MEMBERS.find(m => m.id === n.authorId);
-                return '<div class="recent-item" onclick="openNoteEditor(\'' + n.id + '\')">' +
-                  '<div style="min-width:0; flex:1;">' +
-                    '<div class="recent-title">' + escapeHtml(n.title || 'Untitled') + '</div>' +
-                    '<div class="recent-meta" style="margin-top:4px">' + (author ? escapeHtml(author.name) : '—') + ' · ' + timeAgo(n.updatedAt) + '</div>' +
-                  '</div>' +
-                  '<div style="font-family:\'Playfair Display\',serif; font-size:22px; color:var(--gold); opacity:0.5;">→</div>' +
-                '</div>';
-              }).join('')) +
-        '</div>' +
-        '<div class="section-card">' +
-          '<div class="section-title">Coming up <button class="btn small" onclick="switchView(\'calendar\')">→</button></div>' +
-          (upcomingEvents.length === 0
-            ? '<div style="color:var(--fg-muted); font-style:italic; font-family:Playfair Display,serif;">Nothing scheduled.</div>'
-            : upcomingEvents.map(e => {
-                const d = new Date(e.startISO);
-                const cat = state.eventCategories.find(c => c.id === e.categoryId) || state.eventCategories[0];
-                return '<div class="recent-item" onclick="openEventModal(null, \'' + e.id + '\')">' +
-                  '<div style="display:flex; gap:12px; align-items:center; min-width:0;">' +
-                    '<div style="text-align:center; min-width:40px;">' +
-                      '<div style="font-family:\'JetBrains Mono\',monospace; font-size:9px; color:var(--fg-muted); text-transform:uppercase;">' + d.toLocaleDateString('en-US',{month:'short'}) + '</div>' +
-                      '<div style="font-family:\'Playfair Display\',serif; font-size:22px; font-weight:700; color:' + (cat ? cat.color : '#0A2463') + ';">' + d.getDate() + '</div>' +
-                    '</div>' +
-                    '<div style="min-width:0;">' +
-                      '<div class="recent-title" style="font-size:14px">' + escapeHtml(e.title) + '</div>' +
-                      '<div class="recent-meta" style="margin-top:2px;">' + formatEventTime(e) + (e.location ? ' · ' + escapeHtml(e.location) : '') + '</div>' +
-                    '</div>' +
-                  '</div>' +
-                '</div>';
-              }).join('')) +
-        '</div>' +
-      '</div>';
+      countdownRow +
+      statRow +
+      attentionGrid +
+      activityGrid;
   }
 
   // ============================================================
@@ -3839,6 +4139,7 @@
     const t = state.tasks.find(x => x.id === id);
     if (!t) return;
     t.status = t.status === 'done' ? 'todo' : 'done';
+    t.updatedAt = Date.now();  // bump so dashboard's "Recently completed" picks this up
     await persist('tasks', state.tasks);
     render();
   };
