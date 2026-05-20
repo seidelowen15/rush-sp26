@@ -2059,6 +2059,103 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--fg-muted); }
+
+  /* ========== BROTHERS (chair-facing only) ========== */
+  .brothers-toolbar {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    align-items: center; margin-bottom: 16px;
+  }
+  .brothers-toolbar .search { flex: 1; min-width: 220px; }
+  .brothers-toolbar .field-select { font-size: 13px; padding: 7px 10px; }
+  .brothers-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--fg-muted); margin-left: auto;
+  }
+  .brothers-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden;
+  }
+  .brothers-table thead th {
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600; font-size: 11px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--fg-muted);
+    background: var(--parchment);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 12px;
+  }
+  [data-theme="dark"] .brothers-table thead th { background: rgba(212, 166, 74, 0.06); }
+  .brothers-table tbody td {
+    padding: 11px 12px; border-bottom: 1px solid var(--line);
+    vertical-align: middle; font-size: 13px;
+  }
+  .brothers-table tbody tr { cursor: pointer; }
+  .brothers-table tbody tr:hover { background: var(--parchment); }
+  [data-theme="dark"] .brothers-table tbody tr:hover { background: rgba(212, 166, 74, 0.06); }
+  .brothers-table tbody tr:last-child td { border-bottom: none; }
+  .brother-name { font-weight: 600; color: var(--navy); }
+  [data-theme="dark"] .brother-name { color: var(--gold); }
+  .brother-psu { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--fg-muted); }
+  .brother-badge {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--line-strong); color: var(--fg);
+    margin-right: 4px; white-space: nowrap;
+  }
+  .brother-badge.role-exec { background: var(--navy); color: var(--paper); }
+  .brother-badge.role-pm   { background: var(--gold); color: var(--navy-dark); }
+  .brother-badge.status-active    { background: rgba(63, 138, 92, 0.18); color: #2c6b46; }
+  .brother-badge.status-on_leave  { background: rgba(212, 166, 74, 0.22); color: var(--gold-dark); }
+  .brother-badge.status-alumnus,
+  .brother-badge.status-graduated,
+  .brother-badge.status-unknown   { background: var(--line); color: var(--fg-muted); }
+  .chair-only-tag {
+    display: inline-block; background: transparent;
+    color: var(--gold-dark);
+    border: 1px dashed var(--gold);
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 1px 7px;
+    margin-left: 6px;
+  }
+  .brother-profile-row {
+    display: grid; grid-template-columns: 140px 1fr;
+    gap: 14px; padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .brother-profile-row:last-child { border-bottom: none; }
+  .brother-profile-row .key {
+    color: var(--fg-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .brother-demographics-block {
+    background: rgba(212, 166, 74, 0.08);
+    border: 1px dashed var(--gold);
+    border-radius: 8px; padding: 12px 16px;
+    margin-top: 14px;
+  }
+  .brother-demographics-block .demographics-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; text-transform: uppercase;
+    color: var(--gold-dark); margin-bottom: 6px;
+    letter-spacing: 0.08em;
+  }
+  .brother-internal-notes {
+    margin-top: 14px;
+    background: var(--parchment);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    white-space: pre-wrap;
+  }
+  [data-theme="dark"] .brother-internal-notes { background: rgba(212, 166, 74, 0.06); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -2343,6 +2440,15 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="brotherModal">
+  <div class="modal wide">
+    <button class="modal-close" onclick="closeBrotherModal()">✕</button>
+    <div class="modal-title" id="brotherModalTitle">Brother</div>
+    <div class="modal-sub" id="brotherModalSub">Profile · chair-visible</div>
+    <div id="brotherModalBody"></div>
+  </div>
+</div>
+
 <script>
   // ============================================================
   // SUPABASE CONFIG
@@ -2472,6 +2578,15 @@
         }, 250);
       });
     });
+    // Brothers table is not in TABLE_MAP (different storage shape).
+    // Subscribe separately and refresh only the brothers slice.
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'brothers' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => {
+        await loadBrothers();
+        render();
+      }, 250);
+    });
     channel.subscribe();
   }
 
@@ -2566,6 +2681,15 @@
     notesViewMode: 'grid',
     candidateFilter: 'all',
     notesSearchQuery: '',
+
+    // Brothers view (chair-facing only). Demographics live on the row
+    // objects but are only surfaced in the profile modal, never in any
+    // function exported as reusable. PNM-facing surfaces (nametags,
+    // flyer) will query a separate brothers_public view downstream.
+    brothers: [],
+    brothersLoaded: false,
+    brotherFilter: { search: '', pc: 'all', role: 'all', status: 'active' },
+    viewingBrotherId: null,
   };
 
   // ============================================================
@@ -2596,6 +2720,10 @@
         Storage.get('task_cats'),
         Storage.get('schedule_events'),
       ]);
+      // Brothers bypasses the JSONB-blob Storage layer because it's a
+      // properly-typed table. Awaited separately so a brothers load
+      // failure doesn't block the rest of the workspace from booting.
+      await loadBrothers();
       state.notes = notes || [];
       state.tasks = tasks || [];
       state.events = events || [];
@@ -2690,6 +2818,7 @@
           '<div class="view ' + (state.currentView === 'schedule' ? 'active' : '') + '">' + renderSchedule() + '</div>' +
           '<div class="view ' + (state.currentView === 'tasks' ? 'active' : '') + '">' + renderTasks() + '</div>' +
           '<div class="view ' + (state.currentView === 'candidates' ? 'active' : '') + '">' + renderCandidates() + '</div>' +
+          '<div class="view ' + (state.currentView === 'brothers' ? 'active' : '') + '">' + renderBrothers() + '</div>' +
         '</main>' +
       '</div>';
 
@@ -2771,6 +2900,7 @@
       { id: 'schedule', label: 'Schedule', icon: '◷', count: state.scheduleEvents.length },
       { id: 'tasks', label: 'Tasks', icon: '◈', count: openTasks },
       { id: 'candidates', label: 'Candidates', icon: '★', count: state.candidates.length },
+      { id: 'brothers', label: 'Brothers', icon: '◍', count: state.brothers.length },
     ];
 
     return '' +
@@ -2833,6 +2963,7 @@
       schedule: ['Schedule', '& events'],
       tasks: ['Tasks', '& to-dos'],
       candidates: ['Candidates', ''],
+      brothers: ['Brothers', '& chapter'],
     };
     const parts = titles[state.currentView];
     const main = parts[0], em = parts[1];
@@ -4540,6 +4671,206 @@
       else if (document.getElementById('schedModal').classList.contains('active')) { e.preventDefault(); saveSched(); }
     }
   });
+
+  // ============================================================
+  // BROTHERS  (Phase 0, chair-facing only)
+  //
+  // Bypasses the Storage(key)->JSONB-blob layer used by the other
+  // entities, because public.brothers has real typed columns
+  // (psu_id, demographics, etc.) -- querying by structured fields
+  // is the whole point of having that schema.
+  //
+  // Demographics (gender, ethnicity, hometown_*, international) are
+  // rendered ONLY inside renderBrotherProfile below. Do NOT factor
+  // that block out into a reusable component -- when nametags or the
+  // demographic flyer ship, they will query a brothers_public view
+  // that excludes demographics at the SELECT layer.
+  // ============================================================
+  async function loadBrothers() {
+    if (!sb) return;
+    try {
+      const { data, error } = await sb
+        .from('brothers')
+        .select('id, psu_id, first_name, last_name, preferred_name, pronouns, psu_email, personal_email, phone, status, pledge_class, pledge_class_code, role, gender, ethnicity, hometown_city, hometown_state, international, major_primary, major_secondary, minor_primary, minor_secondary, year_in_school, semester_number, contact_preference, address, birthday, internal_notes, verified_at')
+        .order('last_name', { ascending: true, nullsFirst: false })
+        .order('first_name', { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      state.brothers = data || [];
+      state.brothersLoaded = true;
+    } catch (e) {
+      console.error('loadBrothers failed', e);
+      state.brothers = [];
+      state.brothersLoaded = true;
+    }
+  }
+
+  function isExecRole(r) {
+    if (!r) return false;
+    const x = String(r).toLowerCase();
+    return /(president|vp|chair|treasurer|secretary|founder)/.test(x);
+  }
+
+  function renderBrothers() {
+    const f = state.brotherFilter;
+    const all = state.brothers;
+    const pcCodes = Array.from(new Set(all.map(b => b.pledge_class_code).filter(Boolean))).sort();
+
+    const filtered = all.filter(b => {
+      if (f.pc !== 'all' && b.pledge_class_code !== f.pc) return false;
+      if (f.role === 'exec' && !isExecRole(b.role)) return false;
+      if (f.role === 'pm' && b.role !== 'PM') return false;
+      if (f.role === 'brother' && (isExecRole(b.role) || b.role === 'PM')) return false;
+      if (f.status !== 'all' && (b.status || 'active') !== f.status) return false;
+      if (f.search) {
+        const q = f.search.trim().toLowerCase();
+        const hay = [b.first_name, b.last_name, b.preferred_name, b.psu_id, b.major_primary, b.address]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    return '' +
+      '<div class="brothers-toolbar">' +
+        '<input type="search" class="field-input search" placeholder="Search name, PSU ID, major, address..." ' +
+          'value="' + escapeHtml(f.search) + '" oninput="setBrotherFilter(\'search\', this.value)">' +
+        '<select class="field-select" onchange="setBrotherFilter(\'pc\', this.value)">' +
+          '<option value="all"' + (f.pc === 'all' ? ' selected' : '') + '>All pledge classes</option>' +
+          pcCodes.map(c => '<option value="' + escapeHtml(c) + '"' + (f.pc === c ? ' selected' : '') + '>' + escapeHtml(c) + '</option>').join('') +
+        '</select>' +
+        '<select class="field-select" onchange="setBrotherFilter(\'role\', this.value)">' +
+          '<option value="all"' + (f.role === 'all' ? ' selected' : '') + '>All roles</option>' +
+          '<option value="exec"' + (f.role === 'exec' ? ' selected' : '') + '>Exec</option>' +
+          '<option value="pm"' + (f.role === 'pm' ? ' selected' : '') + '>PM</option>' +
+          '<option value="brother"' + (f.role === 'brother' ? ' selected' : '') + '>Brother</option>' +
+        '</select>' +
+        '<select class="field-select" onchange="setBrotherFilter(\'status\', this.value)">' +
+          '<option value="all"' + (f.status === 'all' ? ' selected' : '') + '>All statuses</option>' +
+          '<option value="active"' + (f.status === 'active' ? ' selected' : '') + '>Active</option>' +
+          '<option value="on_leave"' + (f.status === 'on_leave' ? ' selected' : '') + '>On leave</option>' +
+          '<option value="alumnus"' + (f.status === 'alumnus' ? ' selected' : '') + '>Alumnus</option>' +
+          '<option value="graduated"' + (f.status === 'graduated' ? ' selected' : '') + '>Graduated</option>' +
+          '<option value="unknown"' + (f.status === 'unknown' ? ' selected' : '') + '>Unknown</option>' +
+        '</select>' +
+        '<span class="brothers-count">' + filtered.length + ' of ' + all.length + '</span>' +
+      '</div>' +
+      (!state.brothersLoaded
+        ? '<div class="empty-state"><div class="ornament">◍</div><div style="font-family:\'Playfair Display\',serif; font-size:20px; font-style:italic;">Loading the chapter...</div></div>'
+        : filtered.length === 0
+          ? '<div class="empty-state"><div class="ornament">◍</div>' +
+              '<div style="font-family:\'Playfair Display\',serif; font-size:22px; font-style:italic; margin-bottom:8px;">No brothers match these filters</div>' +
+              '<div style="font-size:13px;">Loosen a filter or clear the search.</div>' +
+            '</div>'
+          : renderBrothersTable(filtered));
+  }
+
+  function renderBrothersTable(rows) {
+    return '<table class="brothers-table">' +
+      '<thead><tr>' +
+        '<th>Name</th><th>PSU ID</th><th>Pledge class</th><th>Role</th><th>Status</th><th>Major</th>' +
+      '</tr></thead><tbody>' +
+      rows.map(b => {
+        const nameRaw = ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim();
+        const name = nameRaw ? escapeHtml(nameRaw) : '<span style="color:var(--fg-muted)">(unnamed)</span>';
+        const roleBadge = b.role
+          ? '<span class="brother-badge ' + (b.role === 'PM' ? 'role-pm' : isExecRole(b.role) ? 'role-exec' : '') + '">' +
+              escapeHtml(b.role) +
+              (b.role === 'PM' ? ' · chair-only' : '') +
+            '</span>'
+          : '';
+        const status = b.status || 'unknown';
+        return '<tr onclick="openBrotherModal(\'' + b.id + '\')">' +
+          '<td class="brother-name">' + name + '</td>' +
+          '<td class="brother-psu">' + escapeHtml(b.psu_id || '—') + '</td>' +
+          '<td>' + escapeHtml(b.pledge_class || '—') + '</td>' +
+          '<td>' + roleBadge + '</td>' +
+          '<td><span class="brother-badge status-' + status + '">' + status + '</span></td>' +
+          '<td>' + escapeHtml(b.major_primary || '—') + '</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  function renderBrotherProfileRow(key, value, opts) {
+    if (value === null || value === undefined || value === '') return '';
+    const tag = opts && opts.tag ? ' <span class="chair-only-tag">' + opts.tag + '</span>' : '';
+    return '<div class="brother-profile-row">' +
+      '<div class="key">' + escapeHtml(key) + '</div>' +
+      '<div>' + escapeHtml(String(value)) + tag + '</div>' +
+    '</div>';
+  }
+
+  function renderBrotherProfile(b) {
+    // Demographics block is rendered INLINE here, intentionally not
+    // factored into a reusable helper. PNM-facing slices must query
+    // a brothers_public view that excludes these columns.
+    const hasDemographics = b.gender || b.ethnicity || b.hometown_city || b.hometown_state || b.international != null;
+    const demoBlock = hasDemographics
+      ? '<div class="brother-demographics-block">' +
+          '<div class="demographics-label">demographics · chair-only</div>' +
+          renderBrotherProfileRow('Gender', b.gender) +
+          renderBrotherProfileRow('Ethnicity', b.ethnicity) +
+          renderBrotherProfileRow('Hometown', [b.hometown_city, b.hometown_state].filter(Boolean).join(', ')) +
+          renderBrotherProfileRow('International', b.international === true ? 'yes' : b.international === false ? 'no' : null) +
+        '</div>'
+      : '';
+
+    const internalNotesBlock = b.internal_notes
+      ? '<div class="brother-internal-notes"><strong>Internal notes:</strong> ' + escapeHtml(b.internal_notes) + '</div>'
+      : '';
+
+    const verifiedDisplay = b.verified_at
+      ? new Date(b.verified_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+      : 'never';
+
+    return '' +
+      renderBrotherProfileRow('PSU ID', b.psu_id) +
+      renderBrotherProfileRow('Pronouns', b.pronouns) +
+      renderBrotherProfileRow('PSU email', b.psu_email) +
+      renderBrotherProfileRow('Personal email', b.personal_email) +
+      renderBrotherProfileRow('Phone', b.phone) +
+      renderBrotherProfileRow('Pledge class', b.pledge_class) +
+      renderBrotherProfileRow('Role', b.role, b.role === 'PM' ? { tag: 'hidden on PNM views' } : null) +
+      renderBrotherProfileRow('Status', b.status) +
+      renderBrotherProfileRow('Major', [b.major_primary, b.major_secondary].filter(Boolean).join(' / ')) +
+      renderBrotherProfileRow('Minor', [b.minor_primary, b.minor_secondary].filter(Boolean).join(' / ')) +
+      renderBrotherProfileRow('Year', b.year_in_school) +
+      renderBrotherProfileRow('Semester #', b.semester_number) +
+      renderBrotherProfileRow('Contact pref', b.contact_preference) +
+      renderBrotherProfileRow('Address', b.address) +
+      renderBrotherProfileRow('Birthday', b.birthday) +
+      renderBrotherProfileRow('Verified', verifiedDisplay) +
+      demoBlock +
+      internalNotesBlock;
+  }
+
+  window.setBrotherFilter = function(key, value) {
+    state.brotherFilter = Object.assign({}, state.brotherFilter, { [key]: value });
+    render();
+    if (key === 'search') {
+      const el = document.querySelector('.brothers-toolbar .search');
+      if (el) {
+        el.focus();
+        el.setSelectionRange(value.length, value.length);
+      }
+    }
+  };
+
+  window.openBrotherModal = function(id) {
+    const b = state.brothers.find(x => x.id === id);
+    if (!b) return;
+    state.viewingBrotherId = id;
+    const display = ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim() || '(unnamed)';
+    document.getElementById('brotherModalTitle').textContent = display;
+    document.getElementById('brotherModalSub').textContent = (b.pledge_class || 'No pledge class') + ' · chair-visible profile';
+    document.getElementById('brotherModalBody').innerHTML = renderBrotherProfile(b);
+    document.getElementById('brotherModal').classList.add('active');
+  };
+
+  window.closeBrotherModal = function() {
+    document.getElementById('brotherModal').classList.remove('active');
+    state.viewingBrotherId = null;
+  };
 
   if (sb) init();
 </script>
