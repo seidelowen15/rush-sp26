@@ -4194,7 +4194,29 @@
     taskTemplatesExcluded: new Set(),
     taskTemplatesExpanded: null,         // initialized on first Templates render based on current phase
     chapterDatesEditingKey: null,
+    // ============================================================
+    // Phase 0 #4 v2 — Task System Redesign state fields
+    // ============================================================
+    tasksView: 'mine',                  // 'mine' | 'all'
+    tasksShowFuture: false,
+    tasksShowCompleted: false,
+    expandedTaskId: null,
+    driftBannerDismissed: false,
+    duplicatesBannerDismissed: false,   // hydrated from localStorage at boot (see hydration block below)
+    whatChangedDismissed: false,
+    lastVisitedAt: null,                // null = un-hydrated; ensureLastVisitedAtLoaded() lazy-reads localStorage
+    calendarDayDetail: null,            // ISO date string when day-detail panel is open
+    taskModalQuickMode: false,
+    taskEditingTemplateId: null,
+    taskTemplateAddingForPhase: null,
   };
+
+  // ============================================================
+  // Phase 0 #4 v2 — hydrate persistent v2 state from localStorage
+  // ============================================================
+  try {
+    state.duplicatesBannerDismissed = localStorage.getItem('rush26_duplicatesBannerDismissed') === '1';
+  } catch (_) {}
 
   // ============================================================
   // TOAST
@@ -4234,6 +4256,11 @@
       // Phase 0 #4: typed-table reads for parametric to-do list.
       await loadTaskTemplates();
       await loadChapterDates();
+      // Phase 0 #4 v2: silent boot-time sync. No toast, no banner — generation
+      // is invisible to chairs at boot. Explicit saveChapterDate triggers
+      // surface counts in their own toast.
+      migrateExistingTasksToV2();
+      await autoSyncTasksToTemplates({ boot: true });
       state.notes = notes || [];
       state.tasks = tasks || [];
       state.events = events || [];
@@ -5266,115 +5293,7 @@
   // ============================================================
   // TASKS
   // ============================================================
-  function renderActiveTasksView() {
-    const filteredTasks = state.tasks.filter(t => {
-      if (state.taskFilterAssignee !== 'all') {
-        // When filtering by a specific person, include their individually-assigned tasks
-        // AND tasks assigned to "All" (since those apply to everyone).
-        if (t.assigneeId !== state.taskFilterAssignee && t.assigneeId !== 'all') return false;
-      }
-      if (state.taskFilterCategory !== 'all' && t.categoryId !== state.taskFilterCategory) return false;
-      return true;
-    });
-
-    const columns = [
-      { id: 'todo', title: 'To do', filter: t => t.status === 'todo' },
-      { id: 'progress', title: 'In progress', filter: t => t.status === 'progress' },
-      { id: 'done', title: 'Done', filter: t => t.status === 'done' },
-    ];
-
-    return '' +
-      '<div class="toolbar">' +
-        '<button class="btn primary" onclick="openTaskModal()">+ New task</button>' +
-      '</div>' +
-      '<div class="legend">' +
-        '<span>Assignee:</span>' +
-        '<button class="chip ' + (state.taskFilterAssignee === 'all' ? 'selected' : '') + '" onclick="setTaskFilter(\'assignee\',\'all\')">Everyone</button>' +
-        MEMBERS.map(m =>
-          '<button class="chip ' + (state.taskFilterAssignee === m.id ? 'selected' : '') + '" onclick="setTaskFilter(\'assignee\',\'' + m.id + '\')" style="' + (state.taskFilterAssignee === m.id ? 'background:' + m.color + '; border-color:' + m.color + '; color:var(--paper)' : '') + '">' +
-            '<span class="chip-dot" style="background:' + (state.taskFilterAssignee === m.id ? 'var(--paper)' : m.color) + '"></span>' + escapeHtml(m.name) +
-          '</button>'
-        ).join('') +
-      '</div>' +
-      '<div class="legend">' +
-        '<span>Category:</span>' +
-        '<button class="chip ' + (state.taskFilterCategory === 'all' ? 'selected' : '') + '" onclick="setTaskFilter(\'category\',\'all\')">All</button>' +
-        state.taskCategories.map(c =>
-          '<button class="chip ' + (state.taskFilterCategory === c.id ? 'selected' : '') + '" onclick="setTaskFilter(\'category\',\'' + c.id + '\')" style="' + (state.taskFilterCategory === c.id ? 'background:' + c.color + '; border-color:' + c.color + '; color:var(--paper)' : '') + '">' +
-            '<span class="chip-dot" style="background:' + (state.taskFilterCategory === c.id ? 'var(--paper)' : c.color) + '"></span>' + escapeHtml(c.name) +
-          '</button>'
-        ).join('') +
-      '</div>' +
-      '<div class="tasks-layout">' +
-        columns.map(col => {
-          const items = filteredTasks.filter(col.filter).sort((a, b) => {
-            const prio = { high: 0, normal: 1, low: 2 };
-            return (prio[a.priority || 'normal'] - prio[b.priority || 'normal']) || (b.createdAt - a.createdAt);
-          });
-          return '<div class="task-column">' +
-            '<div class="task-column-header">' +
-              '<div class="task-column-title">' + col.title + '</div>' +
-              '<div class="task-count">' + items.length + '</div>' +
-            '</div>' +
-            items.map(t => renderTaskCard(t, col.id)).join('') +
-            (items.length === 0 ? '<div style="color:var(--fg-muted); font-style:italic; font-family:Playfair Display,serif; font-size:14px; padding:16px 0; text-align:center;">Nothing here.</div>' : '') +
-          '</div>';
-        }).join('') +
-      '</div>';
-  }
-
-  function renderTaskCard(t, colId) {
-    const isAll = t.assigneeId === 'all';
-    const assignee = isAll ? null : MEMBERS.find(m => m.id === t.assigneeId);
-    const cat = state.taskCategories.find(c => c.id === t.categoryId) || state.taskCategories[0];
-    const accentColor = cat ? cat.color : '#6B7280';
-
-    let dueChip = '';
-    if (t.dueISO && t.status !== 'done') {
-      const due = new Date(t.dueISO);
-      const now = new Date();
-      const diffDays = Math.round((due - now) / 86400000);
-      const dueLabel = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      if (diffDays < 0) dueChip = '<span class="task-chip overdue">⚠ Overdue · ' + dueLabel + '</span>';
-      else if (diffDays <= 2) dueChip = '<span class="task-chip due-soon">Due ' + dueLabel + '</span>';
-      else dueChip = '<span class="task-chip">Due ' + dueLabel + '</span>';
-    }
-
-    const priorityChip = t.priority === 'high' ? '<span class="task-chip priority-high">‼ High</span>' : '';
-
-    const assigneeChip = isAll
-      ? '<span class="task-chip assignee" style="background:var(--gold-dark)">✦ All</span>'
-      : (assignee ? '<span class="task-chip assignee" style="background:' + assignee.color + '">' + escapeHtml(assignee.name) + '</span>' : '');
-
-    return '<div class="task-item ' + (t.status === 'done' ? 'done' : '') + '">' +
-      '<div class="task-accent" style="background:' + accentColor + '"></div>' +
-      '<div class="task-checkbox" onclick="toggleTaskDone(\'' + t.id + '\')">' + (t.status === 'done' ? '✓' : '') + '</div>' +
-      '<div class="task-content">' +
-        '<div class="task-text" onclick="openTaskModal(\'' + t.id + '\')">' + escapeHtml(t.text) + '</div>' +
-        '<div class="task-meta-row">' +
-          assigneeChip +
-          (cat ? '<span class="task-chip"><span style="width:7px;height:7px;border-radius:50%;background:' + cat.color + ';display:inline-block"></span>' + escapeHtml(cat.name) + '</span>' : '') +
-          priorityChip +
-          dueChip +
-        '</div>' +
-        '<div class="task-footer">' +
-          '<span>' + timeAgo(t.createdAt) + '</span>' +
-          '<div style="display:flex; gap:4px;">' +
-            (colId === 'todo' ? '<button class="task-action-btn" onclick="moveTask(\'' + t.id + '\', \'progress\')">Start</button>' : '') +
-            (colId === 'progress' ? '<button class="task-action-btn" onclick="moveTask(\'' + t.id + '\', \'todo\')">← Back</button><button class="task-action-btn" onclick="moveTask(\'' + t.id + '\', \'done\')">Done ✓</button>' : '') +
-            (colId === 'done' ? '<button class="task-action-btn" onclick="moveTask(\'' + t.id + '\', \'progress\')">Reopen</button>' : '') +
-            '<button class="task-action-btn" onclick="openTaskModal(\'' + t.id + '\')">Edit</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  }
-
-  window.setTaskFilter = function(kind, val) {
-    if (kind === 'assignee') state.taskFilterAssignee = val;
-    else state.taskFilterCategory = val;
-    render();
-  };
+// renderActiveTasksView() is defined in the v2 module appended below — search for `function renderActiveTasksView()` (formerly _v2)
 
   window.toggleTaskDone = async function(id) {
     const t = state.tasks.find(x => x.id === id);
@@ -5422,6 +5341,7 @@
   window.closeTaskModal = function() {
     document.getElementById('taskModal').classList.remove('active');
     state.editingTaskId = null;
+    state.taskModalQuickMode = false;  // v2: always reset quick-mode on close (symmetric with openQuickAdd)
   };
 
   function renderTaskAssigneeChips() {
@@ -5504,15 +5424,31 @@
 
     if (state.editingTaskId) {
       const t = state.tasks.find(x => x.id === state.editingTaskId);
-      if (t) Object.assign(t, {
-        text,
-        assigneeId: state.editingTask.assigneeId,
-        categoryId: state.editingTask.categoryId,
-        status: state.editingTask.status,
-        priority, notes,
-        dueISO: dueStr ? new Date(dueStr + 'T23:59:59').toISOString() : null,
-        updatedAt: Date.now(),
-      });
+      if (t) {
+        // Phase 0 #4 v2: detect edits to flip task.edited (drift gate) and stamp dueISOMovedAt.
+        // status changes alone don't count as edits; only structural fields (title, description,
+        // assignee, dueISO) do. notes counted per Owen clarification 3.
+        const newDueISO = dueStr ? new Date(dueStr + 'T23:59:59').toISOString() : null;
+        const userEdited = (
+          text                          !== (t.text || '') ||
+          notes                         !== (t.notes || '') ||
+          state.editingTask.assigneeId  !== (t.assigneeId || null) ||
+          newDueISO                     !== (t.dueISO || null)
+        );
+        const dueChanged = newDueISO !== (t.dueISO || null);
+        Object.assign(t, {
+          text,
+          assigneeId: state.editingTask.assigneeId,
+          categoryId: state.editingTask.categoryId,
+          status: state.editingTask.status,
+          priority, notes,
+          dueISO: newDueISO,
+          updatedAt: Date.now(),
+        });
+        if (userEdited && t.templateId)     t.edited = true;
+        if (dueChanged)                     t.dueISOMovedAt = Date.now();
+        if (userEdited && t.driftFromAnchor) t.driftFromAnchor = false;  // explicit edit reconciles drift
+      }
     } else {
       state.tasks.push({
         id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -5522,9 +5458,11 @@
         status: state.editingTask.status,
         priority, notes,
         dueISO: dueStr ? new Date(dueStr + 'T23:59:59').toISOString() : null,
+        dueISOMovedAt: Date.now(),  // v2: stamp for what-changed banner
         authorId: state.currentUser,
         createdAt: Date.now(), updatedAt: Date.now(),
       });
+      state.taskModalQuickMode = false;  // v2: reset quick-add mode after save
     }
     await persist('tasks', state.tasks);
     toast('Task saved', 'success');
@@ -7729,8 +7667,18 @@
 
   function ensureTemplatesExpansionInitialized() {
     if (state.taskTemplatesExpanded) return;
+    // v2 (Diff 3): expand current phase + any phase containing overdue tasks
     const current = getCurrentRushPhase();
-    state.taskTemplatesExpanded = new Set(current ? [current] : []);
+    const expanded = new Set(current ? [current] : []);
+    const overdueByPhase = {};
+    (state.tasks || []).forEach(function(t) {
+      if (!t.templateId || t.status === 'done' || !t.dueISO) return;
+      if (new Date(t.dueISO).getTime() >= Date.now()) return;
+      const tmpl = (state.taskTemplates || []).find(function(x) { return x.id === t.templateId; });
+      if (tmpl) overdueByPhase[tmpl.phase] = true;
+    });
+    Object.keys(overdueByPhase).forEach(function(p) { expanded.add(p); });
+    state.taskTemplatesExpanded = expanded;
   }
 
   function getPhaseStats(phaseTemplates, byKey) {
@@ -7818,15 +7766,8 @@
           '</select>' +
           '<span class="brothers-count">' + filtered.length + ' template' + (filtered.length === 1 ? '' : 's') + '</span>' +
         '</div>' +
-        '<div class="templates-generate-bar">' +
-          '<div class="generate-plan">' +
-            '<strong>' + plan.canGenerate + '</strong> to generate' +
-            (plan.skipExisting    ? ' · <span class="plan-aside">' + plan.skipExisting    + ' already generated</span>' : '') +
-            (plan.skipAnchorless  ? ' · <span class="plan-aside">' + plan.skipAnchorless  + ' missing anchor</span>' : '') +
-            (plan.skipExcluded    ? ' · <span class="plan-aside">' + plan.skipExcluded    + ' excluded</span>' : '') +
-          '</div>' +
-          '<button class="btn primary" ' + (generateDisabled ? 'disabled ' : '') + 'onclick="generateTasksFromTemplates()">Generate tasks from templates</button>' +
-        '</div>' +
+        // v2 (Diff 3): manual Generate removed. Tasks auto-sync continuously.
+
         (templates.length === 0
           ? '<div class="empty-state-polished">' +
               '<div class="empty-glyph">◌</div>' +
@@ -7856,15 +7797,22 @@
         '</div>' +
       '</div>' +
       (expanded
-        ? '<div class="phase-group-body">' + templates.map(function(t) { return renderTemplateRow(t, byKey); }).join('') + '</div>'
+        ? '<div class="phase-group-body">' +
+            templates.map(function(t) { return renderTemplateRow(t, byKey); }).join('') +
+            (state.taskTemplateAddingForPhase === phaseId
+              ? renderTemplateEditForm({ phase: phaseId, days_offset: 0, priority: 'med' }, 'add')
+              : '<button class="add-template-btn" onclick="openAddTemplate(\'' + phaseId + '\')">+ Add template to ' + escapeHtml(PHASE_LABELS[phaseId]) + '</button>') +
+          '</div>'
         : '') +
     '</div>';
   }
 
   function renderTemplateRow(t, byKey) {
+    // v2 (Diff 3): click row to expand inline edit form. Removed excluded
+    // checkbox (auto-sync replaces Generate). Removed "generated" badge
+    // (hide marker from chairs per v2 spec). Anchor-missing + priority
+    // badges retained.
     const calc = getTemplateCalculatedDue(t, byKey);
-    const existing = findTaskForTemplate(t.id);
-    const excluded = state.taskTemplatesExcluded.has(t.id);
     const anchor = byKey[t.anchor_date_key];
     const dueDisplay = calc
       ? calc.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
@@ -7878,24 +7826,16 @@
       const m = MEMBERS.find(function(x) { return x.id === t.default_assignee; });
       return m ? m.name : t.default_assignee;
     })();
-    let statusBadge = '';
-    if (!calc) statusBadge = '<span class="template-status anchor-missing">anchor missing</span>';
-    else if (existing) {
-      const taskMs = new Date(existing.dueISO || 0).getTime();
-      const drifted = Math.abs(taskMs - calc.getTime()) > 86400000;
-      statusBadge = drifted
-        ? '<span class="template-status drifted">drifted</span>'
-        : '<span class="template-status generated">generated</span>';
-    }
-    return '<div class="template-row' + (excluded ? ' excluded' : '') + (existing ? ' has-task' : '') + '">' +
-      '<label class="template-exclude" title="Skip this template on Generate">' +
-        '<input type="checkbox" ' + (excluded ? 'checked' : '') + ' onchange="toggleTemplateExcluded(\'' + t.id + '\')">' +
-      '</label>' +
-      '<div class="template-body">' +
-        '<div class="template-title">' + escapeHtml(t.title) +
-          (t.priority === 'high' ? ' <span class="template-priority high">high</span>' :
-           t.priority === 'low'  ? ' <span class="template-priority low">low</span>' : '') +
-          ' ' + statusBadge +
+    const isEditing = state.taskEditingTemplateId === t.id;
+    // priority badge: hide 'med' default (v2 spec), show only high/low
+    const priorityBadge =
+      t.priority === 'high' ? ' <span class="template-priority high">high</span>' :
+      t.priority === 'low'  ? ' <span class="template-priority low">low</span>'  : '';
+    // anchor-missing is the only retained status badge; generated/drifted markers removed
+    const anchorBadge = !calc ? ' <span class="template-status anchor-missing">anchor missing</span>' : '';
+    return '<div class="template-row' + (isEditing ? ' editing' : '') + '">' +
+      '<div class="template-body" onclick="editTemplateInline(\'' + t.id + '\')">' +
+        '<div class="template-title">' + escapeHtml(t.title) + priorityBadge + anchorBadge +
         '</div>' +
         (t.description ? '<div class="template-desc">' + escapeHtml(t.description) + '</div>' : '') +
         '<div class="template-meta">' +
@@ -7905,6 +7845,7 @@
           (t.category ? ' · <span class="template-category">' + escapeHtml(t.category) + '</span>' : '') +
         '</div>' +
       '</div>' +
+      (isEditing ? renderTemplateEditForm(t, 'edit') : '') +
     '</div>';
   }
 
@@ -8071,7 +8012,15 @@
       row.updated_by = state.currentUser;
       row.updated_at = new Date().toISOString();
       state.chapterDatesEditingKey = null;
-      toast('Saved ' + row.label + (newIso ? ' → ' + newIso : ' → TBD'), 'success');
+      // Phase 0 #4 v2: auto-sync tasks against the updated anchor.
+      // Surfaces counts in the toast per Owen clarification 2.
+      const syncResult = await autoSyncTasksToTemplates();
+      const parts = [];
+      if (syncResult.created)     parts.push(syncResult.created + ' tasks created');
+      if (syncResult.updated)     parts.push(syncResult.updated + ' updated');
+      if (syncResult.driftMarked) parts.push(syncResult.driftMarked + ' drift');
+      const syncMsg = parts.length ? ' · ' + parts.join(', ') : '';
+      toast('Saved ' + row.label + (newIso ? ' → ' + newIso : ' → TBD') + syncMsg, 'success');
       render();
     } catch (e) {
       console.error('saveChapterDate failed', e);
@@ -8279,7 +8228,7 @@
   // ============================================================
   // §3 — RENDERERS (Active Tasks list-based view)
   // ============================================================
-  function renderActiveTasksView_v2() {
+  function renderActiveTasksView() {
     ensureLastVisitedAtLoaded();
     const scope = state.tasksView || 'mine';
     const allTasks = tasksForView(scope);
