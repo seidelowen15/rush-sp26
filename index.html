@@ -3461,6 +3461,7 @@
   .cal-task-chip:hover { background: rgba(212, 166, 74, 0.55); }
   .cal-task-chip.fading { opacity: 0; pointer-events: none; }
   .cal-task-chip.done { opacity: 0.55; text-decoration: line-through; }
+  .cal-task-chip.overdue { background: rgba(184, 40, 50, 0.18); color: var(--danger); }
   .cal-task-chip .cal-task-check {
     width: 12px; height: 12px;
     accent-color: var(--navy);
@@ -5129,24 +5130,135 @@
           const dateKey = c.date.toDateString();
           const dayEvents = filteredEvents.filter(e => new Date(e.startISO).toDateString() === dateKey)
                              .sort((a, b) => new Date(a.startISO) - new Date(b.startISO));
+          // v2 (Diff 4): task chips on day cells; open tasks only.
+          const dayTasks = state.tasks
+            .filter(t => t.dueISO && t.status !== 'done' && new Date(t.dueISO).toDateString() === dateKey)
+            .sort((a, b) => (a.priority === 'high' ? -1 : 1) - (b.priority === 'high' ? -1 : 1));
+          const itemBudget = 4;
+          const visibleEvents = dayEvents.slice(0, itemBudget);
+          const remainingBudget = Math.max(0, itemBudget - visibleEvents.length);
+          const visibleTasks = dayTasks.slice(0, remainingBudget);
+          const overflowCount = (dayEvents.length - visibleEvents.length) + (dayTasks.length - visibleTasks.length);
           const isToday = dateKey === todayStr;
           const dateIso = c.date.toISOString();
-          return '<div class="cal-cell ' + (c.otherMonth ? 'other-month' : '') + ' ' + (isToday ? 'today' : '') + '" onclick="openEventModal(\'' + dateIso + '\')">' +
+          // v2 (Diff 4): empty cells keep v1 quick-add; populated cells route to day-detail.
+          const cellOnClick = (dayEvents.length + dayTasks.length) === 0
+            ? 'openEventModal(\'' + dateIso + '\')'
+            : 'openCalDayDetail(\'' + dateIso + '\')';
+          return '<div class="cal-cell ' + (c.otherMonth ? 'other-month' : '') + ' ' + (isToday ? 'today' : '') + '" onclick="' + cellOnClick + '">' +
             '<div class="cal-date">' + c.date.getDate() + '</div>' +
-            dayEvents.slice(0, 3).map(e => {
+            visibleEvents.map(e => {
               const cat = state.eventCategories.find(cc => cc.id === e.categoryId) || state.eventCategories[0];
               return '<div class="cal-event" style="background:' + (cat ? cat.color : '#0A2463') + '" onclick="event.stopPropagation(); openEventModal(null, \'' + e.id + '\')">' + escapeHtml(formatEventShort(e)) + '</div>';
             }).join('') +
-            (dayEvents.length > 3 ? '<div style="font-size:9px; color:var(--fg-muted); font-family:\'JetBrains Mono\',monospace;">+' + (dayEvents.length - 3) + '</div>' : '') +
+            visibleTasks.map(t => {
+              const isOverdue = new Date(t.dueISO).getTime() < Date.now();
+              const chipClasses = 'cal-task-chip' + (isOverdue ? ' overdue' : '');
+              return '<div class="' + chipClasses + '" onclick="event.stopPropagation(); openTaskModal(\'' + t.id + '\')">' +
+                '<input type="checkbox" class="cal-task-check" onclick="event.stopPropagation(); toggleTaskDoneFromChip(\'' + t.id + '\')">' +
+                '<span class="cal-task-text">' + escapeHtml(t.title) + '</span>' +
+              '</div>';
+            }).join('') +
+            (overflowCount > 0 ? '<div style="font-size:9px; color:var(--fg-muted); font-family:\'JetBrains Mono\',monospace;">+' + overflowCount + '</div>' : '') +
           '</div>';
         }).join('') +
       '</div>' +
-      '<div style="margin-top: 14px; font-family:\'JetBrains Mono\',monospace; font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.12em;">Click a day to add · click an event to edit</div>';
+      (state.calendarDayDetail ? renderCalDayDetail() : '') +
+      '<div style="margin-top: 14px; font-family:\'JetBrains Mono\',monospace; font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.12em;">Empty day click to add · populated day click to inspect · chip checkbox toggles done</div>';
   }
 
   window.setCalFilter = function(id) { state.calendarFilterCategory = id; render(); };
   window.calNav = function(dir) { state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() + dir, 1); render(); };
   window.calToday = function() { state.calendarDate = new Date(); render(); };
+
+  // ============================================================
+  // CAL DAY DETAIL PANEL (Diff 4)
+  // Slide-from-right panel showing all events + tasks for one day.
+  // CSS shipped in Diff 1. Body scroll lock applied explicitly.
+  // ============================================================
+  function renderCalDayDetail() {
+    const iso = state.calendarDayDetail;
+    if (!iso) return '';
+    const d = new Date(iso);
+    const dateKey = d.toDateString();
+    const headLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const dayEvents = state.events
+      .filter(function(e) { return new Date(e.startISO).toDateString() === dateKey; })
+      .sort(function(a, b) { return new Date(a.startISO) - new Date(b.startISO); });
+    const dayTasks = state.tasks
+      .filter(function(t) { return t.dueISO && new Date(t.dueISO).toDateString() === dateKey; })
+      .sort(function(a, b) { return (a.status === 'done' ? 1 : 0) - (b.status === 'done' ? 1 : 0); });
+    return '<div class="cal-day-detail-overlay" onclick="if (event.target === this) closeCalDayDetail()">' +
+      '<div class="cal-day-detail">' +
+        '<button class="cal-day-detail-close" onclick="closeCalDayDetail()">&times;</button>' +
+        '<div class="cal-day-detail-head">' + escapeHtml(headLabel) + '</div>' +
+        '<div class="cal-day-section">' +
+          '<div class="cal-day-section-label">Events (' + dayEvents.length + ')</div>' +
+          (dayEvents.length === 0
+            ? '<div style="font-size:13px; color:var(--fg-muted); padding:6px 0;">No events scheduled.</div>'
+            : dayEvents.map(function(e) {
+                const cat = state.eventCategories.find(function(cc) { return cc.id === e.categoryId; });
+                const timeStr = new Date(e.startISO).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                return '<div class="cal-day-item" onclick="closeCalDayDetail(); openEventModal(null, \'' + e.id + '\')">' +
+                  '<div class="cal-day-item-title">' +
+                    (cat ? '<span class="chip-dot" style="background:' + cat.color + '; margin-right:6px;"></span>' : '') +
+                    escapeHtml(e.title || e.name || '(untitled)') +
+                  '</div>' +
+                  '<div class="cal-day-item-time">' + escapeHtml(timeStr) + '</div>' +
+                '</div>';
+              }).join('')
+          ) +
+          '<button class="btn small" style="margin-top:8px;" onclick="closeCalDayDetail(); openEventModal(\'' + iso + '\')">+ Event</button>' +
+        '</div>' +
+        '<div class="cal-day-section">' +
+          '<div class="cal-day-section-label">Tasks (' + dayTasks.length + ')</div>' +
+          (dayTasks.length === 0
+            ? '<div style="font-size:13px; color:var(--fg-muted); padding:6px 0;">No tasks due.</div>'
+            : dayTasks.map(function(t) {
+                const isDone = t.status === 'done';
+                const priorityLabel = t.priority === 'high' ? ' · high' : (t.priority === 'low' ? ' · low' : '');
+                return '<div class="cal-day-item' + (isDone ? ' done' : '') + '" onclick="closeCalDayDetail(); openTaskModal(\'' + t.id + '\')" style="' + (isDone ? 'opacity:0.55; text-decoration:line-through;' : '') + '">' +
+                  '<div class="cal-day-item-title">' + escapeHtml(t.title) + '</div>' +
+                  '<div class="cal-day-item-time">' + (isDone ? 'done' : 'open') + escapeHtml(priorityLabel) + '</div>' +
+                '</div>';
+              }).join('')
+          ) +
+          '<button class="btn small" style="margin-top:8px;" onclick="closeCalDayDetail(); openTaskModal(null)">+ Task</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.openCalDayDetail = function(dateIso) {
+    state.calendarDayDetail = dateIso;
+    document.body.style.overflow = 'hidden';
+    render();
+  };
+
+  window.closeCalDayDetail = function() {
+    state.calendarDayDetail = null;
+    document.body.style.overflow = '';
+    render();
+  };
+
+  window.toggleTaskDoneFromChip = async function(taskId) {
+    const t = state.tasks.find(function(x) { return x.id === taskId; });
+    if (!t) return;
+    const wasDone = t.status === 'done';
+    t.status = wasDone ? 'open' : 'done';
+    t.completedAt = wasDone ? null : new Date().toISOString();
+    render();
+    try {
+      await sb.from('entities').update({ blob: t }).eq('id', taskId);
+    } catch (err) {
+      t.status = wasDone ? 'done' : 'open';
+      t.completedAt = wasDone ? new Date().toISOString() : null;
+      render();
+      console.error('[diff4] toggleTaskDoneFromChip failed', err);
+      if (typeof toast === 'function') toast('Could not update task - reverted', 'error');
+    }
+  };
+
 
   // ============================================================
   // EVENT MODAL
@@ -8753,3 +8865,4 @@
 </script>
 </body>
 </html>
+     
