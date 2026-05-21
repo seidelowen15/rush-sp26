@@ -2940,7 +2940,12 @@
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
+    cursor: pointer;
   }
+  /* §F dashboard polish: alternating above/below label staggering */
+  .rush-milestone.below .milestone-label { top: 18px; }
+  .rush-milestone.above .milestone-label { top: auto; bottom: 18px; }
+  .rush-milestone:hover .milestone-marker { transform: scale(1.15); transition: transform 0.15s; }
   .milestone-marker {
     width: 14px; height: 14px;
     border-radius: 50%;
@@ -4188,6 +4193,7 @@
     // ============================================================
     taskTemplates: [],
     taskTemplatesLoaded: false,
+    milestoneDetail: null,            // §G dashboard polish — selected milestone key (or 'tpl:<id>')
     chapterDates: [],
     chapterDatesLoaded: false,
     tasksSubview: 'active',
@@ -4611,21 +4617,84 @@
     return            { id: 'active-rush',  label: 'Active rush',          sub: 'Events underway. PNM evaluations in motion.' };
   }
 
+  // §A dashboard polish: domain shifted from [bfc-180d, bfc] to [soft_launch, selection_start].
+  // Spans the full rush arc. Fallbacks if chapter_dates not yet pinned.
   function getRushTimelinePct(t) {
-    const bfc = new Date(DASHBOARD_DATES.bfcMixer.iso + 'T00:00:00').getTime();
-    const start = bfc - RUSH_TIMELINE_DAYS * 86400000;
+    const byKey = getChapterDatesByKey();
+    const slIso  = (byKey.soft_launch     && byKey.soft_launch.iso_date)     || null;
+    const ssIso  = (byKey.selection_start && byKey.selection_start.iso_date) || null;
+    const bfcIso = (byKey.bfc_mixer       && byKey.bfc_mixer.iso_date)       || DASHBOARD_DATES.bfcMixer.iso;
+    const start = slIso ? new Date(slIso + 'T00:00:00').getTime() : (Date.now() - 30 * 86400000);
+    const end   = ssIso ? new Date(ssIso + 'T00:00:00').getTime() : (new Date(bfcIso + 'T00:00:00').getTime() + 60 * 86400000);
     const ms = (typeof t === 'string') ? new Date(t + 'T00:00:00').getTime() : t;
     if (ms < start) return 0;
-    if (ms > bfc)   return 100;
-    return ((ms - start) / (bfc - start)) * 100;
+    if (ms > end)   return 100;
+    return ((ms - start) / (end - start)) * 100;
   }
 
+  // §B dashboard polish: template-derived milestone lookup with two silent-skip paths.
+  function getMilestoneFromTemplate(titleSubstring, byKey) {
+    if (!state.taskTemplatesLoaded) return null;  // suppress warnings during boot load
+    const lower = titleSubstring.toLowerCase();
+    const tmpl = (state.taskTemplates || []).find(function(t) {
+      return (t.title || '').toLowerCase().indexOf(lower) !== -1;
+    });
+    if (!tmpl) {
+      console.warn('[dashboard] milestone template containing "' + titleSubstring + '" not found in state.taskTemplates - was it renamed?');
+      return null;
+    }
+    const calc = getTemplateCalculatedDue(tmpl, byKey);
+    if (!calc) {
+      console.warn('[dashboard] milestone "' + tmpl.title + '" anchor "' + tmpl.anchor_date_key + '" has no iso_date - not yet pinned');
+      return null;
+    }
+    const isoDate = calc.toISOString().slice(0, 10);
+    return { id: tmpl.id, label: tmpl.title, iso: isoDate };
+  }
+
+  // §C dashboard polish: full rewrite. 8 candidate milestones:
+  //   5 chapter_dates: soft_launch, hard_deadline, bfc_mixer, rush_week_start, selection_start
+  //   2 template-derived: Brother Mingle (BM), Run interviews (INT)
+  //   1 explicit omit: Bid Delivery (no template/chapter_date source yet)
+  // Short codes shown on bar; full label+date in title="" attribute for hover.
+  // Labels stagger: even index -> below, odd index -> above (§F).
   function renderRushCenterpiece() {
     const phase = getRushPhase();
+    const byKey = getChapterDatesByKey();
+    const SHORT_CODES = {
+      soft_launch: 'SL', hard_deadline: 'HD', bfc_mixer: 'BFC',
+      rush_week_start: 'RWS', selection_start: 'SS'
+    };
+    const candidates = [];
+    ['soft_launch', 'hard_deadline', 'bfc_mixer', 'rush_week_start', 'selection_start'].forEach(function(k) {
+      const cd = byKey[k];
+      if (cd && cd.iso_date) {
+        candidates.push({ key: k, iso: cd.iso_date, label: cd.label, code: SHORT_CODES[k] });
+      } else {
+        console.warn('[dashboard] chapter_date "' + k + '" has no iso_date - not yet pinned');
+      }
+    });
+    const bm = getMilestoneFromTemplate('brother mingle', byKey);
+    if (bm) candidates.push({ key: 'tpl:' + bm.id, iso: bm.iso, label: bm.label, code: 'BM' });
+    const ri = getMilestoneFromTemplate('run interviews', byKey);
+    if (ri) candidates.push({ key: 'tpl:' + ri.id, iso: ri.iso, label: ri.label, code: 'INT' });
+    // Bid Delivery: intentionally omitted (no source data). Surface in iteration backlog when template or chapter_date exists.
+
+    candidates.sort(function(a, b) { return new Date(a.iso) - new Date(b.iso); });
+
     const todayPct = getRushTimelinePct(Date.now());
-    const slPct  = getRushTimelinePct(DASHBOARD_DATES.softLaunch.iso);
-    const hdPct  = getRushTimelinePct(DASHBOARD_DATES.hardDeadline.iso);
-    const bfcPct = getRushTimelinePct(DASHBOARD_DATES.bfcMixer.iso);
+    const milestonesHtml = candidates.map(function(m, i) {
+      const pct = getRushTimelinePct(m.iso);
+      const position = (i % 2 === 0) ? 'below' : 'above';
+      const dateStr = new Date(m.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const fullLabel = m.label + ' · ' + dateStr;
+      const markerClass = 'milestone-marker' + (m.key === 'bfc_mixer' ? ' bfc' : '');
+      return '<div class="rush-milestone ' + position + '" style="left:' + pct.toFixed(1) + '%" onclick="openMilestoneDetail(\'' + m.key + '\')" title="' + escapeHtml(fullLabel) + '">' +
+        '<div class="' + markerClass + '"></div>' +
+        '<div class="milestone-label">' + escapeHtml(m.code) + '</div>' +
+      '</div>';
+    }).join('');
+
     return '<div class="rush-centerpiece phase-' + phase.id + '">' +
       '<div class="centerpiece-head">' +
         '<div class="centerpiece-eyebrow">Rush Week Progress</div>' +
@@ -4638,18 +4707,7 @@
       '<div class="rush-progress-wrap">' +
         '<div class="rush-progress-track">' +
           '<div class="rush-progress-fill" style="width:' + todayPct.toFixed(1) + '%"></div>' +
-          '<div class="rush-milestone" style="left:' + slPct.toFixed(1) + '%">' +
-            '<div class="milestone-marker"></div>' +
-            '<div class="milestone-label">Soft launch · Aug 15</div>' +
-          '</div>' +
-          '<div class="rush-milestone" style="left:' + hdPct.toFixed(1) + '%">' +
-            '<div class="milestone-marker"></div>' +
-            '<div class="milestone-label">Hard deadline · Aug 25</div>' +
-          '</div>' +
-          '<div class="rush-milestone" style="left:' + bfcPct.toFixed(1) + '%">' +
-            '<div class="milestone-marker bfc"></div>' +
-            '<div class="milestone-label">BFC Mixer · Sep 8</div>' +
-          '</div>' +
+          milestonesHtml +
           '<div class="rush-today" style="left:' + todayPct.toFixed(1) + '%">' +
             '<div class="today-line"></div>' +
             '<div class="today-label">TODAY</div>' +
@@ -4725,6 +4783,19 @@
       return s >= now && s <= now + 7 * 86400000;
     }).length;
 
+    // §D dashboard polish: gold-italic em wrap only when threshold met.
+    // Rule: overdueCount >= 1 OR (assignedToCurrentUser AND dueWithin24h >= 1)
+    const overdueCount = state.tasks.filter(function(t) {
+      return t.status !== 'done' && t.dueISO && new Date(t.dueISO).getTime() < Date.now();
+    }).length;
+    const myTasks24h = state.tasks.filter(function(t) {
+      if (t.status === 'done' || !t.dueISO || t.assigneeId !== state.currentUser) return false;
+      const due = new Date(t.dueISO).getTime();
+      return due > Date.now() && due - Date.now() <= 24 * 3600000;
+    }).length;
+    const needsAttentionUrgent = overdueCount >= 1 || myTasks24h >= 1;
+    const openTasksDisplay = needsAttentionUrgent ? ('<em>' + openTasks + '</em>') : String(openTasks);
+
     const kpiRow = '<div class="kpi-row">' +
       '<div class="kpi-card" onclick="switchView(\'brothers\')">' +
         '<div class="kpi-label">Active members</div>' +
@@ -4736,9 +4807,10 @@
         '<div class="kpi-value">' + activeCands + '</div>' +
         '<div class="kpi-meta">candidates tracked</div>' +
       '</div>' +
-      '<div class="kpi-card" onclick="switchView(\'tasks\')">' +
+      // §H: Needs Attention card sets tasksView=all before switching (surface all open tasks).
+      '<div class="kpi-card" onclick="state.tasksView = \'all\'; switchView(\'tasks\')">' +
         '<div class="kpi-label">Needs attention</div>' +
-        '<div class="kpi-value"><em>' + openTasks + '</em></div>' +
+        '<div class="kpi-value">' + openTasksDisplay + '</div>' +
         '<div class="kpi-meta">open tasks</div>' +
       '</div>' +
       '<div class="kpi-card" onclick="switchView(\'calendar\')">' +
@@ -4868,6 +4940,7 @@
       kpiRow +
       attentionGrid +
       activityGrid +
+      (state.milestoneDetail ? renderMilestoneDetail() : '') +
     '</div>';
   }
 
@@ -5230,6 +5303,7 @@
   }
 
   window.openCalDayDetail = function(dateIso) {
+    state.milestoneDetail = null;  // §G mutual exclusion
     state.calendarDayDetail = dateIso;
     document.body.style.overflow = 'hidden';
     render();
@@ -5240,6 +5314,78 @@
     document.body.style.overflow = '';
     render();
   };
+
+  // ============================================================
+  // MILESTONE DETAIL PANEL (Dashboard polish §G)
+  // Slide-from-right panel showing tasks anchored to a milestone.
+  // Reuses .cal-day-detail-overlay styling (shipped Diff 1).
+  // Mutually exclusive with state.calendarDayDetail.
+  // ============================================================
+  function renderMilestoneDetail() {
+    const key = state.milestoneDetail;
+    if (!key) return '';
+    const byKey = getChapterDatesByKey();
+    let milestoneLabel, milestoneIso, matchingTasks;
+    if (key.indexOf('tpl:') === 0) {
+      const templateId = key.slice(4);
+      const tmpl = (state.taskTemplates || []).find(function(t) { return t.id === templateId; });
+      if (!tmpl) return '';
+      milestoneLabel = tmpl.title;
+      const calc = getTemplateCalculatedDue(tmpl, byKey);
+      milestoneIso = calc ? calc.toISOString().slice(0, 10) : null;
+      matchingTasks = (state.tasks || []).filter(function(t) { return t.templateId === templateId; });
+    } else {
+      const cd = byKey[key];
+      if (!cd) return '';
+      milestoneLabel = cd.label;
+      milestoneIso = cd.iso_date;
+      const templateIds = (state.taskTemplates || []).filter(function(t) { return t.anchor_date_key === key; }).map(function(t) { return t.id; });
+      matchingTasks = (state.tasks || []).filter(function(t) { return templateIds.indexOf(t.templateId) !== -1; });
+    }
+    matchingTasks = matchingTasks.slice().sort(function(a, b) {
+      const ad = a.dueISO ? new Date(a.dueISO).getTime() : Infinity;
+      const bd = b.dueISO ? new Date(b.dueISO).getTime() : Infinity;
+      return ad - bd;
+    });
+    const dateStr = milestoneIso ? new Date(milestoneIso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Date not pinned';
+    return '<div class="cal-day-detail-overlay" onclick="if (event.target === this) closeMilestoneDetail()">' +
+      '<div class="cal-day-detail">' +
+        '<button class="cal-day-detail-close" onclick="closeMilestoneDetail()">&times;</button>' +
+        '<div class="cal-day-detail-head">' + escapeHtml(milestoneLabel) + '</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace; font-size:11px; color:var(--fg-muted); margin-bottom:14px;">' + escapeHtml(dateStr) + '</div>' +
+        '<div class="cal-day-section">' +
+          '<div class="cal-day-section-label">Tasks anchored here (' + matchingTasks.length + ')</div>' +
+          (matchingTasks.length === 0
+            ? '<div style="font-size:13px; color:var(--fg-muted); padding:6px 0;">No tasks anchored to this milestone.</div>'
+            : matchingTasks.map(function(t) {
+                const isDone = t.status === 'done';
+                const due = t.dueISO ? new Date(t.dueISO).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-';
+                const assignee = MEMBERS.find(function(m) { return m.id === t.assigneeId; });
+                const meta = due + (assignee ? ' · ' + assignee.name : '');
+                return '<div class="cal-day-item' + (isDone ? ' done' : '') + '" onclick="closeMilestoneDetail(); openTaskModal(\'' + t.id + '\')" style="' + (isDone ? 'opacity:0.55; text-decoration:line-through;' : '') + '">' +
+                  '<div class="cal-day-item-title">' + escapeHtml(t.text || t.title || '(untitled task)') + '</div>' +
+                  '<div class="cal-day-item-time">' + escapeHtml(meta) + '</div>' +
+                '</div>';
+              }).join('')
+          ) +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.openMilestoneDetail = function(key) {
+    state.calendarDayDetail = null;
+    state.milestoneDetail = key;
+    document.body.style.overflow = 'hidden';
+    render();
+  };
+
+  window.closeMilestoneDetail = function() {
+    state.milestoneDetail = null;
+    document.body.style.overflow = '';
+    render();
+  };
+
 
   window.toggleTaskDoneFromChip = async function(taskId) {
     const t = state.tasks.find(function(x) { return x.id === taskId; });
