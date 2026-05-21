@@ -587,6 +587,307 @@
     background: var(--paper);
   }
 
+  /* ── Tag help button + expandable panel ───────────────────────── */
+  .tag-help-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--fg-soft);
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-style: italic;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s ease;
+    line-height: 1;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .tag-help-btn:hover {
+    border-color: var(--navy);
+    color: var(--navy);
+    background: var(--paper);
+    box-shadow: 0 2px 8px rgba(10, 36, 99, 0.08);
+  }
+  .tag-help-btn.active {
+    border-color: var(--gold);
+    color: var(--gold-dark);
+    background: var(--parchment);
+  }
+
+  .tag-help-panel {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 6px 20px rgba(10, 36, 99, 0.06);
+    animation: tag-help-in 0.22s ease-out;
+  }
+  @keyframes tag-help-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .tag-help-panel-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .tag-help-panel-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .tag-help-panel-title em { color: var(--gold-dark); font-weight: 500; }
+  .tag-help-panel-close {
+    background: none;
+    border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .tag-help-panel-close:hover { color: var(--navy); background: var(--surface-2); }
+
+  .tag-help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px 22px;
+  }
+  .tag-help-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    border-left: 3px solid var(--navy);
+  }
+  .tag-help-item .help-tag-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .tag-help-item .help-tag-desc {
+    font-size: 12.5px;
+    color: var(--fg-soft);
+    line-height: 1.5;
+  }
+  .tag-help-item .help-tag-example {
+    font-size: 11px;
+    color: var(--fg-muted);
+    font-style: italic;
+    margin-top: 2px;
+  }
+  .tag-help-panel-footer {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    font-size: 11.5px;
+    color: var(--fg-muted);
+    line-height: 1.55;
+  }
+  .tag-help-panel-footer code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    background: var(--surface-2);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: var(--fg-soft);
+  }
+
+  /* ── Note editor modal: refined editorial layout ─────────────── */
+  #noteModalInner {
+    --author-color: var(--navy);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .editor-accent-strip {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--author-color);
+    opacity: 0.85;
+  }
+
+  .editor-meta-rail {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .editor-meta-rail .meta-avatar {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--paper);
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .editor-meta-rail .meta-sep { color: var(--line-strong); }
+  .editor-meta-rail .meta-strong { color: var(--fg-soft); font-weight: 600; }
+
+  .editor-mode-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .editor-mode-toggle {
+    display: inline-flex;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .editor-mode-toggle .mode-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 5px 12px;
+    border: none;
+    background: transparent;
+    color: var(--fg-muted);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    font-weight: 600;
+  }
+  .editor-mode-toggle .mode-btn:hover { color: var(--fg-soft); }
+  .editor-mode-toggle .mode-btn.active {
+    background: var(--paper);
+    color: var(--navy);
+    box-shadow: 0 1px 2px rgba(10, 36, 99, 0.08);
+  }
+  .editor-mode-hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Editor surface — neither child shows its own border. */
+  .editor-surface { position: relative; }
+
+  .editor-body {
+    width: 100%;
+    min-height: 320px;
+    border: none;
+    background: transparent;
+    resize: none;
+    outline: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--fg);
+    padding: 4px 2px;
+  }
+  .editor-body::placeholder { color: var(--fg-muted); font-style: italic; }
+  .editor-body:focus { outline: none; }
+
+  .editor-read {
+    min-height: 320px;
+    padding: 4px 2px;
+    display: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.72;
+    color: var(--fg);
+  }
+
+  /* Mode swap */
+  #noteModalInner[data-mode="read"] .editor-body { display: none; }
+  #noteModalInner[data-mode="read"] .editor-read { display: block; }
+  #noteModalInner[data-mode="edit"] .editor-body { display: block; }
+  #noteModalInner[data-mode="edit"] .editor-read { display: none; }
+
+  /* Markdown-prose styles (headings + bullets only, by design) */
+  .editor-read h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--navy);
+    margin: 18px 0 8px;
+    line-height: 1.25;
+  }
+  .editor-read h1:first-child { margin-top: 0; }
+  .editor-read h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--author-color);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin: 22px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .editor-read h2:first-child { margin-top: 0; }
+  .editor-read p {
+    margin: 0 0 12px;
+    color: var(--fg);
+  }
+  .editor-read p:last-child { margin-bottom: 0; }
+  .editor-read ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+  }
+  .editor-read ul li {
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 6px;
+    color: var(--fg);
+  }
+  .editor-read ul li::before {
+    content: '';
+    position: absolute;
+    left: 4px; top: 11px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--author-color);
+    opacity: 0.7;
+  }
+  .editor-read em.empty-doc {
+    display: block;
+    color: var(--fg-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 40px 0;
+  }
+
   .note-card {
     background: var(--surface);
     border: 1px solid var(--line);
@@ -599,6 +900,8 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* Author color, set inline via style="--author-color: <hex>"; fallback to navy */
+    --author-color: var(--navy);
   }
 
   .note-card::before {
@@ -606,23 +909,18 @@
     position: absolute;
     top: 0; left: 0;
     width: 4px; height: 100%;
-    background: var(--gold);
-    opacity: 0;
+    background: var(--author-color);
+    opacity: 0.55;
     transition: opacity 0.2s ease;
   }
 
   .note-card:hover {
     transform: translateY(-2px);
     border-color: var(--line-strong);
-    box-shadow: 0 8px 24px rgba(10, 36, 99, 0.08);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--author-color) 18%, transparent);
   }
 
   .note-card:hover::before { opacity: 1; }
-  .note-card[data-color="navy"]::before { background: var(--navy); }
-  .note-card[data-color="gold"]::before { background: var(--gold); }
-  .note-card[data-color="crimson"]::before { background: var(--danger); }
-  .note-card[data-color="sage"]::before { background: var(--success); }
-  .note-card[data-color="ink"]::before { background: var(--fg); }
 
   .note-pin {
     position: absolute;
@@ -3792,20 +4090,22 @@
 
 <!-- ================ NOTE EDITOR MODAL ================ -->
 <div class="modal-overlay" id="noteModal">
-  <div class="modal wide">
+  <div class="modal wide" id="noteModalInner">
     <button class="modal-close" onclick="closeNoteEditor()">✕</button>
+    <div class="editor-accent-strip" id="editorAccentStrip"></div>
     <input type="text" class="editor-title-input" id="editorTitle" placeholder="Untitled note…" />
-    <div class="editor-toolbar">
-      <span class="toolbar-label">Accent</span>
-      <div class="color-picker" id="colorPicker">
-        <div class="color-swatch selected" data-color="navy" style="background: var(--navy)"></div>
-        <div class="color-swatch" data-color="gold" style="background: var(--gold)"></div>
-        <div class="color-swatch" data-color="crimson" style="background: var(--danger)"></div>
-        <div class="color-swatch" data-color="sage" style="background: var(--success)"></div>
-        <div class="color-swatch" data-color="ink" style="background: var(--fg)"></div>
+    <div class="editor-meta-rail" id="editorMetaRail"></div>
+    <div class="editor-mode-bar">
+      <div class="editor-mode-toggle">
+        <button class="mode-btn" data-mode="read" onclick="setEditorMode('read')">Read</button>
+        <button class="mode-btn" data-mode="edit" onclick="setEditorMode('edit')">Edit</button>
       </div>
+      <div class="editor-mode-hint" id="editorModeHint"></div>
     </div>
-    <textarea class="editor-body" id="editorBody" placeholder="Start writing…"></textarea>
+    <div class="editor-surface" id="editorSurface">
+      <textarea class="editor-body" id="editorBody" placeholder="Start writing… use # for headings, - for bullets"></textarea>
+      <div class="editor-read" id="editorRead"></div>
+    </div>
     <div class="editor-tag-row" id="editorTagRow"></div>
     <div class="tag-suggestions-row" id="editorTagSuggest" style="display:none;"></div>
     <div class="modal-footer">
@@ -4228,7 +4528,7 @@
     theme: localStorage.getItem('rush26_theme') || 'light',
 
     editingNoteId: null,
-    editingColor: 'navy',
+    editorMode: 'edit', // 'read' | 'edit'
     editingNoteTags: [],
 
     editingEventId: null,
@@ -4255,6 +4555,7 @@
     calendarFilterCategory: 'all',
     notesViewMode: 'grid',
     notesArchiveCollapsed: true,
+    notesHelpOpen: false,
     candidateFilter: 'all',
     notesSearchQuery: '',
 
@@ -5002,22 +5303,50 @@
           '<button class="view-switch-btn ' + (state.notesViewMode === 'grid' ? 'active' : '') + '" onclick="setNoteView(\'grid\')">Grid</button>' +
           '<button class="view-switch-btn ' + (state.notesViewMode === 'list' ? 'active' : '') + '" onclick="setNoteView(\'list\')">List</button>' +
         '</div>' +
+        '<button class="tag-help-btn ' + (state.notesHelpOpen ? 'active' : '') + '" onclick="toggleTagHelp()" title="What do these tags mean?" aria-label="Tag guide">?</button>' +
         '<button class="btn primary" onclick="openNoteEditor()">+ New note</button>' +
       '</div>' +
+      (state.notesHelpOpen ? renderTagHelpPanel() : '') +
       (state.notesViewMode === 'grid'
         ? '<div class="notes-grid-wrap">' + renderNotesGrid(filtered) + '</div>'
         : '<div class="notes-list">' + renderNotesList(filtered) + '</div>');
   }
 
+  function renderTagHelpPanel() {
+    return '<div class="tag-help-panel">' +
+      '<div class="tag-help-panel-header">' +
+        '<div class="tag-help-panel-title">Tag <em>guide</em></div>' +
+        '<button class="tag-help-panel-close" onclick="toggleTagHelp()" aria-label="Close">✕</button>' +
+      '</div>' +
+      '<div class="tag-help-grid">' +
+        NOTE_PRIMARY_TAGS.map(t =>
+          '<div class="tag-help-item">' +
+            '<div class="help-tag-label">' + escapeHtml(t.label) + '</div>' +
+            '<div class="help-tag-desc">' + escapeHtml(t.desc) + '</div>' +
+            '<div class="help-tag-example">' + escapeHtml(t.example) + '</div>' +
+          '</div>'
+        ).join('') +
+      '</div>' +
+      '<div class="tag-help-panel-footer">' +
+        'A note\'s <strong>first matching primary tag</strong> decides its section. Other tags (like <code>draft</code>, <code>decision</code>, <code>week-of-rush</code>, or a person\'s name) are extra metadata — searchable, but they don\'t affect grouping.' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.toggleTagHelp = function() {
+    state.notesHelpOpen = !state.notesHelpOpen;
+    render();
+  };
+
   // Primary tag taxonomy. First match (in this order) wins as a note's section.
   const NOTE_PRIMARY_TAGS = [
-    { id: 'rush-ops',    label: 'Rush Ops' },
-    { id: 'candidates',  label: 'Candidates' },
-    { id: 'meetings',    label: 'Meetings' },
-    { id: 'pr',          label: 'PR' },
-    { id: 'exec',        label: 'Exec' },
-    { id: 'logistics',   label: 'Logistics' },
-    { id: 'archive',     label: 'Archive' },
+    { id: 'rush-ops',    label: 'Rush Ops',   desc: 'The operational core of rush week itself — schedules, room assignments, event mechanics, day-of run-of-show.', example: 'e.g. Rush Week Rooms & Times, Speed Dating flow' },
+    { id: 'candidates',  label: 'Candidates', desc: 'PNM tracking, evaluations, ranking discussions, bid lists, deliberation notes.', example: 'e.g. Tuesday eval recap, bid list draft' },
+    { id: 'meetings',    label: 'Meetings',   desc: 'Recaps from any meeting — onboarding, exec, PR sync, chapter, alumni, 1-on-1s.', example: 'e.g. Rush x PR Meeting, Mikayla Meeting' },
+    { id: 'pr',          label: 'PR',         desc: 'Post ideas, captions, branding, themes, content calendar, social strategy.', example: 'e.g. IG announcement copy, theme brainstorm' },
+    { id: 'exec',        label: 'Exec',       desc: 'Chair-level decisions, policy, agreements, conflicts, big-picture planning.', example: 'e.g. Rush Agreement, takeover notes' },
+    { id: 'logistics',   label: 'Logistics',  desc: 'Stuff supporting rush but not rush itself — budgets, vendors, merch, food, supplies, transport.', example: 'e.g. T-shirt order, food vendor list' },
+    { id: 'archive',     label: 'Archive',    desc: 'Done, superseded, or inactive. Kept for reference. Collapsed by default.', example: 'e.g. last semester\'s schedule, old policy draft' },
   ];
   const NOTE_PRIMARY_TAG_IDS = NOTE_PRIMARY_TAGS.map(t => t.id);
 
@@ -5061,8 +5390,9 @@
 
   function renderNoteCard(n) {
     const author = MEMBERS.find(m => m.id === n.authorId);
+    const authorColor = author ? author.color : 'var(--navy)';
     const tags = (n.tags || []).slice(0, 3);
-    return '<div class="note-card" data-color="' + (n.color || 'navy') + '" onclick="openNoteEditor(\'' + n.id + '\')">' +
+    return '<div class="note-card" style="--author-color: ' + authorColor + '" onclick="openNoteEditor(\'' + n.id + '\')">' +
       '<button class="note-pin ' + (n.pinned ? 'pinned' : '') + '" onclick="event.stopPropagation(); togglePin(\'' + n.id + '\')" title="' + (n.pinned ? 'Unpin' : 'Pin') + '">' + (n.pinned ? '★' : '☆') + '</button>' +
       '<div class="note-title">' + escapeHtml(n.title || 'Untitled') + '</div>' +
       '<div class="note-preview">' + escapeHtml(n.body || 'No content…') + '</div>' +
@@ -5114,8 +5444,7 @@
     return '<div class="list-row header"><div></div><div>Title</div><div>Tags</div><div>Author</div><div>Updated</div><div></div></div>' +
       notes.map(n => {
         const author = MEMBERS.find(m => m.id === n.authorId);
-        const colorMap = { navy: 'var(--navy)', gold: 'var(--gold)', crimson: 'var(--danger)', sage: 'var(--success)', ink: 'var(--fg)' };
-        const color = colorMap[n.color] || 'var(--navy)';
+        const color = author ? author.color : 'var(--navy)';
         const tags = (n.tags || []).slice(0, 2);
         return '<div class="list-row" onclick="openNoteEditor(\'' + n.id + '\')">' +
           '<div class="list-color-dot" style="background:' + color + '"></div>' +
@@ -5162,26 +5491,134 @@
     render();
   };
 
+  // ── Lightweight markdown: # / ## headings, - or * bullets, blank lines = paragraphs ──
+  function renderNoteMarkdown(src) {
+    const raw = (src || '').trim();
+    if (!raw) return '<em class="empty-doc">No content yet. Switch to Edit to write.</em>';
+
+    const lines = raw.split(/\r?\n/);
+    const out = [];
+    let listOpen = false;
+    let paraBuf = [];
+
+    function flushPara() {
+      if (paraBuf.length === 0) return;
+      out.push('<p>' + paraBuf.map(escapeHtml).join('<br/>') + '</p>');
+      paraBuf = [];
+    }
+    function closeList() {
+      if (listOpen) { out.push('</ul>'); listOpen = false; }
+    }
+
+    for (const rawLine of lines) {
+      const line = rawLine.trimEnd();
+      if (!line.trim()) { flushPara(); closeList(); continue; }
+
+      const h1 = line.match(/^#\s+(.+)$/);
+      const h2 = line.match(/^##\s+(.+)$/);
+      const bullet = line.match(/^\s*[-*]\s+(.+)$/);
+
+      if (h2) { flushPara(); closeList(); out.push('<h2>' + escapeHtml(h2[1]) + '</h2>'); continue; }
+      if (h1) { flushPara(); closeList(); out.push('<h1>' + escapeHtml(h1[1]) + '</h1>'); continue; }
+      if (bullet) {
+        flushPara();
+        if (!listOpen) { out.push('<ul>'); listOpen = true; }
+        out.push('<li>' + escapeHtml(bullet[1]) + '</li>');
+        continue;
+      }
+      // Normal paragraph line
+      closeList();
+      paraBuf.push(line);
+    }
+    flushPara();
+    closeList();
+    return out.join('');
+  }
+
+  window.setEditorMode = function(mode) {
+    state.editorMode = mode;
+    applyEditorMode();
+  };
+
+  function applyEditorMode() {
+    const inner = document.getElementById('noteModalInner');
+    if (!inner) return;
+    inner.setAttribute('data-mode', state.editorMode);
+    // Sync the toggle buttons
+    document.querySelectorAll('#noteModalInner .mode-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === state.editorMode);
+    });
+    // Hint text on the right of the toggle
+    const hint = document.getElementById('editorModeHint');
+    if (hint) {
+      hint.textContent = state.editorMode === 'edit'
+        ? 'Use # heading · ## section · - bullet'
+        : '';
+    }
+    // If switching to Read, re-render markdown from the current body
+    if (state.editorMode === 'read') {
+      const body = document.getElementById('editorBody').value;
+      document.getElementById('editorRead').innerHTML = renderNoteMarkdown(body);
+    } else {
+      // Focus the textarea when entering Edit
+      setTimeout(() => document.getElementById('editorBody')?.focus(), 30);
+    }
+  }
+
+  function renderEditorMetaRail(note) {
+    const rail = document.getElementById('editorMetaRail');
+    if (!rail) return;
+    if (!note) {
+      const me = MEMBERS.find(m => m.id === state.currentUser);
+      const myColor = me ? me.color : 'var(--navy)';
+      rail.innerHTML =
+        '<div class="meta-avatar" style="background:' + myColor + '">' + (me ? me.name[0] : '?') + '</div>' +
+        '<span class="meta-strong">New briefing</span>' +
+        '<span class="meta-sep">·</span>' +
+        '<span>by ' + (me ? escapeHtml(me.name) : 'you') + '</span>';
+      return;
+    }
+    const author = MEMBERS.find(m => m.id === note.authorId);
+    const editor = MEMBERS.find(m => m.id === note.lastEditedBy);
+    const authorColor = author ? author.color : 'var(--navy)';
+    const parts = [];
+    parts.push('<div class="meta-avatar" style="background:' + authorColor + '">' + (author ? author.name[0] : '?') + '</div>');
+    parts.push('<span class="meta-strong">' + (author ? escapeHtml(author.name) : 'Unknown') + '</span>');
+    parts.push('<span class="meta-sep">·</span>');
+    parts.push('<span>Created ' + timeAgo(note.createdAt) + '</span>');
+    if (note.updatedAt && note.updatedAt !== note.createdAt) {
+      parts.push('<span class="meta-sep">·</span>');
+      const editorName = editor ? editor.name : (author ? author.name : '');
+      parts.push('<span>Updated ' + timeAgo(note.updatedAt) + (editorName ? ' by ' + escapeHtml(editorName) : '') + '</span>');
+    }
+    rail.innerHTML = parts.join('');
+  }
+
   window.openNoteEditor = function(id) {
     state.editingNoteId = id || null;
     const note = id ? state.notes.find(n => n.id === id) : null;
     document.getElementById('editorTitle').value = note?.title || '';
     document.getElementById('editorBody').value = note?.body || '';
-    state.editingColor = note?.color || 'navy';
     state.editingNoteTags = (note?.tags || []).slice();
 
-    document.querySelectorAll('#colorPicker .color-swatch').forEach(s => {
-      s.classList.toggle('selected', s.dataset.color === state.editingColor);
-      s.onclick = () => {
-        state.editingColor = s.dataset.color;
-        document.querySelectorAll('#colorPicker .color-swatch').forEach(x => x.classList.remove('selected'));
-        s.classList.add('selected');
-      };
-    });
+    // Author-color: existing note → original author; new note → current user
+    const authorId = note ? note.authorId : state.currentUser;
+    const author = MEMBERS.find(m => m.id === authorId);
+    const authorColor = author ? author.color : 'var(--navy)';
+    const inner = document.getElementById('noteModalInner');
+    if (inner) inner.style.setProperty('--author-color', authorColor);
+
+    // Smart mode default: Read for existing, Edit for new
+    state.editorMode = note ? 'read' : 'edit';
+
+    renderEditorMetaRail(note);
     renderEditorTags();
     document.getElementById('deleteNoteBtn').style.display = id ? 'inline-flex' : 'none';
     document.getElementById('noteModal').classList.add('active');
-    setTimeout(() => document.getElementById('editorTitle').focus(), 50);
+    applyEditorMode();
+    if (state.editorMode === 'edit') {
+      setTimeout(() => document.getElementById('editorTitle').focus(), 50);
+    }
   };
 
   function renderEditorTags() {
@@ -5250,7 +5687,6 @@
       if (note) {
         note.title = title;
         note.body = body;
-        note.color = state.editingColor;
         note.tags = state.editingNoteTags.slice();
         note.updatedAt = Date.now();
         note.lastEditedBy = state.currentUser;
@@ -5259,7 +5695,6 @@
       state.notes.unshift({
         id: 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         title, body,
-        color: state.editingColor,
         tags: state.editingNoteTags.slice(),
         pinned: false,
         authorId: state.currentUser,
