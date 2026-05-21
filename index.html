@@ -483,6 +483,110 @@
     gap: 16px;
   }
 
+  /* ── Notes sections (tag-driven grouping) ─────────────────────── */
+  .notes-section { margin-bottom: 28px; }
+  .notes-section:last-child { margin-bottom: 0; }
+
+  .notes-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 12px 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    user-select: none;
+  }
+  .notes-section-header .section-label { position: relative; padding-bottom: 3px; }
+  .notes-section-header .section-label::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -2px;
+    height: 2px;
+    background: var(--gold);
+    border-radius: 2px;
+  }
+  .notes-section-header .section-count {
+    font-size: 10px;
+    color: var(--fg-muted);
+    background: var(--surface-2);
+    padding: 1px 7px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    letter-spacing: 0.06em;
+  }
+
+  /* Pinned section: 2-col wider cards, gold accent visible by default */
+  .notes-section.pinned .notes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 18px;
+  }
+  .notes-section.pinned .note-card { min-height: 200px; padding: 24px; }
+  .notes-section.pinned .note-card::before { opacity: 1; }
+
+  /* Archive section: collapsible, dimmed when collapsed */
+  .notes-section.archive .notes-section-header {
+    cursor: pointer;
+    color: var(--fg-muted);
+  }
+  .notes-section.archive .notes-section-header:hover { color: var(--navy); }
+  .notes-section.archive .notes-section-header .section-label::after { background: var(--line-strong); }
+  .notes-section.archive.collapsed .notes-grid { display: none; }
+  .notes-section.archive .notes-section-header .chevron {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    transition: transform 0.18s ease;
+  }
+  .notes-section.archive.collapsed .notes-section-header .chevron { transform: rotate(-90deg); }
+  .notes-section.archive .note-card { opacity: 0.78; }
+  .notes-section.archive .note-card:hover { opacity: 1; }
+
+  /* Untagged section: low-key, hints that these need tagging */
+  .notes-section.untagged .notes-section-header { color: var(--fg-muted); }
+  .notes-section.untagged .notes-section-header .section-label::after { background: var(--line-strong); }
+
+  /* Tag suggestion chips in the editor (zero-tag state only) */
+  .tag-suggestions-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    border: 1px dashed var(--line);
+  }
+  .tag-suggestions-row .suggest-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-right: 4px;
+  }
+  .tag-suggest-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--fg-soft);
+    border: 1px solid var(--line);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .tag-suggest-chip:hover {
+    border-color: var(--navy);
+    color: var(--navy);
+    background: var(--paper);
+  }
+
   .note-card {
     background: var(--surface);
     border: 1px solid var(--line);
@@ -554,7 +658,7 @@
     flex: 1;
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     white-space: pre-wrap;
   }
@@ -2940,12 +3044,7 @@
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
-    cursor: pointer;
   }
-  /* §F dashboard polish: alternating above/below label staggering */
-  .rush-milestone.below .milestone-label { top: 18px; }
-  .rush-milestone.above .milestone-label { top: auto; bottom: 18px; }
-  .rush-milestone:hover .milestone-marker { transform: scale(1.15); transition: transform 0.15s; }
   .milestone-marker {
     width: 14px; height: 14px;
     border-radius: 50%;
@@ -3708,6 +3807,7 @@
     </div>
     <textarea class="editor-body" id="editorBody" placeholder="Start writing…"></textarea>
     <div class="editor-tag-row" id="editorTagRow"></div>
+    <div class="tag-suggestions-row" id="editorTagSuggest" style="display:none;"></div>
     <div class="modal-footer">
       <button class="btn danger" onclick="deleteCurrentNote()" id="deleteNoteBtn" style="display:none">Delete</button>
       <div class="right">
@@ -4154,6 +4254,7 @@
     taskFilterCategory: 'all',
     calendarFilterCategory: 'all',
     notesViewMode: 'grid',
+    notesArchiveCollapsed: true,
     candidateFilter: 'all',
     notesSearchQuery: '',
 
@@ -4193,7 +4294,6 @@
     // ============================================================
     taskTemplates: [],
     taskTemplatesLoaded: false,
-    milestoneDetail: null,            // §G dashboard polish — selected milestone key (or 'tpl:<id>')
     chapterDates: [],
     chapterDatesLoaded: false,
     tasksSubview: 'active',
@@ -4617,84 +4717,21 @@
     return            { id: 'active-rush',  label: 'Active rush',          sub: 'Events underway. PNM evaluations in motion.' };
   }
 
-  // §A dashboard polish: domain shifted from [bfc-180d, bfc] to [soft_launch, selection_start].
-  // Spans the full rush arc. Fallbacks if chapter_dates not yet pinned.
   function getRushTimelinePct(t) {
-    const byKey = getChapterDatesByKey();
-    const slIso  = (byKey.soft_launch     && byKey.soft_launch.iso_date)     || null;
-    const ssIso  = (byKey.selection_start && byKey.selection_start.iso_date) || null;
-    const bfcIso = (byKey.bfc_mixer       && byKey.bfc_mixer.iso_date)       || DASHBOARD_DATES.bfcMixer.iso;
-    const start = slIso ? new Date(slIso + 'T00:00:00').getTime() : (Date.now() - 30 * 86400000);
-    const end   = ssIso ? new Date(ssIso + 'T00:00:00').getTime() : (new Date(bfcIso + 'T00:00:00').getTime() + 60 * 86400000);
+    const bfc = new Date(DASHBOARD_DATES.bfcMixer.iso + 'T00:00:00').getTime();
+    const start = bfc - RUSH_TIMELINE_DAYS * 86400000;
     const ms = (typeof t === 'string') ? new Date(t + 'T00:00:00').getTime() : t;
     if (ms < start) return 0;
-    if (ms > end)   return 100;
-    return ((ms - start) / (end - start)) * 100;
+    if (ms > bfc)   return 100;
+    return ((ms - start) / (bfc - start)) * 100;
   }
 
-  // §B dashboard polish: template-derived milestone lookup with two silent-skip paths.
-  function getMilestoneFromTemplate(titleSubstring, byKey) {
-    if (!state.taskTemplatesLoaded) return null;  // suppress warnings during boot load
-    const lower = titleSubstring.toLowerCase();
-    const tmpl = (state.taskTemplates || []).find(function(t) {
-      return (t.title || '').toLowerCase().indexOf(lower) !== -1;
-    });
-    if (!tmpl) {
-      console.warn('[dashboard] milestone template containing "' + titleSubstring + '" not found in state.taskTemplates - was it renamed?');
-      return null;
-    }
-    const calc = getTemplateCalculatedDue(tmpl, byKey);
-    if (!calc) {
-      console.warn('[dashboard] milestone "' + tmpl.title + '" anchor "' + tmpl.anchor_date_key + '" has no iso_date - not yet pinned');
-      return null;
-    }
-    const isoDate = calc.toISOString().slice(0, 10);
-    return { id: tmpl.id, label: tmpl.title, iso: isoDate };
-  }
-
-  // §C dashboard polish: full rewrite. 8 candidate milestones:
-  //   5 chapter_dates: soft_launch, hard_deadline, bfc_mixer, rush_week_start, selection_start
-  //   2 template-derived: Brother Mingle (BM), Run interviews (INT)
-  //   1 explicit omit: Bid Delivery (no template/chapter_date source yet)
-  // Short codes shown on bar; full label+date in title="" attribute for hover.
-  // Labels stagger: even index -> below, odd index -> above (§F).
   function renderRushCenterpiece() {
     const phase = getRushPhase();
-    const byKey = getChapterDatesByKey();
-    const SHORT_CODES = {
-      soft_launch: 'SL', hard_deadline: 'HD', bfc_mixer: 'BFC',
-      rush_week_start: 'RWS', selection_start: 'SS'
-    };
-    const candidates = [];
-    ['soft_launch', 'hard_deadline', 'bfc_mixer', 'rush_week_start', 'selection_start'].forEach(function(k) {
-      const cd = byKey[k];
-      if (cd && cd.iso_date) {
-        candidates.push({ key: k, iso: cd.iso_date, label: cd.label, code: SHORT_CODES[k] });
-      } else {
-        console.warn('[dashboard] chapter_date "' + k + '" has no iso_date - not yet pinned');
-      }
-    });
-    const bm = getMilestoneFromTemplate('brother mingle', byKey);
-    if (bm) candidates.push({ key: 'tpl:' + bm.id, iso: bm.iso, label: bm.label, code: 'BM' });
-    const ri = getMilestoneFromTemplate('run interviews', byKey);
-    if (ri) candidates.push({ key: 'tpl:' + ri.id, iso: ri.iso, label: ri.label, code: 'INT' });
-    // Bid Delivery: intentionally omitted (no source data). Surface in iteration backlog when template or chapter_date exists.
-
-    candidates.sort(function(a, b) { return new Date(a.iso) - new Date(b.iso); });
-
     const todayPct = getRushTimelinePct(Date.now());
-    const milestonesHtml = candidates.map(function(m, i) {
-      const pct = getRushTimelinePct(m.iso);
-      const position = (i % 2 === 0) ? 'below' : 'above';
-      const dateStr = new Date(m.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const fullLabel = m.label + ' · ' + dateStr;
-      const markerClass = 'milestone-marker' + (m.key === 'bfc_mixer' ? ' bfc' : '');
-      return '<div class="rush-milestone ' + position + '" style="left:' + pct.toFixed(1) + '%" onclick="openMilestoneDetail(\'' + m.key + '\')" title="' + escapeHtml(fullLabel) + '">' +
-        '<div class="' + markerClass + '"></div>' +
-        '<div class="milestone-label">' + escapeHtml(m.code) + '</div>' +
-      '</div>';
-    }).join('');
-
+    const slPct  = getRushTimelinePct(DASHBOARD_DATES.softLaunch.iso);
+    const hdPct  = getRushTimelinePct(DASHBOARD_DATES.hardDeadline.iso);
+    const bfcPct = getRushTimelinePct(DASHBOARD_DATES.bfcMixer.iso);
     return '<div class="rush-centerpiece phase-' + phase.id + '">' +
       '<div class="centerpiece-head">' +
         '<div class="centerpiece-eyebrow">Rush Week Progress</div>' +
@@ -4707,7 +4744,18 @@
       '<div class="rush-progress-wrap">' +
         '<div class="rush-progress-track">' +
           '<div class="rush-progress-fill" style="width:' + todayPct.toFixed(1) + '%"></div>' +
-          milestonesHtml +
+          '<div class="rush-milestone" style="left:' + slPct.toFixed(1) + '%">' +
+            '<div class="milestone-marker"></div>' +
+            '<div class="milestone-label">Soft launch · Aug 15</div>' +
+          '</div>' +
+          '<div class="rush-milestone" style="left:' + hdPct.toFixed(1) + '%">' +
+            '<div class="milestone-marker"></div>' +
+            '<div class="milestone-label">Hard deadline · Aug 25</div>' +
+          '</div>' +
+          '<div class="rush-milestone" style="left:' + bfcPct.toFixed(1) + '%">' +
+            '<div class="milestone-marker bfc"></div>' +
+            '<div class="milestone-label">BFC Mixer · Sep 8</div>' +
+          '</div>' +
           '<div class="rush-today" style="left:' + todayPct.toFixed(1) + '%">' +
             '<div class="today-line"></div>' +
             '<div class="today-label">TODAY</div>' +
@@ -4783,19 +4831,6 @@
       return s >= now && s <= now + 7 * 86400000;
     }).length;
 
-    // §D dashboard polish: gold-italic em wrap only when threshold met.
-    // Rule: overdueCount >= 1 OR (assignedToCurrentUser AND dueWithin24h >= 1)
-    const overdueCount = state.tasks.filter(function(t) {
-      return t.status !== 'done' && t.dueISO && new Date(t.dueISO).getTime() < Date.now();
-    }).length;
-    const myTasks24h = state.tasks.filter(function(t) {
-      if (t.status === 'done' || !t.dueISO || t.assigneeId !== state.currentUser) return false;
-      const due = new Date(t.dueISO).getTime();
-      return due > Date.now() && due - Date.now() <= 24 * 3600000;
-    }).length;
-    const needsAttentionUrgent = overdueCount >= 1 || myTasks24h >= 1;
-    const openTasksDisplay = needsAttentionUrgent ? ('<em>' + openTasks + '</em>') : String(openTasks);
-
     const kpiRow = '<div class="kpi-row">' +
       '<div class="kpi-card" onclick="switchView(\'brothers\')">' +
         '<div class="kpi-label">Active members</div>' +
@@ -4807,10 +4842,9 @@
         '<div class="kpi-value">' + activeCands + '</div>' +
         '<div class="kpi-meta">candidates tracked</div>' +
       '</div>' +
-      // §H: Needs Attention card sets tasksView=all before switching (surface all open tasks).
-      '<div class="kpi-card" onclick="state.tasksView = \'all\'; switchView(\'tasks\')">' +
+      '<div class="kpi-card" onclick="switchView(\'tasks\')">' +
         '<div class="kpi-label">Needs attention</div>' +
-        '<div class="kpi-value">' + openTasksDisplay + '</div>' +
+        '<div class="kpi-value"><em>' + openTasks + '</em></div>' +
         '<div class="kpi-meta">open tasks</div>' +
       '</div>' +
       '<div class="kpi-card" onclick="switchView(\'calendar\')">' +
@@ -4940,7 +4974,6 @@
       kpiRow +
       attentionGrid +
       activityGrid +
-      (state.milestoneDetail ? renderMilestoneDetail() : '') +
     '</div>';
   }
 
@@ -4972,8 +5005,75 @@
         '<button class="btn primary" onclick="openNoteEditor()">+ New note</button>' +
       '</div>' +
       (state.notesViewMode === 'grid'
-        ? '<div class="notes-grid">' + renderNotesGrid(filtered) + '</div>'
+        ? '<div class="notes-grid-wrap">' + renderNotesGrid(filtered) + '</div>'
         : '<div class="notes-list">' + renderNotesList(filtered) + '</div>');
+  }
+
+  // Primary tag taxonomy. First match (in this order) wins as a note's section.
+  const NOTE_PRIMARY_TAGS = [
+    { id: 'rush-ops',    label: 'Rush Ops' },
+    { id: 'candidates',  label: 'Candidates' },
+    { id: 'meetings',    label: 'Meetings' },
+    { id: 'pr',          label: 'PR' },
+    { id: 'exec',        label: 'Exec' },
+    { id: 'logistics',   label: 'Logistics' },
+    { id: 'archive',     label: 'Archive' },
+  ];
+  const NOTE_PRIMARY_TAG_IDS = NOTE_PRIMARY_TAGS.map(t => t.id);
+
+  function getNoteSection(note) {
+    const tags = (note.tags || []).map(t => String(t).toLowerCase().trim());
+    for (const tag of tags) {
+      if (NOTE_PRIMARY_TAG_IDS.includes(tag)) return tag;
+    }
+    return 'untagged';
+  }
+
+  function groupNotesBySection(notes) {
+    // Section order: pinned (synthetic) → primary tags in declared order → untagged → archive
+    const buckets = { pinned: [] };
+    NOTE_PRIMARY_TAG_IDS.forEach(id => { buckets[id] = []; });
+    buckets.untagged = [];
+
+    notes.forEach(n => {
+      if (n.pinned) { buckets.pinned.push(n); return; }
+      buckets[getNoteSection(n)].push(n);
+    });
+
+    // Within each section, newest first (pinned section: also newest-first since "pinned" itself is the ordering signal)
+    Object.keys(buckets).forEach(k => buckets[k].sort((a, b) => b.updatedAt - a.updatedAt));
+
+    const order = [
+      { id: 'pinned',     label: 'Pinned',     cls: 'pinned' },
+      { id: 'rush-ops',   label: 'Rush Ops',   cls: '' },
+      { id: 'candidates', label: 'Candidates', cls: '' },
+      { id: 'meetings',   label: 'Meetings',   cls: '' },
+      { id: 'pr',         label: 'PR',         cls: '' },
+      { id: 'exec',       label: 'Exec',       cls: '' },
+      { id: 'logistics',  label: 'Logistics',  cls: '' },
+      { id: 'untagged',   label: 'Untagged',   cls: 'untagged' },
+      { id: 'archive',    label: 'Archive',    cls: 'archive' },
+    ];
+    return order
+      .map(s => Object.assign({}, s, { notes: buckets[s.id] }))
+      .filter(s => s.notes.length > 0);
+  }
+
+  function renderNoteCard(n) {
+    const author = MEMBERS.find(m => m.id === n.authorId);
+    const tags = (n.tags || []).slice(0, 3);
+    return '<div class="note-card" data-color="' + (n.color || 'navy') + '" onclick="openNoteEditor(\'' + n.id + '\')">' +
+      '<button class="note-pin ' + (n.pinned ? 'pinned' : '') + '" onclick="event.stopPropagation(); togglePin(\'' + n.id + '\')" title="' + (n.pinned ? 'Unpin' : 'Pin') + '">' + (n.pinned ? '★' : '☆') + '</button>' +
+      '<div class="note-title">' + escapeHtml(n.title || 'Untitled') + '</div>' +
+      '<div class="note-preview">' + escapeHtml(n.body || 'No content…') + '</div>' +
+      (tags.length > 0 ? '<div class="note-tags">' + tags.map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('') + ((n.tags || []).length > 3 ? '<span class="tag">+' + (n.tags.length - 3) + '</span>' : '') + '</div>' : '') +
+      '<div class="note-footer">' +
+        '<div class="note-author">' +
+          (author ? '<div class="mini-avatar" style="background:' + author.color + '">' + author.name[0] + '</div>' + escapeHtml(author.name) : '—') +
+        '</div>' +
+        '<div>' + timeAgo(n.updatedAt) + '</div>' +
+      '</div>' +
+    '</div>';
   }
 
   function renderNotesGrid(notes) {
@@ -4984,20 +5084,25 @@
         '<div style="font-size:13px;">Create the first one — it\'ll show up for the whole committee.</div>' +
       '</div>';
     }
-    return notes.map(n => {
-      const author = MEMBERS.find(m => m.id === n.authorId);
-      const tags = (n.tags || []).slice(0, 3);
-      return '<div class="note-card" data-color="' + (n.color || 'navy') + '" onclick="openNoteEditor(\'' + n.id + '\')">' +
-        '<button class="note-pin ' + (n.pinned ? 'pinned' : '') + '" onclick="event.stopPropagation(); togglePin(\'' + n.id + '\')" title="' + (n.pinned ? 'Unpin' : 'Pin') + '">' + (n.pinned ? '★' : '☆') + '</button>' +
-        '<div class="note-title">' + escapeHtml(n.title || 'Untitled') + '</div>' +
-        '<div class="note-preview">' + escapeHtml(n.body || 'No content…') + '</div>' +
-        (tags.length > 0 ? '<div class="note-tags">' + tags.map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('') + ((n.tags || []).length > 3 ? '<span class="tag">+' + (n.tags.length - 3) + '</span>' : '') + '</div>' : '') +
-        '<div class="note-footer">' +
-          '<div class="note-author">' +
-            (author ? '<div class="mini-avatar" style="background:' + author.color + '">' + author.name[0] + '</div>' + escapeHtml(author.name) : '—') +
-          '</div>' +
-          '<div>' + timeAgo(n.updatedAt) + '</div>' +
+
+    // Search active → flat grid, no sectioning (search is a different mental model)
+    if (state.notesSearchQuery.trim()) {
+      return '<div class="notes-grid">' + notes.map(renderNoteCard).join('') + '</div>';
+    }
+
+    const sections = groupNotesBySection(notes);
+    return sections.map(section => {
+      const isArchive = section.id === 'archive';
+      const collapsedCls = (isArchive && state.notesArchiveCollapsed) ? ' collapsed' : '';
+      const headerClick = isArchive ? ' onclick="toggleArchiveSection()"' : '';
+      const chevron = isArchive ? '<span class="chevron">▾</span>' : '';
+      return '<div class="notes-section ' + section.cls + collapsedCls + '">' +
+        '<div class="notes-section-header"' + headerClick + '>' +
+          chevron +
+          '<span class="section-label">' + section.label + '</span>' +
+          '<span class="section-count">' + section.notes.length + '</span>' +
         '</div>' +
+        '<div class="notes-grid">' + section.notes.map(renderNoteCard).join('') + '</div>' +
       '</div>';
     }).join('');
   }
@@ -5031,10 +5136,22 @@
     const notes = state.notes
       .filter(n => !qLow || (n.title || '').toLowerCase().includes(qLow) || (n.body || '').toLowerCase().includes(qLow) || (n.tags || []).some(t => t.toLowerCase().includes(qLow)))
       .sort((a, b) => (!!b.pinned - !!a.pinned) || (b.updatedAt - a.updatedAt));
-    const grid = document.querySelector('.notes-grid');
+    const wrap = document.querySelector('.notes-grid-wrap');
     const list = document.querySelector('.notes-list');
-    if (grid) grid.innerHTML = renderNotesGrid(notes);
+    if (wrap) wrap.innerHTML = renderNotesGrid(notes);
     if (list) list.innerHTML = renderNotesList(notes);
+  };
+
+  window.toggleArchiveSection = function() {
+    state.notesArchiveCollapsed = !state.notesArchiveCollapsed;
+    const wrap = document.querySelector('.notes-grid-wrap');
+    if (wrap) {
+      const qLow = state.notesSearchQuery.toLowerCase().trim();
+      const notes = state.notes
+        .filter(n => !qLow || (n.title || '').toLowerCase().includes(qLow) || (n.body || '').toLowerCase().includes(qLow) || (n.tags || []).some(t => t.toLowerCase().includes(qLow)))
+        .sort((a, b) => (!!b.pinned - !!a.pinned) || (b.updatedAt - a.updatedAt));
+      wrap.innerHTML = renderNotesGrid(notes);
+    }
   };
 
   window.togglePin = async function(id) {
@@ -5075,7 +5192,28 @@
       ).join('') +
       '<input type="text" class="tag-input" id="newTagInput" placeholder="+ tag" maxlength="20" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addNoteTag();}" />' +
       '<button class="btn small" onclick="addNoteTag()">Add</button>';
+
+    // Suggestion chips: only when this note has zero tags
+    const suggestEl = document.getElementById('editorTagSuggest');
+    if (suggestEl) {
+      if (state.editingNoteTags.length === 0) {
+        suggestEl.innerHTML = '<span class="suggest-label">Suggest:</span>' +
+          NOTE_PRIMARY_TAGS.map(t =>
+            '<span class="tag-suggest-chip" onclick="addSuggestedTag(\'' + t.id + '\')">' + escapeHtml(t.label) + '</span>'
+          ).join('');
+        suggestEl.style.display = 'flex';
+      } else {
+        suggestEl.style.display = 'none';
+        suggestEl.innerHTML = '';
+      }
+    }
   }
+
+  window.addSuggestedTag = function(tagId) {
+    if (state.editingNoteTags.includes(tagId)) return;
+    state.editingNoteTags.push(tagId);
+    renderEditorTags();
+  };
 
   window.addNoteTag = function() {
     const input = document.getElementById('newTagInput');
@@ -5303,7 +5441,6 @@
   }
 
   window.openCalDayDetail = function(dateIso) {
-    state.milestoneDetail = null;  // §G mutual exclusion
     state.calendarDayDetail = dateIso;
     document.body.style.overflow = 'hidden';
     render();
@@ -5314,78 +5451,6 @@
     document.body.style.overflow = '';
     render();
   };
-
-  // ============================================================
-  // MILESTONE DETAIL PANEL (Dashboard polish §G)
-  // Slide-from-right panel showing tasks anchored to a milestone.
-  // Reuses .cal-day-detail-overlay styling (shipped Diff 1).
-  // Mutually exclusive with state.calendarDayDetail.
-  // ============================================================
-  function renderMilestoneDetail() {
-    const key = state.milestoneDetail;
-    if (!key) return '';
-    const byKey = getChapterDatesByKey();
-    let milestoneLabel, milestoneIso, matchingTasks;
-    if (key.indexOf('tpl:') === 0) {
-      const templateId = key.slice(4);
-      const tmpl = (state.taskTemplates || []).find(function(t) { return t.id === templateId; });
-      if (!tmpl) return '';
-      milestoneLabel = tmpl.title;
-      const calc = getTemplateCalculatedDue(tmpl, byKey);
-      milestoneIso = calc ? calc.toISOString().slice(0, 10) : null;
-      matchingTasks = (state.tasks || []).filter(function(t) { return t.templateId === templateId; });
-    } else {
-      const cd = byKey[key];
-      if (!cd) return '';
-      milestoneLabel = cd.label;
-      milestoneIso = cd.iso_date;
-      const templateIds = (state.taskTemplates || []).filter(function(t) { return t.anchor_date_key === key; }).map(function(t) { return t.id; });
-      matchingTasks = (state.tasks || []).filter(function(t) { return templateIds.indexOf(t.templateId) !== -1; });
-    }
-    matchingTasks = matchingTasks.slice().sort(function(a, b) {
-      const ad = a.dueISO ? new Date(a.dueISO).getTime() : Infinity;
-      const bd = b.dueISO ? new Date(b.dueISO).getTime() : Infinity;
-      return ad - bd;
-    });
-    const dateStr = milestoneIso ? new Date(milestoneIso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Date not pinned';
-    return '<div class="cal-day-detail-overlay" onclick="if (event.target === this) closeMilestoneDetail()">' +
-      '<div class="cal-day-detail">' +
-        '<button class="cal-day-detail-close" onclick="closeMilestoneDetail()">&times;</button>' +
-        '<div class="cal-day-detail-head">' + escapeHtml(milestoneLabel) + '</div>' +
-        '<div style="font-family:\'JetBrains Mono\',monospace; font-size:11px; color:var(--fg-muted); margin-bottom:14px;">' + escapeHtml(dateStr) + '</div>' +
-        '<div class="cal-day-section">' +
-          '<div class="cal-day-section-label">Tasks anchored here (' + matchingTasks.length + ')</div>' +
-          (matchingTasks.length === 0
-            ? '<div style="font-size:13px; color:var(--fg-muted); padding:6px 0;">No tasks anchored to this milestone.</div>'
-            : matchingTasks.map(function(t) {
-                const isDone = t.status === 'done';
-                const due = t.dueISO ? new Date(t.dueISO).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-';
-                const assignee = MEMBERS.find(function(m) { return m.id === t.assigneeId; });
-                const meta = due + (assignee ? ' · ' + assignee.name : '');
-                return '<div class="cal-day-item' + (isDone ? ' done' : '') + '" onclick="closeMilestoneDetail(); openTaskModal(\'' + t.id + '\')" style="' + (isDone ? 'opacity:0.55; text-decoration:line-through;' : '') + '">' +
-                  '<div class="cal-day-item-title">' + escapeHtml(t.text || t.title || '(untitled task)') + '</div>' +
-                  '<div class="cal-day-item-time">' + escapeHtml(meta) + '</div>' +
-                '</div>';
-              }).join('')
-          ) +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  }
-
-  window.openMilestoneDetail = function(key) {
-    state.calendarDayDetail = null;
-    state.milestoneDetail = key;
-    document.body.style.overflow = 'hidden';
-    render();
-  };
-
-  window.closeMilestoneDetail = function() {
-    state.milestoneDetail = null;
-    document.body.style.overflow = '';
-    render();
-  };
-
 
   window.toggleTaskDoneFromChip = async function(taskId) {
     const t = state.tasks.find(function(x) { return x.id === taskId; });
