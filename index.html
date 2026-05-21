@@ -2511,6 +2511,230 @@
     .history-print.history-print-head { display: none; }
   }
 
+  /* ========== PHASE 0 #4 — Tasks sub-nav + Templates view ========== */
+  .tasks-subnav {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .templates-view { display: flex; flex-direction: column; gap: 20px; }
+  .templates-section {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 22px;
+  }
+  .templates-section-head { margin-bottom: 14px; }
+  .templates-section-head .section-help {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--fg-muted);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  /* Chapter dates editor */
+  .chapter-dates-list { display: flex; flex-direction: column; gap: 6px; }
+  .chapter-date-row {
+    display: grid;
+    grid-template-columns: 160px 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .chapter-date-row.editing { border-color: var(--gold); background: rgba(212, 166, 74, 0.06); }
+  .chapter-date-row.no-date { background: rgba(184, 40, 50, 0.04); }
+  [data-theme="dark"] .chapter-date-row.no-date { background: rgba(184, 40, 50, 0.10); }
+  .chapter-date-row .cd-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-muted);
+  }
+  .chapter-date-row .cd-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .chapter-date-row.no-date .cd-value { color: var(--danger); font-style: italic; }
+  .chapter-date-row .cd-input { font-size: 13px; padding: 6px 10px; min-width: 160px; }
+  .chapter-date-row .cd-desc {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    color: var(--fg-muted);
+    margin-top: -2px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.02em;
+  }
+
+  /* Generate bar */
+  .templates-generate-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px;
+    margin: 12px 0 18px;
+    background: var(--parchment);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  [data-theme="dark"] .templates-generate-bar { background: rgba(212, 166, 74, 0.06); }
+  .generate-plan {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--fg);
+    letter-spacing: 0.02em;
+  }
+  .generate-plan strong { font-size: 14px; color: var(--navy); }
+  [data-theme="dark"] .generate-plan strong { color: var(--gold); }
+  .generate-plan .plan-aside { color: var(--fg-muted); }
+
+  /* Phase groups */
+  .phase-group {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .phase-group.current-phase { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(212, 166, 74, 0.12) inset; }
+  .phase-group-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .phase-group-head:hover { background: var(--parchment); }
+  [data-theme="dark"] .phase-group-head:hover { background: rgba(212, 166, 74, 0.06); }
+  .phase-group-title {
+    flex: 1;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .phase-current-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: var(--gold);
+    color: var(--navy-dark);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+    vertical-align: 2px;
+  }
+  .phase-group-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+    letter-spacing: 0.04em;
+  }
+  .phase-drift { color: var(--gold-dark); }
+  .phase-anchorless { color: var(--danger); }
+  .phase-group-body { border-top: 1px solid var(--line); padding: 4px 0; }
+
+  /* Template rows */
+  .template-row {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    transition: background 0.15s;
+  }
+  .template-row:last-child { border-bottom: none; }
+  .template-row.excluded { opacity: 0.5; }
+  .template-exclude {
+    display: flex;
+    align-items: flex-start;
+    padding-top: 3px;
+    cursor: pointer;
+  }
+  .template-exclude input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--navy);
+  }
+  .template-body { min-width: 0; }
+  .template-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fg);
+    line-height: 1.35;
+  }
+  .template-priority {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: 1px;
+  }
+  .template-priority.high { background: rgba(184, 40, 50, 0.12); color: var(--danger); }
+  .template-priority.low  { background: var(--line); color: var(--fg-muted); }
+  .template-status {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: 1px;
+  }
+  .template-status.generated { background: rgba(63, 138, 92, 0.18); color: #2c6b46; }
+  .template-status.drifted { background: rgba(212, 166, 74, 0.22); color: var(--gold-dark); }
+  .template-status.anchor-missing { background: rgba(184, 40, 50, 0.12); color: var(--danger); }
+  .template-desc {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--fg-soft);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+  .template-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+    margin-top: 6px;
+    letter-spacing: 0.02em;
+  }
+  .template-meta .template-due {
+    color: var(--navy);
+    font-weight: 600;
+  }
+  [data-theme="dark"] .template-meta .template-due { color: var(--gold); }
+
+  @media (max-width: 900px) {
+    .chapter-date-row {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .templates-generate-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+
+
   /* ========== DASHBOARD — polished ========== */
 
   /* Hero countdown row — large horizontal feature cards */
@@ -3424,6 +3648,22 @@
         render();
       }, 250);
     });
+    // Phase 0 #4: task_templates + chapter_dates realtime. When another
+    // chair re-seeds templates or edits an anchor date, our view re-renders.
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'task_templates' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => {
+        await loadTaskTemplates();
+        render();
+      }, 250);
+    });
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'chapter_dates' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => {
+        await loadChapterDates();
+        render();
+      }, 250);
+    });
     channel.subscribe();
   }
 
@@ -3550,6 +3790,18 @@
     nametagSubview: 'generate',
     nametagHistoryFilter: { search: '', event_label: 'all', template_name: 'all' },
     nametagHistoryExpanded: new Set(),
+    // ============================================================
+    // 1. STATE INIT (Phase 0 #4 — Master To-Do List)
+    // ============================================================
+    taskTemplates: [],
+    taskTemplatesLoaded: false,
+    chapterDates: [],
+    chapterDatesLoaded: false,
+    tasksSubview: 'active',
+    taskTemplateFilter: { search: '', phase: 'all', category: 'all' },
+    taskTemplatesExcluded: new Set(),
+    taskTemplatesExpanded: null,         // initialized on first Templates render based on current phase
+    chapterDatesEditingKey: null,
   };
 
   // ============================================================
@@ -3587,6 +3839,9 @@
       // Nametag print history -- typed table like brothers. Awaited
       // separately for the same boot-isolation reason.
       await loadNametagPrints();
+      // Phase 0 #4: typed-table reads for parametric to-do list.
+      await loadTaskTemplates();
+      await loadChapterDates();
       state.notes = notes || [];
       state.tasks = tasks || [];
       state.events = events || [];
@@ -3859,11 +4114,23 @@
   // panel — edit ISO strings here when the president confirms a date.
   // BFC Mixer is approximate; everything else is locked.
   // ============================================================
-  const DASHBOARD_DATES = {
+  // Phase 0 #4: now a code-side fallback. Live anchors come from public.chapter_dates via getDashboardDates().
+  const DASHBOARD_DATES_FALLBACK = {
     softLaunch:   { label: 'Soft launch',   iso: '2026-08-15', icon: '◴', sub: 'Forms open · outreach begins' },
     hardDeadline: { label: 'Hard deadline', iso: '2026-08-25', icon: '⬢', sub: 'Last day for submissions' },
     bfcMixer:     { label: 'BFC Mixer',     iso: '2026-09-08', icon: '✦', sub: 'Bid for Connection event' },
   };
+  // Phase 0 #4 shim: callers still reference DASHBOARD_DATES.softLaunch.iso etc.
+  // Object.defineProperty makes those reads live-merge with chapter_dates via getDashboardDates().
+  const DASHBOARD_DATES = {};
+  ['softLaunch', 'hardDeadline', 'bfcMixer'].forEach(function(k) {
+    Object.defineProperty(DASHBOARD_DATES, k, {
+      get: function() {
+        try { return getDashboardDates()[k]; }
+        catch (_) { return DASHBOARD_DATES_FALLBACK[k]; }
+      }
+    });
+  });
   // Rush calendar timeline window: 6 months ending at BFC Mixer.
   // Frames the centerpiece progress bar so "today" sits visibly inside
   // the timeline even months out from the soft launch.
@@ -4607,7 +4874,7 @@
   // ============================================================
   // TASKS
   // ============================================================
-  function renderTasks() {
+  function renderActiveTasksView() {
     const filteredTasks = state.tasks.filter(t => {
       if (state.taskFilterAssignee !== 'all') {
         // When filtering by a specific person, include their individually-assigned tasks
@@ -6942,6 +7209,485 @@
     render();
   };
 
+
+  // ============================================================
+  // PHASE 0 #4 — MASTER TO-DO LIST (parametric)
+  //
+  // Two new typed-table reads (task_templates, chapter_dates), one
+  // Templates sub-view inside Tasks, one read-only Chapter Dates
+  // editor. Generated tasks land in the existing state.tasks JSONB
+  // store with a `templateId` marker — no schema change to tasks.
+  //
+  // Templates are READ-ONLY in v1 (CRUD ships in v1.1). Iterate seed
+  // content via SQL re-runs.
+  // ============================================================
+
+  const PHASE_LABELS = {
+    'pre_rush':  'Pre-rush',
+    'pre_bfc':   'Pre-BFC',
+    'rush_week': 'Rush week',
+    'selection': 'Selection',
+    'post_rush': 'Post-rush',
+  };
+
+  // Phase → primary anchor key. Used by current-phase detection.
+  const PHASE_ANCHOR = {
+    'pre_rush':  'soft_launch',
+    'pre_bfc':   'bfc_mixer',
+    'rush_week': 'rush_week_start',
+    'selection': 'selection_start',
+    'post_rush': null,  // trailing phase, no anchor
+  };
+
+  async function loadTaskTemplates() {
+    if (!sb) return;
+    try {
+      const { data, error } = await sb
+        .from('task_templates')
+        .select('id, phase, title, description, days_offset, anchor_date_key, default_assignee, priority, category, created_at')
+        .order('phase', { ascending: true })
+        .order('days_offset', { ascending: true });
+      if (error) throw error;
+      state.taskTemplates = data || [];
+      state.taskTemplatesLoaded = true;
+    } catch (e) {
+      console.error('loadTaskTemplates failed', e);
+      state.taskTemplates = [];
+      state.taskTemplatesLoaded = true;
+    }
+  }
+
+  async function loadChapterDates() {
+    if (!sb) return;
+    try {
+      const { data, error } = await sb
+        .from('chapter_dates')
+        .select('id, key, label, iso_date, description, updated_at, updated_by')
+        .order('iso_date', { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      state.chapterDates = data || [];
+      state.chapterDatesLoaded = true;
+    } catch (e) {
+      console.error('loadChapterDates failed', e);
+      state.chapterDates = [];
+      state.chapterDatesLoaded = true;
+    }
+  }
+
+  function getChapterDatesByKey() {
+    const byKey = {};
+    (state.chapterDates || []).forEach(function(d) { byKey[d.key] = d; });
+    return byKey;
+  }
+
+  // v1.0 of #4: merges live chapter_dates with the JS fallback so a
+  // fresh deploy (chapter_dates empty) still has the countdown working.
+  function getDashboardDates() {
+    const byKey = getChapterDatesByKey();
+    function pick(fb, key) {
+      const live = byKey[key];
+      return {
+        label: (live && live.label) || fb.label,
+        iso:   (live && live.iso_date) || fb.iso,
+        icon:  fb.icon,
+        sub:   fb.sub,
+      };
+    }
+    return {
+      softLaunch:   pick(DASHBOARD_DATES_FALLBACK.softLaunch,   'soft_launch'),
+      hardDeadline: pick(DASHBOARD_DATES_FALLBACK.hardDeadline, 'hard_deadline'),
+      bfcMixer:     pick(DASHBOARD_DATES_FALLBACK.bfcMixer,     'bfc_mixer'),
+    };
+  }
+
+  function computeDueDate(iso, offset) {
+    if (!iso) return null;
+    // iso like '2026-08-15'. Set to 23:59:59 to match existing saveTask convention.
+    const d = new Date(iso + 'T23:59:59');
+    d.setDate(d.getDate() + Number(offset || 0));
+    return d;
+  }
+
+  function getTemplateCalculatedDue(template, byKey) {
+    const anchor = byKey[template.anchor_date_key];
+    if (!anchor || !anchor.iso_date) return null;
+    return computeDueDate(anchor.iso_date, template.days_offset);
+  }
+
+  function findTaskForTemplate(templateId) {
+    return (state.tasks || []).find(function(t) { return t.templateId === templateId; });
+  }
+
+  function getCurrentRushPhase() {
+    const byKey = getChapterDatesByKey();
+    let anyAnchorPinned = false;
+    Object.keys(byKey).forEach(function(k) { if (byKey[k] && byKey[k].iso_date) anyAnchorPinned = true; });
+    if (!anyAnchorPinned) return null;
+    const order = ['pre_rush', 'pre_bfc', 'rush_week', 'selection'];
+    const todayMs = Date.now();
+    for (let i = 0; i < order.length; i++) {
+      const akey = PHASE_ANCHOR[order[i]];
+      const a = akey ? byKey[akey] : null;
+      if (!a || !a.iso_date) continue;
+      const aMs = new Date(a.iso_date + 'T23:59:59').getTime();
+      if (todayMs <= aMs) return order[i];
+    }
+    return 'post_rush';
+  }
+
+  function ensureTemplatesExpansionInitialized() {
+    if (state.taskTemplatesExpanded) return;
+    const current = getCurrentRushPhase();
+    state.taskTemplatesExpanded = new Set(current ? [current] : []);
+  }
+
+  function getPhaseStats(phaseTemplates, byKey) {
+    const stats = { total: phaseTemplates.length, generated: 0, drifted: 0, anchorless: 0 };
+    phaseTemplates.forEach(function(t) {
+      const calc = getTemplateCalculatedDue(t, byKey);
+      if (!calc) { stats.anchorless++; return; }
+      const existing = findTaskForTemplate(t.id);
+      if (!existing) return;
+      stats.generated++;
+      if (!existing.dueISO) return;
+      const taskMs = new Date(existing.dueISO).getTime();
+      if (Math.abs(taskMs - calc.getTime()) > 86400000) stats.drifted++;
+    });
+    return stats;
+  }
+
+  // ============================================================
+  // RENDER — Tasks sub-nav + Templates view + Chapter Dates editor
+  // ============================================================
+  function renderTasks() {
+    const sub = state.tasksSubview || 'active';
+    return '<div class="tasks-subnav">' +
+      '<button class="subnav-tab' + (sub === 'active'    ? ' active' : '') + '" onclick="setTasksSubview(\'active\')">Active Tasks</button>' +
+      '<button class="subnav-tab' + (sub === 'templates' ? ' active' : '') + '" onclick="setTasksSubview(\'templates\')">Templates</button>' +
+    '</div>' +
+    (sub === 'templates' ? renderTemplatesView() : renderActiveTasksView());
+  }
+
+  function renderTemplatesView() {
+    ensureTemplatesExpansionInitialized();
+    const templates = state.taskTemplates || [];
+    const byKey = getChapterDatesByKey();
+    const f = state.taskTemplateFilter || { search: '', phase: 'all', category: 'all' };
+
+    const allCategories = Array.from(new Set(templates.map(function(t) { return t.category; }).filter(Boolean))).sort();
+    const filtered = templates.filter(function(t) {
+      if (f.phase !== 'all' && t.phase !== f.phase) return false;
+      if (f.category !== 'all' && t.category !== f.category) return false;
+      if (f.search) {
+        const q = f.search.trim().toLowerCase();
+        const hay = [t.title, t.description, t.category, t.default_assignee].filter(Boolean).join(' ').toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+
+    // Group by phase, preserving phase order
+    const phaseOrder = ['pre_rush', 'pre_bfc', 'rush_week', 'selection', 'post_rush'];
+    const grouped = {};
+    phaseOrder.forEach(function(p) { grouped[p] = []; });
+    filtered.forEach(function(t) { if (grouped[t.phase]) grouped[t.phase].push(t); });
+
+    // Generate plan: count non-excluded, anchored templates that aren't already generated
+    let plan = { canGenerate: 0, skipExisting: 0, skipAnchorless: 0, skipExcluded: 0 };
+    templates.forEach(function(t) {
+      if (state.taskTemplatesExcluded.has(t.id)) { plan.skipExcluded++; return; }
+      const calc = getTemplateCalculatedDue(t, byKey);
+      if (!calc) { plan.skipAnchorless++; return; }
+      if (findTaskForTemplate(t.id)) { plan.skipExisting++; return; }
+      plan.canGenerate++;
+    });
+    const generateDisabled = plan.canGenerate === 0;
+
+    return '<div class="templates-view">' +
+      renderChapterDatesEditor() +
+      '<div class="templates-section">' +
+        '<div class="templates-section-head">' +
+          '<div class="section-title" style="font-family:\'Playfair Display\',serif; font-size:17px; font-weight:700; color:var(--navy);">Task templates</div>' +
+        '</div>' +
+        '<div class="brothers-toolbar">' +
+          '<input type="search" class="field-input search" placeholder="Search templates..." ' +
+            'value="' + escapeHtml(f.search) + '" oninput="setTaskTemplateFilter(\'search\', this.value)">' +
+          '<select class="field-select" onchange="setTaskTemplateFilter(\'phase\', this.value)">' +
+            '<option value="all"' + (f.phase === 'all' ? ' selected' : '') + '>All phases</option>' +
+            phaseOrder.map(function(p) {
+              return '<option value="' + p + '"' + (f.phase === p ? ' selected' : '') + '>' + escapeHtml(PHASE_LABELS[p]) + '</option>';
+            }).join('') +
+          '</select>' +
+          '<select class="field-select" onchange="setTaskTemplateFilter(\'category\', this.value)">' +
+            '<option value="all"' + (f.category === 'all' ? ' selected' : '') + '>All categories</option>' +
+            allCategories.map(function(c) {
+              return '<option value="' + escapeHtml(c) + '"' + (f.category === c ? ' selected' : '') + '>' + escapeHtml(c) + '</option>';
+            }).join('') +
+          '</select>' +
+          '<span class="brothers-count">' + filtered.length + ' template' + (filtered.length === 1 ? '' : 's') + '</span>' +
+        '</div>' +
+        '<div class="templates-generate-bar">' +
+          '<div class="generate-plan">' +
+            '<strong>' + plan.canGenerate + '</strong> to generate' +
+            (plan.skipExisting    ? ' · <span class="plan-aside">' + plan.skipExisting    + ' already generated</span>' : '') +
+            (plan.skipAnchorless  ? ' · <span class="plan-aside">' + plan.skipAnchorless  + ' missing anchor</span>' : '') +
+            (plan.skipExcluded    ? ' · <span class="plan-aside">' + plan.skipExcluded    + ' excluded</span>' : '') +
+          '</div>' +
+          '<button class="btn primary" ' + (generateDisabled ? 'disabled ' : '') + 'onclick="generateTasksFromTemplates()">Generate tasks from templates</button>' +
+        '</div>' +
+        (templates.length === 0
+          ? '<div class="empty-state-polished">' +
+              '<div class="empty-glyph">◌</div>' +
+              '<div class="empty-text">No templates yet \\u2014 seed via 0006_seed_initial_templates.sql.</div>' +
+            '</div>'
+          : phaseOrder.map(function(p) { return renderPhaseGroup(p, grouped[p], byKey); }).join('')) +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderPhaseGroup(phaseId, templates, byKey) {
+    if (!templates.length) return '';
+    const expanded = state.taskTemplatesExpanded && state.taskTemplatesExpanded.has(phaseId);
+    const stats = getPhaseStats(templates, byKey);
+    const isCurrent = getCurrentRushPhase() === phaseId;
+    return '<div class="phase-group' + (expanded ? ' expanded' : '') + (isCurrent ? ' current-phase' : '') + '">' +
+      '<div class="phase-group-head" onclick="togglePhaseExpanded(\'' + phaseId + '\')">' +
+        '<span class="history-chevron">' + (expanded ? '\\u25be' : '\\u25b8') + '</span>' +
+        '<div class="phase-group-title">' + escapeHtml(PHASE_LABELS[phaseId]) +
+          (isCurrent ? ' <span class="phase-current-badge">current</span>' : '') +
+        '</div>' +
+        '<div class="phase-group-meta">' +
+          stats.total + ' template' + (stats.total === 1 ? '' : 's') +
+          (stats.generated ? ' \\u00b7 ' + stats.generated + ' generated' : '') +
+          (stats.drifted   ? ' \\u00b7 <span class="phase-drift">' + stats.drifted + ' drifted</span>' : '') +
+          (stats.anchorless ? ' \\u00b7 <span class="phase-anchorless">' + stats.anchorless + ' missing anchor</span>' : '') +
+        '</div>' +
+      '</div>' +
+      (expanded
+        ? '<div class="phase-group-body">' + templates.map(function(t) { return renderTemplateRow(t, byKey); }).join('') + '</div>'
+        : '') +
+    '</div>';
+  }
+
+  function renderTemplateRow(t, byKey) {
+    const calc = getTemplateCalculatedDue(t, byKey);
+    const existing = findTaskForTemplate(t.id);
+    const excluded = state.taskTemplatesExcluded.has(t.id);
+    const anchor = byKey[t.anchor_date_key];
+    const dueDisplay = calc
+      ? calc.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      : '\\u2014';
+    const anchorLabel = anchor ? anchor.label : t.anchor_date_key;
+    const offsetSign = t.days_offset === 0 ? 'on' : (t.days_offset > 0 ? '+' + t.days_offset + 'd after' : t.days_offset + 'd before');
+    const offsetExpr = offsetSign + ' ' + anchorLabel;
+    const assigneeLabel = (function() {
+      if (!t.default_assignee) return '\\u2014';
+      if (t.default_assignee === 'all') return 'All chairs';
+      const m = MEMBERS.find(function(x) { return x.id === t.default_assignee; });
+      return m ? m.name : t.default_assignee;
+    })();
+    let statusBadge = '';
+    if (!calc) statusBadge = '<span class="template-status anchor-missing">anchor missing</span>';
+    else if (existing) {
+      const taskMs = new Date(existing.dueISO || 0).getTime();
+      const drifted = Math.abs(taskMs - calc.getTime()) > 86400000;
+      statusBadge = drifted
+        ? '<span class="template-status drifted">drifted</span>'
+        : '<span class="template-status generated">generated</span>';
+    }
+    return '<div class="template-row' + (excluded ? ' excluded' : '') + (existing ? ' has-task' : '') + '">' +
+      '<label class="template-exclude" title="Skip this template on Generate">' +
+        '<input type="checkbox" ' + (excluded ? 'checked' : '') + ' onchange="toggleTemplateExcluded(\'' + t.id + '\')">' +
+      '</label>' +
+      '<div class="template-body">' +
+        '<div class="template-title">' + escapeHtml(t.title) +
+          (t.priority === 'high' ? ' <span class="template-priority high">high</span>' :
+           t.priority === 'low'  ? ' <span class="template-priority low">low</span>' : '') +
+          ' ' + statusBadge +
+        '</div>' +
+        (t.description ? '<div class="template-desc">' + escapeHtml(t.description) + '</div>' : '') +
+        '<div class="template-meta">' +
+          '<span class="template-due">Due ' + escapeHtml(dueDisplay) + '</span>' +
+          ' \\u00b7 <span class="template-offset">' + escapeHtml(offsetExpr) + '</span>' +
+          ' \\u00b7 <span class="template-assignee">' + escapeHtml(assigneeLabel) + '</span>' +
+          (t.category ? ' \\u00b7 <span class="template-category">' + escapeHtml(t.category) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderChapterDatesEditor() {
+    const dates = (state.chapterDates || []).slice().sort(function(a, b) {
+      // Order: by phase progression, fallback alphabetical
+      const order = ['soft_launch', 'hard_deadline', 'bfc_mixer', 'rush_week_start', 'selection_start'];
+      const ai = order.indexOf(a.key); const bi = order.indexOf(b.key);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return a.label.localeCompare(b.label);
+    });
+    const editing = state.chapterDatesEditingKey;
+    return '<div class="templates-section">' +
+      '<div class="templates-section-head">' +
+        '<div class="section-title" style="font-family:\'Playfair Display\',serif; font-size:17px; font-weight:700; color:var(--navy);">Chapter anchor dates</div>' +
+        '<div class="section-help">Templates calculate due dates from these. Edit a date \\u2192 templates show recalculated dues immediately. Already-generated tasks keep their old due (intentional, lets you see drift).</div>' +
+      '</div>' +
+      (dates.length === 0
+        ? '<div class="empty-state-polished">' +
+            '<div class="empty-glyph">◷</div>' +
+            '<div class="empty-text">No chapter dates yet \\u2014 apply 0005_task_templates_chapter_dates.sql.</div>' +
+          '</div>'
+        : '<div class="chapter-dates-list">' +
+            dates.map(function(d) {
+              const isEditing = editing === d.key;
+              const dateStr = d.iso_date
+                ? new Date(d.iso_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+                : 'TBD';
+              return '<div class="chapter-date-row' + (isEditing ? ' editing' : '') + (d.iso_date ? '' : ' no-date') + '">' +
+                '<div class="cd-label">' + escapeHtml(d.label) + '</div>' +
+                (isEditing
+                  ? '<input type="date" class="field-input cd-input" value="' + escapeHtml(d.iso_date || '') + '" data-key="' + escapeHtml(d.key) + '">' +
+                    '<button class="btn small" onclick="saveChapterDate(\'' + d.key + '\')">Save</button>' +
+                    '<button class="btn small ghost" onclick="setChapterDateEditing(null)">Cancel</button>'
+                  : '<div class="cd-value">' + escapeHtml(dateStr) + '</div>' +
+                    '<button class="btn small ghost" onclick="setChapterDateEditing(\'' + d.key + '\')">Edit</button>') +
+                (d.description ? '<div class="cd-desc">' + escapeHtml(d.description) + '</div>' : '') +
+              '</div>';
+            }).join('') +
+          '</div>') +
+    '</div>';
+  }
+
+  // ============================================================
+  // GENERATE FLOW
+  // ============================================================
+  async function generateTasksFromTemplates() {
+    if (!sb) return;
+    const templates = state.taskTemplates || [];
+    const byKey = getChapterDatesByKey();
+    const newTasks = [];
+    let skipExisting = 0, skipAnchorless = 0, skipExcluded = 0;
+
+    templates.forEach(function(t) {
+      if (state.taskTemplatesExcluded.has(t.id)) { skipExcluded++; return; }
+      const calc = getTemplateCalculatedDue(t, byKey);
+      if (!calc) { skipAnchorless++; return; }
+      if (findTaskForTemplate(t.id)) { skipExisting++; return; }
+      // Category match: case-insensitive name match against existing task_cats
+      let categoryId = null;
+      if (t.category) {
+        const match = (state.taskCategories || []).find(function(c) {
+          return c.name && c.name.toLowerCase() === t.category.toLowerCase();
+        });
+        if (match) categoryId = match.id;
+      }
+      newTasks.push({
+        id:        't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        templateId: t.id,
+        text:      t.title,
+        notes:     t.description || '',
+        assigneeId: t.default_assignee || null,
+        categoryId: categoryId,
+        status:    'todo',
+        priority:  t.priority || 'med',
+        dueISO:    calc.toISOString(),
+        authorId:  state.currentUser,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    });
+
+    if (newTasks.length === 0) {
+      toast('Nothing to generate. ' +
+            (skipExisting ? skipExisting + ' already exist. ' : '') +
+            (skipAnchorless ? skipAnchorless + ' missing anchor.' : ''), 'error');
+      return;
+    }
+
+    const confirmed = confirm('Generate ' + newTasks.length + ' task' + (newTasks.length === 1 ? '' : 's') + ' from templates?\\n\\n' +
+      (skipExisting   ? skipExisting + ' already generated will be skipped.\\n' : '') +
+      (skipAnchorless ? skipAnchorless + ' have no anchor date set.\\n' : '') +
+      (skipExcluded   ? skipExcluded + ' are excluded.\\n' : ''));
+    if (!confirmed) return;
+
+    state.tasks = state.tasks.concat(newTasks);
+    const ok = await Storage.set('tasks', state.tasks);
+    if (!ok) {
+      toast('Failed to save generated tasks \\u2014 check console.', 'error');
+      state.tasks = state.tasks.slice(0, state.tasks.length - newTasks.length);
+      return;
+    }
+    toast('Generated ' + newTasks.length + ' task' + (newTasks.length === 1 ? '' : 's') + '.', 'success');
+    render();
+  }
+
+  // ============================================================
+  // WINDOW HANDLERS
+  // ============================================================
+  window.setTasksSubview = function(key) {
+    state.tasksSubview = key;
+    render();
+  };
+
+  window.setTaskTemplateFilter = function(key, value) {
+    state.taskTemplateFilter = Object.assign({}, state.taskTemplateFilter, { [key]: value });
+    render();
+    if (key === 'search') {
+      const el = document.querySelector('.templates-view .brothers-toolbar .search');
+      if (el) { try { el.focus(); el.setSelectionRange(value.length, value.length); } catch(_) {} }
+    }
+  };
+
+  window.toggleTemplateExcluded = function(id) {
+    if (!state.taskTemplatesExcluded) state.taskTemplatesExcluded = new Set();
+    if (state.taskTemplatesExcluded.has(id)) state.taskTemplatesExcluded.delete(id);
+    else state.taskTemplatesExcluded.add(id);
+    render();
+  };
+
+  window.togglePhaseExpanded = function(phase) {
+    if (!state.taskTemplatesExpanded) state.taskTemplatesExpanded = new Set();
+    if (state.taskTemplatesExpanded.has(phase)) state.taskTemplatesExpanded.delete(phase);
+    else state.taskTemplatesExpanded.add(phase);
+    render();
+  };
+
+  window.setChapterDateEditing = function(key) {
+    state.chapterDatesEditingKey = key;
+    render();
+    if (key) {
+      // focus the date input after render
+      setTimeout(function() {
+        const el = document.querySelector('.cd-input[data-key="' + key + '"]');
+        if (el) { try { el.focus(); } catch(_) {} }
+      }, 0);
+    }
+  };
+
+  window.saveChapterDate = async function(key) {
+    const el = document.querySelector('.cd-input[data-key="' + key + '"]');
+    if (!el) return;
+    const newIso = el.value || null;
+    const row = (state.chapterDates || []).find(function(d) { return d.key === key; });
+    if (!row) return;
+    try {
+      const { error } = await sb.from('chapter_dates')
+        .update({ iso_date: newIso, updated_by: state.currentUser, updated_at: new Date().toISOString() })
+        .eq('key', key);
+      if (error) throw error;
+      row.iso_date = newIso;
+      row.updated_by = state.currentUser;
+      row.updated_at = new Date().toISOString();
+      state.chapterDatesEditingKey = null;
+      toast('Saved ' + row.label + (newIso ? ' \\u2192 ' + newIso : ' \\u2192 TBD'), 'success');
+      render();
+    } catch (e) {
+      console.error('saveChapterDate failed', e);
+      toast('Failed to save date \\u2014 check console.', 'error');
+    }
+  };
+
+  window.generateTasksFromTemplates = generateTasksFromTemplates;
 
   if (sb) init();
 </script>
