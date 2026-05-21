@@ -7438,7 +7438,7 @@
         (templates.length === 0
           ? '<div class="empty-state-polished">' +
               '<div class="empty-glyph">◌</div>' +
-              '<div class="empty-text">No templates yet \\u2014 seed via 0006_seed_initial_templates.sql.</div>' +
+              '<div class="empty-text">No templates yet — seed via 0006_seed_initial_templates.sql.</div>' +
             '</div>'
           : phaseOrder.map(function(p) { return renderPhaseGroup(p, grouped[p], byKey); }).join('')) +
       '</div>' +
@@ -7452,15 +7452,15 @@
     const isCurrent = getCurrentRushPhase() === phaseId;
     return '<div class="phase-group' + (expanded ? ' expanded' : '') + (isCurrent ? ' current-phase' : '') + '">' +
       '<div class="phase-group-head" onclick="togglePhaseExpanded(\'' + phaseId + '\')">' +
-        '<span class="history-chevron">' + (expanded ? '\\u25be' : '\\u25b8') + '</span>' +
+        '<span class="history-chevron">' + (expanded ? '▾' : '▸') + '</span>' +
         '<div class="phase-group-title">' + escapeHtml(PHASE_LABELS[phaseId]) +
           (isCurrent ? ' <span class="phase-current-badge">current</span>' : '') +
         '</div>' +
         '<div class="phase-group-meta">' +
           stats.total + ' template' + (stats.total === 1 ? '' : 's') +
-          (stats.generated ? ' \\u00b7 ' + stats.generated + ' generated' : '') +
-          (stats.drifted   ? ' \\u00b7 <span class="phase-drift">' + stats.drifted + ' drifted</span>' : '') +
-          (stats.anchorless ? ' \\u00b7 <span class="phase-anchorless">' + stats.anchorless + ' missing anchor</span>' : '') +
+          (stats.generated ? ' · ' + stats.generated + ' generated' : '') +
+          (stats.drifted   ? ' · <span class="phase-drift">' + stats.drifted + ' drifted</span>' : '') +
+          (stats.anchorless ? ' · <span class="phase-anchorless">' + stats.anchorless + ' missing anchor</span>' : '') +
         '</div>' +
       '</div>' +
       (expanded
@@ -7476,12 +7476,12 @@
     const anchor = byKey[t.anchor_date_key];
     const dueDisplay = calc
       ? calc.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-      : '\\u2014';
+      : '—';
     const anchorLabel = anchor ? anchor.label : t.anchor_date_key;
     const offsetSign = t.days_offset === 0 ? 'on' : (t.days_offset > 0 ? '+' + t.days_offset + 'd after' : t.days_offset + 'd before');
     const offsetExpr = offsetSign + ' ' + anchorLabel;
     const assigneeLabel = (function() {
-      if (!t.default_assignee) return '\\u2014';
+      if (!t.default_assignee) return '—';
       if (t.default_assignee === 'all') return 'All chairs';
       const m = MEMBERS.find(function(x) { return x.id === t.default_assignee; });
       return m ? m.name : t.default_assignee;
@@ -7508,9 +7508,9 @@
         (t.description ? '<div class="template-desc">' + escapeHtml(t.description) + '</div>' : '') +
         '<div class="template-meta">' +
           '<span class="template-due">Due ' + escapeHtml(dueDisplay) + '</span>' +
-          ' \\u00b7 <span class="template-offset">' + escapeHtml(offsetExpr) + '</span>' +
-          ' \\u00b7 <span class="template-assignee">' + escapeHtml(assigneeLabel) + '</span>' +
-          (t.category ? ' \\u00b7 <span class="template-category">' + escapeHtml(t.category) + '</span>' : '') +
+          ' · <span class="template-offset">' + escapeHtml(offsetExpr) + '</span>' +
+          ' · <span class="template-assignee">' + escapeHtml(assigneeLabel) + '</span>' +
+          (t.category ? ' · <span class="template-category">' + escapeHtml(t.category) + '</span>' : '') +
         '</div>' +
       '</div>' +
     '</div>';
@@ -7530,12 +7530,12 @@
     return '<div class="templates-section">' +
       '<div class="templates-section-head">' +
         '<div class="section-title" style="font-family:\'Playfair Display\',serif; font-size:17px; font-weight:700; color:var(--navy);">Chapter anchor dates</div>' +
-        '<div class="section-help">Templates calculate due dates from these. Edit a date \\u2192 templates show recalculated dues immediately. Already-generated tasks keep their old due (intentional, lets you see drift).</div>' +
+        '<div class="section-help">Templates calculate due dates from these. Edit a date → templates show recalculated dues immediately. Already-generated tasks keep their old due (intentional, lets you see drift).</div>' +
       '</div>' +
       (dates.length === 0
         ? '<div class="empty-state-polished">' +
             '<div class="empty-glyph">◷</div>' +
-            '<div class="empty-text">No chapter dates yet \\u2014 apply 0005_task_templates_chapter_dates.sql.</div>' +
+            '<div class="empty-text">No chapter dates yet — apply 0005_task_templates_chapter_dates.sql.</div>' +
           '</div>'
         : '<div class="chapter-dates-list">' +
             dates.map(function(d) {
@@ -7613,7 +7613,7 @@
     state.tasks = state.tasks.concat(newTasks);
     const ok = await Storage.set('tasks', state.tasks);
     if (!ok) {
-      toast('Failed to save generated tasks \\u2014 check console.', 'error');
+      toast('Failed to save generated tasks — check console.', 'error');
       state.tasks = state.tasks.slice(0, state.tasks.length - newTasks.length);
       return;
     }
@@ -7679,11 +7679,11 @@
       row.updated_by = state.currentUser;
       row.updated_at = new Date().toISOString();
       state.chapterDatesEditingKey = null;
-      toast('Saved ' + row.label + (newIso ? ' \\u2192 ' + newIso : ' \\u2192 TBD'), 'success');
+      toast('Saved ' + row.label + (newIso ? ' → ' + newIso : ' → TBD'), 'success');
       render();
     } catch (e) {
       console.error('saveChapterDate failed', e);
-      toast('Failed to save date \\u2014 check console.', 'error');
+      toast('Failed to save date — check console.', 'error');
     }
   };
 
