@@ -6292,6 +6292,10 @@
     state.nametagGenerating = true;
     render();
 
+    if (window.NAMETAG_DEBUG) {
+      console.warn('[nametag] NAMETAG_DEBUG is on — PDF will preview only, no prints logged.');
+    }
+
     try {
       if (document.fonts && document.fonts.ready) {
         await document.fonts.ready;
@@ -6302,7 +6306,7 @@
       var perPage = dims.cols * dims.rows;
 
       var stage = document.createElement('div');
-      stage.style.cssText = 'position:absolute; left:-9999px; top:0; visibility:hidden;';
+      stage.style.cssText = 'position:absolute; left:-9999px; top:0;';
       document.body.appendChild(stage);
 
       for (var i = 0; i < plan.toPrint.length; i++) {
@@ -6310,8 +6314,16 @@
         if (!b) continue;
         stage.innerHTML = renderNametagCardHTML(b);
         var cardEl = stage.firstElementChild;
+        if (window.NAMETAG_DEBUG) {
+          var _dbgRect = cardEl.getBoundingClientRect();
+          console.log('[nametag]', i, 'cardEl rect:', _dbgRect.width.toFixed(1) + 'x' + _dbgRect.height.toFixed(1));
+        }
         // eslint-disable-next-line no-await-in-loop
-        var canvas = await window.html2canvas(cardEl, { scale: 3, backgroundColor: null, logging: false });
+        var canvas = await window.html2canvas(cardEl, { scale: 3, backgroundColor: '#ffffff', logging: false, useCORS: true });
+        if (window.NAMETAG_DEBUG) {
+          var _dbgUrl = canvas.toDataURL('image/png');
+          console.log('[nametag]', i, 'canvas:', canvas.width + 'x' + canvas.height, '· dataURL len:', _dbgUrl.length, '· prefix:', _dbgUrl.slice(0, 22));
+        }
         var posInPage = i % perPage;
         if (posInPage === 0 && i > 0) doc.addPage();
         var col = posInPage % dims.cols;
@@ -6324,14 +6336,20 @@
 
       var safeLabel = eventLabel.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '');
       var today = new Date().toISOString().slice(0, 10);
-      doc.save('nametags_' + safeLabel + '_' + today + '.pdf');
 
-      await recordNametagPrints(plan.toPrint, eventLabel, NAMETAG_TEMPLATES[state.nametagTemplate].label);
-
-      state.nametagSelected.clear();
-      state.nametagReprint.clear();
-      toast('Printed ' + plan.toPrint.length + ' nametag' + (plan.toPrint.length === 1 ? '' : 's') +
-            (plan.skipped.length ? ' · skipped ' + plan.skipped.length + ' already-printed' : ''));
+      if (window.NAMETAG_DEBUG) {
+        // Debug path: preview in new tab for visual verification. No save-to-
+        // disk, no print log, no selection clear — chair can iterate freely.
+        doc.output('dataurlnewwindow');
+        toast('Preview opened · NAMETAG_DEBUG on, no prints logged.', 'default');
+      } else {
+        doc.save('nametags_' + safeLabel + '_' + today + '.pdf');
+        await recordNametagPrints(plan.toPrint, eventLabel, NAMETAG_TEMPLATES[state.nametagTemplate].label);
+        state.nametagSelected.clear();
+        state.nametagReprint.clear();
+        toast('Printed ' + plan.toPrint.length + ' nametag' + (plan.toPrint.length === 1 ? '' : 's') +
+              (plan.skipped.length ? ' · skipped ' + plan.skipped.length + ' already-printed' : ''));
+      }
     } catch (e) {
       console.error('PDF generation failed', e);
       toast('PDF generation failed — check console.', 'error');
