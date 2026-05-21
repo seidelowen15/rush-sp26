@@ -3206,6 +3206,398 @@
     .hero-value { font-size: 34px; }
     .kpi-value { font-size: 30px; }
   }
+
+  /* ========== PHASE 0 #4 v2 — TASK SYSTEM REDESIGN ========== */
+
+  /* §1 — Active Tasks header + scope toggle */
+  .tasks-header-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .tasks-scope-toggle {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .scope-pill {
+    border: none;
+    background: transparent;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .scope-pill:hover { color: var(--fg); }
+  .scope-pill.active { background: var(--navy); color: var(--paper); }
+  [data-theme="dark"] .scope-pill.active { background: var(--gold); color: var(--navy-dark); }
+  .tasks-count {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* §2 — Task list rows */
+  .task-list { display: flex; flex-direction: column; }
+  .task-list.secondary { opacity: 0.85; margin-top: 4px; }
+  .task-group-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px 6px;
+    margin-top: 6px;
+  }
+  .task-group-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    font-weight: 600;
+  }
+  .task-group-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--fg-muted);
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--line);
+  }
+  .task-group-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--fg-muted);
+  }
+  .task-group-dot.urgency-overdue  { background: var(--danger); }
+  .task-group-dot.urgency-today    { background: var(--gold); }
+  .task-group-dot.urgency-tomorrow { background: var(--gold-dark); }
+  .task-group-dot.urgency-week     { background: var(--navy); }
+  [data-theme="dark"] .task-group-dot.urgency-week { background: var(--gold); }
+  .task-group-dot.urgency-future   { background: var(--fg-muted); }
+  .task-group-dot.urgency-done     { background: var(--success); }
+
+  .task-row {
+    border-bottom: 1px solid var(--line);
+    transition: background 0.15s;
+  }
+  .task-row:hover { background: var(--parchment); }
+  [data-theme="dark"] .task-row:hover { background: rgba(212, 166, 74, 0.06); }
+  .task-row-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+  }
+  .task-checkbox-inline {
+    width: 16px; height: 16px;
+    margin-top: 1px;
+    accent-color: var(--navy);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  [data-theme="dark"] .task-checkbox-inline { accent-color: var(--gold); }
+  .task-row-body { flex: 1; min-width: 0; }
+  .task-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--fg);
+    line-height: 1.35;
+  }
+  .task-title.done { text-decoration: line-through; color: var(--fg-muted); }
+  .task-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+    margin-top: 3px;
+    letter-spacing: 0.02em;
+  }
+  .task-row.urgency-overdue .task-title { color: var(--danger); }
+  .task-row.urgency-overdue .task-meta { color: var(--danger); opacity: 0.75; }
+  .task-row-expanded {
+    padding: 0 12px 14px 40px;
+  }
+  .task-notes {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--fg-soft);
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+  .task-notes.empty { font-style: italic; color: var(--fg-muted); }
+  .task-row-actions { display: flex; gap: 8px; }
+  .task-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .task-badge.priority-high   { background: rgba(184, 40, 50, 0.12);  color: var(--danger); }
+  .task-badge.priority-low    { background: var(--line);                color: var(--fg-muted); }
+  .task-badge.status-progress { background: rgba(10, 36, 99, 0.12);   color: var(--navy); }
+  [data-theme="dark"] .task-badge.status-progress { color: var(--gold); }
+  .task-badge.drifted {
+    background: rgba(212, 166, 74, 0.22);
+    color: var(--gold-dark);
+    cursor: pointer;
+  }
+  .task-badge.drifted:hover { background: rgba(212, 166, 74, 0.38); }
+
+  .task-section-toggle {
+    padding: 10px 12px;
+    margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    border-top: 1px solid var(--line);
+    transition: color 0.15s;
+  }
+  .task-section-toggle:hover { color: var(--fg); }
+  .task-section-toggle.open { color: var(--fg); }
+
+  /* §3 — Banners */
+  .task-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+  }
+  .task-banner .banner-icon  { font-size: 16px; }
+  .task-banner .banner-text  { flex: 1; }
+  .task-banner .banner-action {
+    background: transparent;
+    border: 1px solid currentColor;
+    color: inherit;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .task-banner .banner-action:hover { background: rgba(255,255,255,0.12); }
+  .task-banner .banner-dismiss {
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+    opacity: 0.7;
+  }
+  .task-banner .banner-dismiss:hover { opacity: 1; }
+  .drift-banner       { background: rgba(212, 166, 74, 0.14); color: var(--gold-dark); }
+  .duplicates-banner  { background: rgba(184, 40, 50, 0.10);   color: var(--danger); }
+  .what-changed-banner{ background: rgba(63, 138, 92, 0.12);  color: #2c6b46; }
+  [data-theme="dark"] .drift-banner { color: var(--gold); }
+  [data-theme="dark"] .what-changed-banner { color: #6aa884; }
+
+  /* §4 — Quick-add floating button */
+  .quick-add-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: var(--paper);
+    border: none;
+    font-family: 'Playfair Display', serif;
+    font-size: 30px;
+    line-height: 0;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(3, 16, 46, 0.25);
+    transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+    z-index: 50;
+  }
+  .quick-add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(3, 16, 46, 0.32);
+    background: var(--navy-dark);
+  }
+  [data-theme="dark"] .quick-add-btn { background: var(--gold); color: var(--navy-dark); }
+  [data-theme="dark"] .quick-add-btn:hover { background: var(--gold-light); }
+
+  /* §5 — Calendar task chips + day detail */
+  .cal-task-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(232, 198, 112, 0.30);
+    color: var(--navy-dark);
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    margin: 2px 2px 0 0;
+    cursor: pointer;
+    max-width: 100%;
+    transition: opacity 0.32s ease, background 0.15s;
+  }
+  [data-theme="dark"] .cal-task-chip { background: rgba(212, 166, 74, 0.30); color: var(--gold-light); }
+  .cal-task-chip:hover { background: rgba(212, 166, 74, 0.55); }
+  .cal-task-chip.fading { opacity: 0; pointer-events: none; }
+  .cal-task-chip.done { opacity: 0.55; text-decoration: line-through; }
+  .cal-task-chip .cal-task-check {
+    width: 12px; height: 12px;
+    accent-color: var(--navy);
+    cursor: pointer;
+    margin: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .cal-task-chip:hover .cal-task-check { opacity: 1; }
+  .cal-task-chip .cal-task-text {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cal-day-detail-overlay {
+    position: fixed; inset: 0;
+    background: rgba(3, 16, 46, 0.45);
+    z-index: 100;
+    display: flex;
+    justify-content: flex-end;
+    backdrop-filter: blur(4px);
+  }
+  .cal-day-detail {
+    width: 420px;
+    max-width: 90vw;
+    background: var(--surface);
+    padding: 28px 32px;
+    overflow-y: auto;
+    position: relative;
+  }
+  .cal-day-detail-close {
+    position: absolute;
+    top: 14px; right: 18px;
+    border: none; background: transparent;
+    font-size: 20px; cursor: pointer;
+    color: var(--fg-muted);
+  }
+  .cal-day-detail-head {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 18px;
+    letter-spacing: -0.01em;
+  }
+  [data-theme="dark"] .cal-day-detail-head { color: var(--gold); }
+  .cal-day-section { margin-bottom: 22px; }
+  .cal-day-section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-bottom: 8px;
+  }
+  .cal-day-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .cal-day-item:hover { background: var(--parchment); }
+  [data-theme="dark"] .cal-day-item:hover { background: rgba(212, 166, 74, 0.06); }
+  .cal-day-item-title { font-weight: 500; }
+  .cal-day-item-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+  }
+
+  /* §6 — Templates CRUD inline edit form */
+  .template-edit-form {
+    background: var(--parchment);
+    border-left: 3px solid var(--navy);
+    padding: 14px 18px;
+    margin-top: 6px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+  }
+  [data-theme="dark"] .template-edit-form { background: rgba(212, 166, 74, 0.06); }
+  .template-edit-form .form-row { margin-bottom: 10px; }
+  .template-edit-form .form-row-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  .template-edit-form .form-row-grid label { margin: 0; }
+  .template-edit-form .field-label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-muted);
+    margin-bottom: 4px;
+  }
+  .template-edit-form .field-input,
+  .template-edit-form .field-select,
+  .template-edit-form .field-textarea {
+    width: 100%;
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+  .template-edit-form .form-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 14px;
+  }
+  .add-template-btn {
+    margin: 6px 0 0 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-muted);
+    background: transparent;
+    border: 1px dashed var(--line-strong);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .add-template-btn:hover { color: var(--navy); border-color: var(--navy); }
+  [data-theme="dark"] .add-template-btn:hover { color: var(--gold); border-color: var(--gold); }
+
+  /* §7 — Mobile */
+  @media (max-width: 900px) {
+    .quick-add-btn { bottom: 20px; right: 20px; width: 48px; height: 48px; }
+    .cal-day-detail { padding: 20px 22px; }
+    .template-edit-form .form-row-grid { grid-template-columns: 1fr; }
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -7688,6 +8080,725 @@
   };
 
   window.generateTasksFromTemplates = generateTasksFromTemplates;
+
+  // ============================================================
+  // PHASE 0 #4 v2 — TASK SYSTEM REDESIGN
+  //
+  // Auto-sync replaces manual Generate. Tasks ↔ templates maintained
+  // continuously: when a chapter_date or template changes, autoSync
+  // updates non-edited tasks and flags edited ones as drifted.
+  //
+  // Bug guard: 0007 migration deletes legacy duplicate templates and
+  // adds a UNIQUE constraint so future seeds can't recreate the
+  // duplicate condition.
+  //
+  // Existing tasks: task.edited defaults true on first v2 load (safer —
+  // assumes chair has been working in them). New generated tasks default
+  // task.edited = false at creation time.
+  // ============================================================
+
+  // ============================================================
+  // §1 — AUTO-SYNC ENGINE
+  // ============================================================
+  function migrateExistingTasksToV2() {
+    // One-shot first-v2-load pass: stamp existing generated tasks as
+    // edited=true so subsequent autoSync runs don't clobber chair work.
+    // Idempotent — sets edited=true only when undefined.
+    let migrated = 0;
+    (state.tasks || []).forEach(function(t) {
+      if (t.templateId && t.edited === undefined) {
+        t.edited = true;
+        migrated++;
+      }
+    });
+    if (migrated > 0) {
+      console.log('[v2 migration] stamped', migrated, 'existing generated tasks as edited=true');
+    }
+    return migrated;
+  }
+
+  function detectDuplicateTaskGroups() {
+    // Returns array of { templateId, tasks: [t1, t2, ...] } for any
+    // templateId that has 2+ associated tasks. Surfaced via banner.
+    const byTemplateId = {};
+    (state.tasks || []).forEach(function(t) {
+      if (!t.templateId) return;
+      if (!byTemplateId[t.templateId]) byTemplateId[t.templateId] = [];
+      byTemplateId[t.templateId].push(t);
+    });
+    const groups = [];
+    Object.keys(byTemplateId).forEach(function(tid) {
+      if (byTemplateId[tid].length >= 2) groups.push({ templateId: tid, tasks: byTemplateId[tid] });
+    });
+    return groups;
+  }
+
+  async function autoSyncTasksToTemplates(opts) {
+    // Core engine. Idempotent. Called from:
+    //   - loadAll (boot-time pass)
+    //   - saveChapterDate success
+    //   - saveTemplateEdit success
+    //   - deleteTemplateRow success
+    // Returns { created, updated, deletedOrphans, driftMarked } counts.
+    if (!sb) return { created: 0, updated: 0, deletedOrphans: 0, driftMarked: 0 };
+    opts = opts || {};
+    const templates = state.taskTemplates || [];
+    const tasks     = state.tasks || [];
+    const byKey     = getChapterDatesByKey();
+    const byTemplateId = {};
+    tasks.forEach(function(t) { if (t.templateId) byTemplateId[t.templateId] = t; });
+
+    let created = 0, updated = 0, deletedOrphans = 0, driftMarked = 0;
+    const newTasks = tasks.slice();  // mutable copy
+    const generatedTemplateIds = new Set();
+
+    // 1. For each template: create task if missing (and anchor pinned)
+    templates.forEach(function(tmpl) {
+      generatedTemplateIds.add(tmpl.id);
+      const anchor = byKey[tmpl.anchor_date_key];
+      if (!anchor || !anchor.iso_date) return;  // can't compute due, skip
+      const existing = byTemplateId[tmpl.id];
+      const newDue = computeDueDate(anchor.iso_date, tmpl.days_offset);
+      if (!existing) {
+        // Create
+        let categoryId = null;
+        if (tmpl.category) {
+          const match = (state.taskCategories || []).find(function(c) {
+            return c.name && c.name.toLowerCase() === tmpl.category.toLowerCase();
+          });
+          if (match) categoryId = match.id;
+        }
+        newTasks.push({
+          id:         't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          templateId: tmpl.id,
+          text:       tmpl.title,
+          notes:      tmpl.description || '',
+          assigneeId: tmpl.default_assignee || null,
+          categoryId: categoryId,
+          status:     'todo',
+          priority:   tmpl.priority || 'med',
+          dueISO:     newDue.toISOString(),
+          dueISOMovedAt: Date.now(),
+          edited:     false,
+          driftFromAnchor: false,
+          authorId:   state.currentUser,
+          createdAt:  Date.now(),
+          updatedAt:  Date.now(),
+        });
+        created++;
+      } else {
+        // Update or flag drift on existing
+        const taskDueMs = existing.dueISO ? new Date(existing.dueISO).getTime() : 0;
+        const newDueMs  = newDue.getTime();
+        if (Math.abs(taskDueMs - newDueMs) > 60000) {  // >1 min difference = real change
+          if (!existing.edited) {
+            existing.dueISO = newDue.toISOString();
+            existing.dueISOMovedAt = Date.now();
+            existing.driftFromAnchor = false;
+            updated++;
+          } else if (!existing.driftFromAnchor) {
+            existing.driftFromAnchor = true;
+            driftMarked++;
+          }
+        }
+      }
+    });
+
+    // 2. For each task with a templateId: if the template no longer exists,
+    //    delete the task IF not edited (preserve chair work otherwise).
+    for (let i = newTasks.length - 1; i >= 0; i--) {
+      const t = newTasks[i];
+      if (!t.templateId) continue;
+      if (generatedTemplateIds.has(t.templateId)) continue;
+      if (!t.edited) {
+        console.log('[autoSync] removing orphan task', t.id, 'for missing template', t.templateId);
+        newTasks.splice(i, 1);
+        deletedOrphans++;
+      }
+    }
+
+    if (created || updated || deletedOrphans || driftMarked) {
+      state.tasks = newTasks;
+      const ok = await Storage.set('tasks', state.tasks);
+      if (!ok) {
+        console.error('[autoSync] persist failed; reverting in-memory changes is not possible without snapshot');
+      }
+    }
+    return { created, updated, deletedOrphans, driftMarked };
+  }
+
+  // ============================================================
+  // §2 — TASK FILTERING + GROUPING (Active Tasks)
+  // ============================================================
+  function taskUrgency(t) {
+    if (!t.dueISO) return 'future';
+    if (t.status === 'done') return 'done';
+    const due = new Date(t.dueISO).getTime();
+    const now = Date.now();
+    if (due < now) return 'overdue';
+    const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+    const tomorrowEnd = new Date(); tomorrowEnd.setDate(tomorrowEnd.getDate() + 1); tomorrowEnd.setHours(23, 59, 59, 999);
+    if (due <= todayEnd.getTime())    return 'today';
+    if (due <= tomorrowEnd.getTime()) return 'tomorrow';
+    if (due <= now + 7 * 86400000)    return 'week';
+    if (due <= now + 14 * 86400000)   return 'two_week';
+    return 'future';
+  }
+
+  function tasksForView(scope) {
+    // scope === 'mine' or 'all'
+    const me = state.currentUser;
+    return (state.tasks || []).filter(function(t) {
+      if (scope === 'mine') {
+        if (t.assigneeId && t.assigneeId !== me && t.assigneeId !== 'all') return false;
+      }
+      return true;
+    });
+  }
+
+  function groupTasksByUrgency(tasks) {
+    const groups = { overdue: [], today: [], tomorrow: [], week: [], future: [], done: [] };
+    tasks.forEach(function(t) {
+      const u = taskUrgency(t);
+      if (u === 'two_week') groups.future.push(t);
+      else if (!groups[u]) groups.future.push(t);
+      else groups[u].push(t);
+    });
+    // sort each by dueISO ascending (overdue oldest first; done newest first)
+    function byDueAsc(a, b) { return new Date(a.dueISO || 0) - new Date(b.dueISO || 0); }
+    function byUpdatedDesc(a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); }
+    groups.overdue.sort(byDueAsc);
+    groups.today.sort(byDueAsc);
+    groups.tomorrow.sort(byDueAsc);
+    groups.week.sort(byDueAsc);
+    groups.future.sort(byDueAsc);
+    groups.done.sort(byUpdatedDesc);
+    return groups;
+  }
+
+  // ============================================================
+  // §3 — RENDERERS (Active Tasks list-based view)
+  // ============================================================
+  function renderActiveTasksView_v2() {
+    ensureLastVisitedAtLoaded();
+    const scope = state.tasksView || 'mine';
+    const allTasks = tasksForView(scope);
+    const groups = groupTasksByUrgency(allTasks);
+    const visibleNow = [].concat(groups.overdue, groups.today, groups.tomorrow, groups.week);
+    const futureCount = groups.future.length;
+    const completedCount = groups.done.length;
+
+    // Banners (drift, what-changed, duplicates)
+    const driftedTasks = allTasks.filter(function(t) { return t.driftFromAnchor; });
+    const duplicateGroups = detectDuplicateTaskGroups();
+
+    return '' +
+      renderDuplicatesBanner(duplicateGroups) +
+      renderDriftBanner(driftedTasks) +
+      renderWhatChangedBanner() +
+      '<div class="tasks-header-row">' +
+        '<div class="tasks-scope-toggle">' +
+          '<button class="scope-pill' + (scope === 'mine' ? ' active' : '') + '" onclick="setTasksView(\'mine\')">My tasks</button>' +
+          '<button class="scope-pill' + (scope === 'all'  ? ' active' : '') + '" onclick="setTasksView(\'all\')">All tasks</button>' +
+        '</div>' +
+        '<div class="tasks-count">' + visibleNow.length + ' visible · ' + futureCount + ' future · ' + completedCount + ' done</div>' +
+      '</div>' +
+      '<div class="task-list">' +
+        (visibleNow.length === 0 && !state.tasksShowFuture && !state.tasksShowCompleted
+          ? '<div class="empty-state-polished">' +
+              '<div class="empty-glyph">○</div>' +
+              '<div class="empty-text">Nothing on the radar.</div>' +
+            '</div>'
+          : '') +
+        (groups.overdue.length  ? renderTaskGroupSection('Overdue',  'overdue',  groups.overdue)  : '') +
+        (groups.today.length    ? renderTaskGroupSection('Today',    'today',    groups.today)    : '') +
+        (groups.tomorrow.length ? renderTaskGroupSection('Tomorrow', 'tomorrow', groups.tomorrow) : '') +
+        (groups.week.length     ? renderTaskGroupSection('This week','week',     groups.week)     : '') +
+      '</div>' +
+      (futureCount > 0
+        ? '<div class="task-section-toggle' + (state.tasksShowFuture ? ' open' : '') + '" onclick="toggleTasksShowFuture()">' +
+            (state.tasksShowFuture ? '▾ Hide ' + futureCount + ' future tasks' : '▸ Show ' + futureCount + ' future tasks') +
+          '</div>' +
+          (state.tasksShowFuture ? '<div class="task-list secondary">' + renderTaskGroupSection('Future', 'future', groups.future, true) + '</div>' : '')
+        : '') +
+      (completedCount > 0
+        ? '<div class="task-section-toggle' + (state.tasksShowCompleted ? ' open' : '') + '" onclick="toggleTasksShowCompleted()">' +
+            (state.tasksShowCompleted ? '▾ Hide ' + completedCount + ' completed' : '▸ Show ' + completedCount + ' completed') +
+          '</div>' +
+          (state.tasksShowCompleted ? '<div class="task-list secondary">' + renderTaskGroupSection('Completed', 'done', groups.done, true) + '</div>' : '')
+        : '') +
+      renderQuickAddButton('tasks');
+  }
+
+  function renderTaskGroupSection(label, key, tasks, headerless) {
+    return (headerless ? '' :
+      '<div class="task-group-head urgency-' + key + '">' +
+        '<span class="task-group-dot urgency-' + key + '"></span>' +
+        '<span class="task-group-label">' + escapeHtml(label) + '</span>' +
+        '<span class="task-group-count">' + tasks.length + '</span>' +
+      '</div>') +
+      tasks.map(renderTaskRow).join('');
+  }
+
+  function renderTaskRow(t) {
+    const isExpanded = state.expandedTaskId === t.id;
+    const due = t.dueISO ? new Date(t.dueISO) : null;
+    const dueLabel = due
+      ? due.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      : 'no date';
+    const assignee = MEMBERS.find(function(m) { return m.id === t.assigneeId; });
+    const assigneeLabel = t.assigneeId === 'all' ? 'All' : (assignee ? assignee.name : (t.assigneeId || '—'));
+    const u = taskUrgency(t);
+    const titleClass = (t.status === 'done') ? 'task-title done' : 'task-title';
+
+    // Badges — hide noise ones
+    const badges = [];
+    if (t.priority === 'high') badges.push('<span class="task-badge priority-high">high</span>');
+    if (t.priority === 'low')  badges.push('<span class="task-badge priority-low">low</span>');
+    if (t.status === 'progress') badges.push('<span class="task-badge status-progress">in progress</span>');
+    if (t.driftFromAnchor)     badges.push('<span class="task-badge drifted" onclick="event.stopPropagation(); resetTaskToTemplate(\'' + t.id + '\')" title="Reset to template default">drifted</span>');
+
+    return '<div class="task-row urgency-' + u + (isExpanded ? ' expanded' : '') + (t.status === 'done' ? ' done' : '') + '" data-task-id="' + t.id + '">' +
+      '<div class="task-row-main" onclick="toggleTaskRowExpanded(\'' + t.id + '\')">' +
+        '<input type="checkbox" class="task-checkbox-inline" ' + (t.status === 'done' ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleTaskDone(\'' + t.id + '\')">' +
+        '<div class="task-row-body">' +
+          '<div class="' + titleClass + '">' + escapeHtml(t.text || '(untitled)') + '</div>' +
+          '<div class="task-meta">' +
+            escapeHtml(dueLabel) + ' · ' + escapeHtml(assigneeLabel) +
+            (badges.length ? ' · ' + badges.join(' ') : '') +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      (isExpanded
+        ? '<div class="task-row-expanded">' +
+            (t.notes ? '<div class="task-notes">' + escapeHtml(t.notes) + '</div>' : '<div class="task-notes empty">No description.</div>') +
+            '<div class="task-row-actions">' +
+              '<button class="btn small" onclick="openTaskModal(\'' + t.id + '\')">Edit</button>' +
+            '</div>' +
+          '</div>'
+        : '') +
+    '</div>';
+  }
+
+  // ============================================================
+  // §4 — DRIFT, DUPLICATES, WHAT-CHANGED BANNERS
+  // ============================================================
+  function renderDriftBanner(driftedTasks) {
+    if (!driftedTasks || driftedTasks.length === 0) return '';
+    if (state.driftBannerDismissed) return '';
+    return '<div class="task-banner drift-banner">' +
+      '<span class="banner-icon">⚠</span>' +
+      '<span class="banner-text"><strong>' + driftedTasks.length + ' task' + (driftedTasks.length === 1 ? '' : 's') + '</strong> have stale dates from anchor changes.</span>' +
+      '<button class="banner-action" onclick="state.tasksShowFuture = true; state.driftBannerDismissed = true; render();">Review</button>' +
+      '<button class="banner-dismiss" onclick="dismissDriftBanner()" aria-label="Dismiss">×</button>' +
+    '</div>';
+  }
+
+  function renderDuplicatesBanner(groups) {
+    if (!groups || groups.length === 0) return '';
+    if (state.duplicatesBannerDismissed) return '';
+    const totalDupes = groups.reduce(function(n, g) { return n + g.tasks.length - 1; }, 0);
+    return '<div class="task-banner duplicates-banner">' +
+      '<span class="banner-icon">⚠</span>' +
+      '<span class="banner-text"><strong>' + totalDupes + ' duplicate generated task' + (totalDupes === 1 ? '' : 's') + '</strong> detected (legacy v1 bug).</span>' +
+      '<button class="banner-action" onclick="openDuplicatesReview()">Review</button>' +
+      '<button class="banner-dismiss" onclick="dismissDuplicatesBanner()" aria-label="Dismiss">×</button>' +
+    '</div>';
+  }
+
+  function renderWhatChangedBanner() {
+    if (state.whatChangedDismissed) return '';
+    if (!state.lastVisitedAt) return '';
+    const wc = computeWhatChanged();
+    if (wc.totalSignal === 0) return '';
+    const parts = [];
+    if (wc.created)   parts.push('+' + wc.created + ' tasks');
+    if (wc.completed) parts.push(wc.completed + ' completed');
+    if (wc.moved)     parts.push(wc.moved + ' deadline' + (wc.moved === 1 ? '' : 's') + ' moved');
+    if (wc.autoGen)   parts.push(wc.autoGen + ' tasks auto-generated from anchor changes');
+    return '<div class="task-banner what-changed-banner">' +
+      '<span class="banner-icon">✨</span>' +
+      '<span class="banner-text">Since you were last here: ' + parts.join(', ') + '.</span>' +
+      '<button class="banner-dismiss" onclick="dismissWhatChangedBanner()" aria-label="Dismiss">×</button>' +
+    '</div>';
+  }
+
+  function computeWhatChanged() {
+    const since = state.lastVisitedAt || 0;
+    let created = 0, completed = 0, moved = 0, autoGen = 0;
+    (state.tasks || []).forEach(function(t) {
+      if ((t.createdAt || 0) > since) {
+        created++;
+        // auto-generated subset: templateId set AND created very recently
+        if (t.templateId) autoGen++;
+      }
+      if (t.status === 'done' && (t.updatedAt || 0) > since) completed++;
+      if ((t.dueISOMovedAt || 0) > since && (t.createdAt || 0) <= since) moved++;
+    });
+    return { created: created, completed: completed, moved: moved, autoGen: autoGen, totalSignal: created + completed + moved };
+  }
+
+  function ensureLastVisitedAtLoaded() {
+    if (state.lastVisitedAt === null) {
+      try {
+        const v = localStorage.getItem('rush26_lastVisitedAt');
+        state.lastVisitedAt = v ? Number(v) : 0;
+      } catch (_) { state.lastVisitedAt = 0; }
+    }
+  }
+
+  function stampLastVisitedAt() {
+    state.lastVisitedAt = Date.now();
+    try { localStorage.setItem('rush26_lastVisitedAt', String(state.lastVisitedAt)); } catch (_) {}
+  }
+
+  // ============================================================
+  // §5 — CALENDAR INTEGRATION (task chips + day detail)
+  // ============================================================
+  function tasksForDate(dateIso) {
+    // dateIso like '2026-08-15' — match by yyyy-mm-dd of dueISO
+    return (state.tasks || []).filter(function(t) {
+      if (!t.dueISO) return false;
+      if (state.tasksShowCompleted === false && t.status === 'done') return false;
+      return new Date(t.dueISO).toISOString().slice(0, 10) === dateIso;
+    });
+  }
+
+  function renderCalendarTaskChip(t) {
+    const titleAttr = escapeHtml((t.text || '(untitled)') + (t.assigneeId ? ' · ' + (t.assigneeId === 'all' ? 'All' : (MEMBERS.find(function(m){return m.id === t.assigneeId;}) || {name: t.assigneeId}).name) : ''));
+    const doneCls = t.status === 'done' ? ' done' : '';
+    return '<div class="cal-task-chip' + doneCls + '" title="' + titleAttr + '" ' +
+      'onclick="event.stopPropagation(); openTaskModal(\'' + t.id + '\')">' +
+      '<input type="checkbox" class="cal-task-check" ' + (t.status === 'done' ? 'checked' : '') +
+        ' onclick="event.stopPropagation(); completeTaskFromCalendar(\'' + t.id + '\')">' +
+      '<span class="cal-task-text">' + escapeHtml(t.text || '(untitled)') + '</span>' +
+    '</div>';
+  }
+
+  function renderCalendarDayDetail() {
+    if (!state.calendarDayDetail) return '';
+    const dateIso = state.calendarDayDetail;
+    const d = new Date(dateIso + 'T00:00:00');
+    const heading = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const dayEvents = (state.events || []).filter(function(e) {
+      return e.startISO && new Date(e.startISO).toISOString().slice(0, 10) === dateIso;
+    });
+    const dayTasks = tasksForDate(dateIso);
+    return '<div class="cal-day-detail-overlay" onclick="closeCalendarDayDetail()">' +
+      '<div class="cal-day-detail" onclick="event.stopPropagation()">' +
+        '<button class="cal-day-detail-close" onclick="closeCalendarDayDetail()" aria-label="Close">×</button>' +
+        '<div class="cal-day-detail-head">' + escapeHtml(heading) + '</div>' +
+        (dayEvents.length
+          ? '<div class="cal-day-section">' +
+              '<div class="cal-day-section-label">Events</div>' +
+              dayEvents.map(function(e) {
+                return '<div class="cal-day-item event" onclick="openEventModal(null, \'' + e.id + '\')">' +
+                  '<span class="cal-day-item-title">' + escapeHtml(e.title || '(untitled event)') + '</span>' +
+                  '<span class="cal-day-item-time">' + escapeHtml(formatEventTime(e)) + '</span>' +
+                '</div>';
+              }).join('') +
+            '</div>'
+          : '') +
+        (dayTasks.length
+          ? '<div class="cal-day-section">' +
+              '<div class="cal-day-section-label">Tasks</div>' +
+              dayTasks.map(renderTaskRow).join('') +
+            '</div>'
+          : '') +
+        (!dayEvents.length && !dayTasks.length
+          ? '<div class="empty-state-polished"><div class="empty-glyph">○</div><div class="empty-text">Nothing on this day.</div></div>'
+          : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  // ============================================================
+  // §6 — QUICK-ADD (reuses existing taskModal in quickMode)
+  // ============================================================
+  function renderQuickAddButton(context) {
+    return '<button class="quick-add-btn" data-ctx="' + context + '" onclick="openQuickAdd()" aria-label="Quick add task">+</button>';
+  }
+
+  // ============================================================
+  // §7 — TEMPLATE INLINE EDIT FORM (CRUD)
+  // ============================================================
+  function renderTemplateEditForm(t, mode) {
+    // mode: 'edit' (existing template, t is the row) or 'add' (new, t is { phase: '...' })
+    const isEdit = mode === 'edit';
+    const phases = ['pre_rush','pre_bfc','rush_week','selection','post_rush'];
+    const anchors = (state.chapterDates || []).map(function(d) { return d.key; });
+    if (anchors.length === 0) anchors.push('soft_launch', 'bfc_mixer', 'rush_week_start', 'selection_start', 'hard_deadline');
+    const cats = (state.taskCategories || []).map(function(c) { return c.name; });
+    const tid = isEdit ? t.id : 'new_' + (t.phase || 'pre_rush');
+    return '<div class="template-edit-form">' +
+      '<div class="form-row">' +
+        '<label class="field-label">Title</label>' +
+        '<input type="text" class="field-input" data-tef="title" data-tid="' + tid + '" value="' + escapeHtml(t.title || '') + '" placeholder="Required">' +
+      '</div>' +
+      '<div class="form-row">' +
+        '<label class="field-label">Description</label>' +
+        '<textarea class="field-textarea" data-tef="description" data-tid="' + tid + '" rows="2">' + escapeHtml(t.description || '') + '</textarea>' +
+      '</div>' +
+      '<div class="form-row form-row-grid">' +
+        '<div>' +
+          '<label class="field-label">Phase</label>' +
+          '<select class="field-select" data-tef="phase" data-tid="' + tid + '">' +
+            phases.map(function(p) {
+              return '<option value="' + p + '"' + ((t.phase || 'pre_rush') === p ? ' selected' : '') + '>' + escapeHtml(PHASE_LABELS[p]) + '</option>';
+            }).join('') +
+          '</select>' +
+        '</div>' +
+        '<div>' +
+          '<label class="field-label">Anchor</label>' +
+          '<select class="field-select" data-tef="anchor_date_key" data-tid="' + tid + '">' +
+            anchors.map(function(k) {
+              return '<option value="' + k + '"' + ((t.anchor_date_key || 'soft_launch') === k ? ' selected' : '') + '>' + escapeHtml(k) + '</option>';
+            }).join('') +
+          '</select>' +
+        '</div>' +
+        '<div>' +
+          '<label class="field-label">Offset (days)</label>' +
+          '<input type="number" class="field-input" data-tef="days_offset" data-tid="' + tid + '" value="' + (t.days_offset != null ? t.days_offset : 0) + '">' +
+        '</div>' +
+      '</div>' +
+      '<div class="form-row form-row-grid">' +
+        '<div>' +
+          '<label class="field-label">Assignee</label>' +
+          '<select class="field-select" data-tef="default_assignee" data-tid="' + tid + '">' +
+            '<option value="">— unassigned —</option>' +
+            MEMBERS.map(function(m) {
+              return '<option value="' + m.id + '"' + (t.default_assignee === m.id ? ' selected' : '') + '>' + escapeHtml(m.name) + '</option>';
+            }).join('') +
+            '<option value="all"' + (t.default_assignee === 'all' ? ' selected' : '') + '>All chairs</option>' +
+          '</select>' +
+        '</div>' +
+        '<div>' +
+          '<label class="field-label">Priority</label>' +
+          '<select class="field-select" data-tef="priority" data-tid="' + tid + '">' +
+            ['high','med','low'].map(function(p) {
+              return '<option value="' + p + '"' + ((t.priority || 'med') === p ? ' selected' : '') + '>' + p + '</option>';
+            }).join('') +
+          '</select>' +
+        '</div>' +
+        '<div>' +
+          '<label class="field-label">Category</label>' +
+          '<select class="field-select" data-tef="category" data-tid="' + tid + '">' +
+            '<option value="">—</option>' +
+            cats.map(function(c) {
+              return '<option value="' + escapeHtml(c) + '"' + (t.category === c ? ' selected' : '') + '>' + escapeHtml(c) + '</option>';
+            }).join('') +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="form-row form-actions">' +
+        '<button class="btn primary" onclick="saveTemplateEdit(\'' + tid + '\', ' + (isEdit ? 'true' : 'false') + ')">Save</button>' +
+        '<button class="btn" onclick="cancelTemplateEdit()">Cancel</button>' +
+        (isEdit ? '<button class="btn danger" onclick="deleteTemplateRow(\'' + t.id + '\')" style="margin-left:auto;">Delete</button>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  // ============================================================
+  // §8 — WINDOW HANDLERS
+  // ============================================================
+  window.setTasksView = function(scope) {
+    state.tasksView = scope;
+    render();
+  };
+
+  window.toggleTasksShowFuture = function() {
+    state.tasksShowFuture = !state.tasksShowFuture;
+    render();
+  };
+
+  window.toggleTasksShowCompleted = function() {
+    state.tasksShowCompleted = !state.tasksShowCompleted;
+    render();
+  };
+
+  window.toggleTaskRowExpanded = function(id) {
+    state.expandedTaskId = state.expandedTaskId === id ? null : id;
+    render();
+  };
+
+  window.dismissDriftBanner = function() {
+    state.driftBannerDismissed = true;
+    render();
+  };
+
+  window.dismissDuplicatesBanner = function() {
+    state.duplicatesBannerDismissed = true;
+    try { localStorage.setItem('rush26_duplicatesBannerDismissed', '1'); } catch (_) {}
+    render();
+  };
+
+  window.dismissWhatChangedBanner = function() {
+    state.whatChangedDismissed = true;
+    stampLastVisitedAt();
+    render();
+  };
+
+  window.openDuplicatesReview = function() {
+    const groups = detectDuplicateTaskGroups();
+    if (groups.length === 0) { toast('No duplicates detected.', 'default'); return; }
+    let msg = 'Duplicate task groups (newest of each group will be removed if you proceed):\n\n';
+    groups.forEach(function(g) {
+      const sorted = g.tasks.slice().sort(function(a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+      const keep = sorted[0];
+      const remove = sorted.slice(1);
+      msg += '- "' + (keep.text || '(untitled)') + '" — keep oldest, remove ' + remove.length + ' duplicate(s)\n';
+    });
+    msg += '\nProceed?';
+    if (!confirm(msg)) return;
+    const removed = [];
+    groups.forEach(function(g) {
+      const sorted = g.tasks.slice().sort(function(a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+      sorted.slice(1).forEach(function(t) {
+        console.log('[duplicates review] removing', t.id, t.text);
+        removed.push(t.id);
+      });
+    });
+    state.tasks = state.tasks.filter(function(t) { return removed.indexOf(t.id) === -1; });
+    Storage.set('tasks', state.tasks);
+    toast('Removed ' + removed.length + ' duplicate task(s). Originals preserved.', 'success');
+    render();
+  };
+
+  window.resetTaskToTemplate = function(taskId) {
+    const t = (state.tasks || []).find(function(x) { return x.id === taskId; });
+    if (!t || !t.templateId) return;
+    const ok = confirm('This will discard your edits and reset to template defaults. Continue?');
+    if (!ok) return;
+    const tmpl = (state.taskTemplates || []).find(function(x) { return x.id === t.templateId; });
+    if (!tmpl) { toast('Template no longer exists — can’t reset.', 'error'); return; }
+    const anchor = getChapterDatesByKey()[tmpl.anchor_date_key];
+    if (!anchor || !anchor.iso_date) { toast('Anchor not set — can’t reset.', 'error'); return; }
+    const newDue = computeDueDate(anchor.iso_date, tmpl.days_offset);
+    t.text = tmpl.title;
+    t.notes = tmpl.description || '';
+    t.assigneeId = tmpl.default_assignee || null;
+    t.priority = tmpl.priority || 'med';
+    t.dueISO = newDue.toISOString();
+    t.dueISOMovedAt = Date.now();
+    t.edited = false;
+    t.driftFromAnchor = false;
+    t.updatedAt = Date.now();
+    Storage.set('tasks', state.tasks);
+    toast('Reset to template default.', 'success');
+    render();
+  };
+
+  window.openCalendarDayDetail = function(dateIso) {
+    state.calendarDayDetail = dateIso;
+    render();
+  };
+
+  window.closeCalendarDayDetail = function() {
+    state.calendarDayDetail = null;
+    render();
+  };
+
+  window.completeTaskFromCalendar = function(taskId) {
+    const t = (state.tasks || []).find(function(x) { return x.id === taskId; });
+    if (!t) return;
+    // Fade-then-undo window: defer the actual flip by 300ms, allow click-undo within window
+    const chip = document.querySelector('.cal-task-chip[data-task-id="' + taskId + '"]');
+    if (chip) chip.classList.add('fading');
+    const flipMs = 320;
+    setTimeout(function() {
+      // confirm chip is still fading (chair didn't click undo)
+      const still = document.querySelector('.cal-task-chip.fading[data-task-id="' + taskId + '"]');
+      if (!still) return;  // undo happened, abort
+      t.status = (t.status === 'done') ? 'todo' : 'done';
+      t.updatedAt = Date.now();
+      Storage.set('tasks', state.tasks);
+      render();
+    }, flipMs);
+  };
+
+  window.openQuickAdd = function() {
+    state.taskModalQuickMode = true;
+    openTaskModal();
+  };
+
+  window.editTemplateInline = function(templateId) {
+    state.taskEditingTemplateId = templateId;
+    state.taskTemplateAddingForPhase = null;
+    render();
+  };
+
+  window.cancelTemplateEdit = function() {
+    state.taskEditingTemplateId = null;
+    state.taskTemplateAddingForPhase = null;
+    render();
+  };
+
+  window.openAddTemplate = function(phase) {
+    state.taskTemplateAddingForPhase = phase;
+    state.taskEditingTemplateId = null;
+    render();
+  };
+
+  window.saveTemplateEdit = async function(tid, isEdit) {
+    function readField(name) {
+      const el = document.querySelector('[data-tef="' + name + '"][data-tid="' + tid + '"]');
+      return el ? el.value : '';
+    }
+    const title           = readField('title').trim();
+    const description     = readField('description').trim();
+    const phase           = readField('phase');
+    const anchor_date_key = readField('anchor_date_key');
+    const days_offset     = parseInt(readField('days_offset'), 10) || 0;
+    const default_assignee = readField('default_assignee') || null;
+    const priority        = readField('priority');
+    const category        = readField('category') || null;
+    if (!title) { toast('Title required.', 'error'); return; }
+    if (!phase) { toast('Phase required.', 'error'); return; }
+    if (!anchor_date_key) { toast('Anchor required.', 'error'); return; }
+    try {
+      const payload = { phase: phase, title: title, description: description || null,
+                        anchor_date_key: anchor_date_key, days_offset: days_offset,
+                        default_assignee: default_assignee, priority: priority, category: category };
+      if (isEdit && tid && tid.indexOf('new_') !== 0) {
+        const { error } = await sb.from('task_templates').update(payload).eq('id', tid);
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from('task_templates').insert(payload);
+        if (error) throw error;
+      }
+      state.taskEditingTemplateId = null;
+      state.taskTemplateAddingForPhase = null;
+      await loadTaskTemplates();
+      await autoSyncTasksToTemplates();
+      toast(isEdit ? 'Template updated.' : 'Template added.', 'success');
+      render();
+    } catch (e) {
+      console.error('saveTemplateEdit failed', e);
+      toast('Save failed — check console.', 'error');
+    }
+  };
+
+  window.deleteTemplateRow = async function(templateId) {
+    const tmpl = (state.taskTemplates || []).find(function(x) { return x.id === templateId; });
+    if (!tmpl) return;
+    const ok = confirm('Delete this template? Tasks already generated from it will be preserved (and orphaned).');
+    if (!ok) return;
+    try {
+      const { error } = await sb.from('task_templates').delete().eq('id', templateId);
+      if (error) throw error;
+      state.taskEditingTemplateId = null;
+      await loadTaskTemplates();
+      // autoSync will mark orphaned tasks but won't delete edited ones.
+      // For deleted-template case, we DO want to preserve all existing tasks (even non-edited):
+      // chair explicitly asked to delete the template, not its tasks. So we skip autoSync here.
+      toast('Template deleted. Tasks preserved.', 'success');
+      render();
+    } catch (e) {
+      console.error('deleteTemplateRow failed', e);
+      toast('Delete failed — check console.', 'error');
+    }
+  };
+
 
   if (sb) init();
 </script>
