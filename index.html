@@ -1388,10 +1388,21 @@
   /* ========== DASHBOARD ========== */
   .dash-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 18px;
+    grid-template-columns: 1fr 1fr;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    gap: 0;
     margin-bottom: 20px;
+    overflow: hidden;
   }
+  .dash-grid > .section-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    border-right: 1px solid var(--line);
+  }
+  .dash-grid > .section-card:last-child { border-right: none; }
 
   .stat-row {
     display: grid;
@@ -2855,7 +2866,7 @@
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 14px;
-    padding: 24px 28px 56px;
+    padding: 24px 28px 76px;
     margin-bottom: 22px;
     position: relative;
     overflow: hidden;
@@ -2942,9 +2953,23 @@
     transform: translate(-50%, -50%);
     cursor: pointer;
   }
-  /* §F dashboard polish: alternating above/below label staggering */
-  .rush-milestone.below .milestone-label { top: 18px; }
-  .rush-milestone.above .milestone-label { top: auto; bottom: 18px; }
+  /* Collision-aware label rows. Tier-0 = adjacent to the bar (18px), tier-1 = pushed further out (34px) so clustered milestones don't overlap. */
+  .rush-milestone.below.tier-0 .milestone-label { top: 18px; bottom: auto; }
+  .rush-milestone.above.tier-0 .milestone-label { top: auto; bottom: 18px; }
+  .rush-milestone.below.tier-1 .milestone-label { top: 34px; bottom: auto; }
+  .rush-milestone.above.tier-1 .milestone-label { top: auto; bottom: 34px; }
+  /* Subtle dotted leader from marker to far-tier label so the connection is clear */
+  .rush-milestone.tier-1::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    width: 0;
+    border-left: 1px dotted var(--line-strong);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .rush-milestone.below.tier-1::before { top: 7px; height: 26px; }
+  .rush-milestone.above.tier-1::before { bottom: 7px; height: 26px; }
   .rush-milestone:hover .milestone-marker { transform: scale(1.15); transition: transform 0.15s; }
   .milestone-marker {
     width: 14px; height: 14px;
@@ -3030,7 +3055,7 @@
     font-family: 'Playfair Display', serif;
     font-size: 16px;
     color: var(--fg-muted);
-    opacity: 0.35;
+    opacity: 0;
     transition: opacity 0.18s ease, color 0.18s ease, transform 0.18s ease;
   }
   .kpi-card:hover::after {
@@ -3133,19 +3158,37 @@
     color: var(--fg-muted);
   }
 
-  /* Activity grid — polished spacing */
+  /* One-line inline empty state — for dashboard sections where the
+     full polished empty card would dominate visually. */
+  .empty-inline {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--fg-muted);
+    padding: 6px 2px 4px;
+    line-height: 1.5;
+  }
+
+  /* Activity grid — unified surface with internal dividers */
   .activity-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-top: 20px;
-  }
-  .activity-column {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 12px;
-    padding: 16px 18px;
+    gap: 0;
+    margin-top: 20px;
+    overflow: hidden;
   }
+  .activity-grid.two-col { grid-template-columns: 1fr 1fr; }
+  .activity-column {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    border-right: 1px solid var(--line);
+    padding: 18px 22px;
+  }
+  .activity-grid > .activity-column:last-child { border-right: none; }
   .activity-column .section-title {
     margin-bottom: 10px;
     font-size: 13px;
@@ -4718,14 +4761,39 @@
 
     candidates.sort(function(a, b) { return new Date(a.iso) - new Date(b.iso); });
 
-    const todayPct = getRushTimelinePct(Date.now());
-    const milestonesHtml = candidates.map(function(m, i) {
+    // Collision-aware label placement.
+    // Each milestone goes in one of 4 "rows": below-near (row 0), above-near (row 1),
+    // below-far (row 2), above-far (row 3). We greedily place each milestone in the
+    // first row where its position is >= MIN_GAP_PCT away from the last placed milestone
+    // in that row. This eliminates the cluttered overlap when multiple milestones fall
+    // close together (e.g. Soft Launch + Hard Deadline + BFC Mixer in late Aug / early Sep).
+    const MIN_GAP_PCT = 9; // label width budget at this scale
+    const ROW_DEFS = [
+      { position: 'below', tier: 0 },
+      { position: 'above', tier: 0 },
+      { position: 'below', tier: 1 },
+      { position: 'above', tier: 1 },
+    ];
+    const lastPctInRow = [-Infinity, -Infinity, -Infinity, -Infinity];
+    const placements = candidates.map(function(m) {
       const pct = getRushTimelinePct(m.iso);
-      const position = (i % 2 === 0) ? 'below' : 'above';
+      let rowIdx = 0;
+      for (let r = 0; r < ROW_DEFS.length; r++) {
+        if (pct - lastPctInRow[r] >= MIN_GAP_PCT) { rowIdx = r; break; }
+        if (r === ROW_DEFS.length - 1) { rowIdx = r; } // overflow → last row
+      }
+      lastPctInRow[rowIdx] = pct;
+      return { milestone: m, pct: pct, row: ROW_DEFS[rowIdx] };
+    });
+
+    const todayPct = getRushTimelinePct(Date.now());
+    const milestonesHtml = placements.map(function(p) {
+      const m = p.milestone;
       const dateStr = new Date(m.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const fullLabel = m.label + ' · ' + dateStr;
       const markerClass = 'milestone-marker' + (m.key === 'bfc_mixer' ? ' bfc' : '');
-      return '<div class="rush-milestone ' + position + '" style="left:' + pct.toFixed(1) + '%" onclick="openMilestoneDetail(\'' + m.key + '\')" title="' + escapeHtml(fullLabel) + '">' +
+      const rowClass = ' tier-' + p.row.tier;
+      return '<div class="rush-milestone ' + p.row.position + rowClass + '" style="left:' + p.pct.toFixed(1) + '%" onclick="openMilestoneDetail(\'' + m.key + '\')" title="' + escapeHtml(fullLabel) + '">' +
         '<div class="' + markerClass + '"></div>' +
         '<div class="milestone-label">' + escapeHtml(m.code) + '</div>' +
       '</div>';
@@ -4780,6 +4848,12 @@
     '</div>';
   }
 
+  // One-line inline empty — much smaller than empty-state-polished. For dashboard sections
+  // where a 120px-tall empty card would dominate when there happens to be no data.
+  function renderEmptyInline(text) {
+    return '<div class="empty-inline">' + escapeHtml(text) + '</div>';
+  }
+
   function renderDashboard() {
     const me = MEMBERS.find(m => m.id === state.currentUser);
     const hour = new Date().getHours();
@@ -4800,14 +4874,7 @@
         '</div>'
       : '';
 
-    // ----- Hero countdown row -----
-    const countdownRow = '<div class="countdown-row">' +
-      renderCountdownCard(DASHBOARD_DATES.softLaunch.label,   DASHBOARD_DATES.softLaunch.iso,   DASHBOARD_DATES.softLaunch.icon) +
-      renderCountdownCard(DASHBOARD_DATES.hardDeadline.label, DASHBOARD_DATES.hardDeadline.iso, DASHBOARD_DATES.hardDeadline.icon) +
-      renderCountdownCard(DASHBOARD_DATES.bfcMixer.label,     DASHBOARD_DATES.bfcMixer.iso,     DASHBOARD_DATES.bfcMixer.icon) +
-    '</div>';
-
-    // ----- Rush Week Progress centerpiece -----
+    // ----- Hero: timeline centerpiece (countdown row removed — timeline shows same data) -----
     const centerpiece = renderRushCenterpiece();
 
     // ----- KPI row (4 cards, relabeled, 7-day window) -----
@@ -4881,14 +4948,14 @@
     };
 
     const attentionTasks = (overdue.length === 0 && dueSoon.length === 0)
-      ? renderEmptyState('✓', 'Nothing on fire. Catch your breath.')
+      ? renderEmptyInline('Nothing on fire. Catch your breath.')
       : '<div class="attention-list">' +
           overdue.map(t => renderAttentionItem(t.text || '(untitled task)', taskMeta(t), 'overdue', 'openTaskModal(\'' + t.id + '\')')).join('') +
           dueSoon.map(t => renderAttentionItem(t.text || '(untitled task)', taskMeta(t), getTaskUrgency(t), 'openTaskModal(\'' + t.id + '\')')).join('') +
         '</div>';
 
     const attentionEvents = eventsThisWeek.length === 0
-      ? renderEmptyState('◷', 'Nothing on the calendar this week.')
+      ? renderEmptyInline('Nothing on the calendar this week.')
       : '<div class="attention-list">' +
           eventsThisWeek.map(e => {
             const d = new Date(e.startISO);
@@ -4910,7 +4977,7 @@
       '</div>' +
     '</div>';
 
-    // ----- Recent activity (3-column feed) -----
+    // ----- Recent activity (2-column feed — nametag prints removed as ambient noise) -----
     const recentNotes = state.notes
       .filter(n => !n.pinned)
       .slice()
@@ -4921,12 +4988,11 @@
       .slice()
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
       .slice(0, 5);
-    const recentPrints = state.nametagPrints.slice(0, 5);
 
     const recentNotesCol = '<div class="activity-column">' +
       '<div class="section-title">Recent notes</div>' +
       (recentNotes.length === 0
-        ? renderEmptyState('✎', 'No notes yet.')
+        ? renderEmptyInline('No notes yet.')
         : recentNotes.map(n => {
             const author = MEMBERS.find(m => m.id === n.authorId);
             return '<div class="activity-item" onclick="openNoteEditor(\'' + n.id + '\')">' +
@@ -4939,7 +5005,7 @@
     const completedTasksCol = '<div class="activity-column">' +
       '<div class="section-title">Recently completed</div>' +
       (completedTasks.length === 0
-        ? renderEmptyState('◈', 'Nothing completed yet.')
+        ? renderEmptyInline('Nothing completed yet.')
         : completedTasks.map(t => {
             const assignee = MEMBERS.find(m => m.id === t.assigneeId);
             return '<div class="activity-item" onclick="openTaskModal(\'' + t.id + '\')">' +
@@ -4949,29 +5015,13 @@
           }).join('')) +
     '</div>';
 
-    const recentPrintsCol = '<div class="activity-column">' +
-      '<div class="section-title">Recent nametag prints</div>' +
-      (recentPrints.length === 0
-        ? renderEmptyState('◇', 'No prints yet.')
-        : recentPrints.map(p => {
-            const b = state.brothers.find(x => x.id === p.brother_id);
-            const brotherName = b ? ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim() : '(unknown)';
-            const printedMs = new Date(p.printed_at).getTime();
-            return '<div class="activity-item" onclick="openBrotherModal(\'' + p.brother_id + '\')">' +
-              '<div class="activity-item-title">' + escapeHtml(brotherName) + ' · ' + escapeHtml(p.event_label) + '</div>' +
-              '<div class="activity-item-meta">' + timeAgo(printedMs) + '</div>' +
-            '</div>';
-          }).join('')) +
-    '</div>';
-
-    const activityGrid = '<div class="activity-grid">' + recentNotesCol + completedTasksCol + recentPrintsCol + '</div>';
+    const activityGrid = '<div class="activity-grid two-col">' + recentNotesCol + completedTasksCol + '</div>';
 
     return '<div class="view-dashboard">' +
       '<div style="font-family:\'Playfair Display\',serif; font-size:22px; font-style:italic; color:var(--fg-soft); margin-bottom:22px;">' +
         greeting + ', ' + (me ? escapeHtml(me.name) : '') + '.' +
       '</div>' +
       pinnedBanner +
-      countdownRow +
       centerpiece +
       kpiRow +
       attentionGrid +
