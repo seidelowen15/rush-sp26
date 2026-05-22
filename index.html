@@ -2930,7 +2930,13 @@
     font-size: 15px;
     color: var(--fg-soft);
   }
-  /* ── Phase-segmented progress bar ────────────────────────────── */
+  /* ── Phase-segmented progress bar with chip row + connectors ──── */
+  .rush-bar-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
   .rush-segments {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -2940,7 +2946,7 @@
 
   .rush-segment {
     position: relative;
-    padding-bottom: 56px; /* room for milestone labels below the bar */
+    /* No padding-bottom — labels live in the chip row, not under each segment */
   }
 
   .rush-segment-header {
@@ -3005,7 +3011,7 @@
     opacity: 0.55;
   }
 
-  /* Milestones within a segment */
+  /* Milestone dots on the bar — no labels, labels are in the chip row */
   .seg-milestone {
     position: absolute;
     top: 50%;
@@ -3019,9 +3025,13 @@
     background: var(--surface);
     border: 2px solid var(--navy);
     box-shadow: 0 0 0 3px var(--surface);
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
-  .seg-milestone:hover .seg-milestone-marker { transform: scale(1.25); }
+  .seg-milestone:hover .seg-milestone-marker,
+  .seg-milestone.is-hover .seg-milestone-marker {
+    transform: scale(1.3);
+    box-shadow: 0 0 0 4px var(--surface), 0 0 0 5px var(--gold);
+  }
   .seg-milestone-marker.past {
     background: var(--navy);
     border-color: var(--navy);
@@ -3033,35 +3043,6 @@
   .seg-milestone-marker.bfc.past {
     background: var(--gold-dark);
   }
-
-  /* Milestone labels */
-  .seg-milestone-text {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-    white-space: nowrap;
-  }
-  .seg-milestone.label-below .seg-milestone-text { top: 14px; }
-  .seg-milestone.label-above .seg-milestone-text { bottom: 14px; }
-
-  .seg-milestone-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--navy);
-    line-height: 1.2;
-  }
-  .seg-milestone.label-above .seg-milestone-label,
-  .rush-segment.status-past .seg-milestone-label { color: var(--fg-soft); }
-  .seg-milestone-date {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    color: var(--fg-muted);
-    margin-top: 2px;
-    letter-spacing: 0.05em;
-  }
-  .seg-milestone:hover .seg-milestone-label { color: var(--gold-dark); }
 
   /* TODAY marker: vertical line + pill */
   .seg-today-line {
@@ -3090,11 +3071,90 @@
     white-space: nowrap;
   }
 
+  /* Connector layer: SVG strip linking each dot to its chip below */
+  .rush-connectors {
+    display: block;
+    width: 100%;
+    height: 28px;
+    margin: 6px 4px 0;
+    overflow: visible;
+  }
+  .rush-connectors .connector {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1;
+    stroke-linejoin: round;
+    transition: stroke 0.15s ease, stroke-width 0.15s ease;
+  }
+  .rush-connectors .connector.past { stroke: var(--line); }
+  .rush-connectors .connector.is-hover {
+    stroke: var(--gold-dark);
+    stroke-width: 1.6;
+  }
+
+  /* Chip row: equal-width grid cells, one chip per milestone, centered */
+  .rush-chip-row {
+    display: grid;
+    gap: 4px;
+    padding: 0 4px;
+    margin-top: 2px;
+  }
+  .rush-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 6px 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    min-width: 0;
+  }
+  .rush-chip:hover,
+  .rush-chip.is-hover {
+    background: var(--surface-2);
+  }
+  .rush-chip .chip-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--navy);
+    margin-bottom: 6px;
+    transition: transform 0.15s ease;
+  }
+  .rush-chip.past .chip-dot { background: var(--fg-muted); opacity: 0.55; }
+  .rush-chip.bfc .chip-dot { background: var(--gold); }
+  .rush-chip.bfc.past .chip-dot { background: var(--gold-dark); }
+  .rush-chip.is-hover .chip-dot,
+  .rush-chip:hover .chip-dot { transform: scale(1.35); }
+  .rush-chip .chip-text { min-width: 0; width: 100%; }
+  .rush-chip .chip-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--navy);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rush-chip.past .chip-label { color: var(--fg-soft); }
+  .rush-chip:hover .chip-label,
+  .rush-chip.is-hover .chip-label { color: var(--gold-dark); }
+  .rush-chip .chip-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--fg-muted);
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+
   /* When a segment has no milestones, give it a low-key placeholder feel */
   .rush-segment.status-future .seg-label { opacity: 0.6; }
 
   @media (max-width: 900px) {
     .rush-segments { grid-template-columns: 1fr 1fr; gap: 20px 14px; }
+    .rush-chip-row { grid-template-columns: repeat(2, 1fr) !important; gap: 6px; }
+    .rush-connectors { display: none; } /* connectors don't map sensibly across wrapped rows */
   }
 
   /* KPI row — relabeled, lighter weight than countdown hero */
@@ -4882,54 +4942,43 @@
 
     milestones.sort(function(a, b) { return new Date(a.iso) - new Date(b.iso); });
 
-    // Group milestones by segment with their within-segment position
-    const milestonesBySegment = [[], [], [], []];
+    // Compute placement: each milestone gets a segment index, within-segment % (for the dot),
+    // and a chip index (its position in the chip row, 0..N-1 left-to-right by date)
+    const placed = [];
     milestones.forEach(function(m) {
       const placement = placeMilestoneInSegments(m.iso, segments);
-      if (!placement) return; // skip milestones outside the cycle window
+      if (!placement) return;
       const ms = new Date(m.iso + 'T00:00:00').getTime();
-      const isPast = ms < now;
-      milestonesBySegment[placement.segmentIndex].push({
+      placed.push({
         milestone: m,
-        pct: placement.pctWithinSegment,
-        isPast: isPast
+        segmentIndex: placement.segmentIndex,
+        pctWithinSegment: placement.pctWithinSegment,
+        isPast: ms < now,
       });
     });
+    // Chip index = position in date-sorted list (already sorted)
+    placed.forEach(function(p, i) { p.chipIndex = i; });
+    const N = placed.length;
 
-    // Within each segment, alternate label position (above/below) to avoid overlap
-    // when adjacent milestones are close together within the same segment.
+    // ── Render segment row (bars + dots, no labels) ──
     const segmentsHtml = segments.map(function(seg, segIdx) {
-      const segMilestones = milestonesBySegment[segIdx];
+      const segMilestones = placed.filter(function(p) { return p.segmentIndex === segIdx; });
 
-      // Sort by pct within segment, then assign alternating above/below
-      segMilestones.sort(function(a, b) { return a.pct - b.pct; });
-      const placedMilestones = segMilestones.map(function(m, i) {
-        const lastClose = i > 0 && (m.pct - segMilestones[i - 1].pct) < 28;
-        return Object.assign({}, m, {
-          labelPosition: lastClose ? (segMilestones[i - 1]._lp === 'below' ? 'above' : 'below') : 'below',
-          _lp: lastClose ? (segMilestones[i - 1]._lp === 'below' ? 'above' : 'below') : 'below'
-        });
-      });
-
-      const milestoneNodes = placedMilestones.map(function(pm) {
+      const dotNodes = segMilestones.map(function(pm) {
         const m = pm.milestone;
         const dateStr = new Date(m.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const markerClasses = ['seg-milestone-marker'];
         if (pm.isPast) markerClasses.push('past');
         if (m.key === 'bfc_mixer') markerClasses.push('bfc');
-        return '<div class="seg-milestone label-' + pm.labelPosition + '" ' +
-                'style="left:' + pm.pct.toFixed(1) + '%" ' +
+        return '<div class="seg-milestone" ' +
+                'style="left:' + pm.pctWithinSegment.toFixed(1) + '%" ' +
+                'data-mkey="' + escapeHtml(m.key) + '" ' +
                 'onclick="event.stopPropagation(); openMilestoneDetail(\'' + m.key + '\')" ' +
                 'title="' + escapeHtml(m.label + ' · ' + dateStr) + '">' +
           '<div class="' + markerClasses.join(' ') + '"></div>' +
-          '<div class="seg-milestone-text">' +
-            '<div class="seg-milestone-label">' + escapeHtml(m.label) + '</div>' +
-            '<div class="seg-milestone-date">' + escapeHtml(dateStr) + '</div>' +
-          '</div>' +
         '</div>';
       }).join('');
 
-      // Header content per segment
       let headerMeta;
       if (seg.status === 'current') {
         headerMeta = '<span class="seg-meta-current">Now · ' + seg.daysRemaining + 'd left</span>';
@@ -4940,14 +4989,12 @@
         headerMeta = '<span class="seg-meta-future">in ' + daysUntil + 'd</span>';
       }
 
-      // Today marker if today is inside this segment
       const todayMarker = seg.status === 'current'
         ? '<div class="seg-today-line" style="left:' + seg.todayPct.toFixed(1) + '%">' +
             '<div class="seg-today-pill">TODAY</div>' +
           '</div>'
         : '';
 
-      // Fill: full for past segments, partial for current, none for future
       let fillStyle = '';
       if (seg.status === 'past') fillStyle = 'width:100%';
       else if (seg.status === 'current') fillStyle = 'width:' + seg.todayPct.toFixed(1) + '%';
@@ -4960,11 +5007,50 @@
         '</div>' +
         '<div class="rush-segment-bar">' +
           '<div class="rush-segment-fill" style="' + fillStyle + '"></div>' +
-          milestoneNodes +
+          dotNodes +
           todayMarker +
         '</div>' +
       '</div>';
     }).join('');
+
+    // ── Render chip row (one chip per milestone, equal-width cells via grid) ──
+    const chipsHtml = placed.map(function(pm) {
+      const m = pm.milestone;
+      const dateStr = new Date(m.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const classes = ['rush-chip'];
+      if (pm.isPast) classes.push('past');
+      if (m.key === 'bfc_mixer') classes.push('bfc');
+      return '<div class="' + classes.join(' ') + '" ' +
+              'data-mkey="' + escapeHtml(m.key) + '" ' +
+              'onclick="event.stopPropagation(); openMilestoneDetail(\'' + m.key + '\')">' +
+        '<div class="chip-dot"></div>' +
+        '<div class="chip-text">' +
+          '<div class="chip-label">' + escapeHtml(m.label) + '</div>' +
+          '<div class="chip-date">' + escapeHtml(dateStr) + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    // ── Render connector layer (SVG polylines from each dot to its chip) ──
+    // Connector geometry is computed at render time using known positions:
+    //   - Dot X = (segIdx + pctWithinSegment/100) * (100 / 4)   (% of full row width)
+    //   - Chip X = (chipIndex + 0.5) * (100 / N)                 (center of its grid cell, % of full row width)
+    // The connector zone is a fixed height (28px). We draw a polyline:
+    //   dotX,0 → dotX,8 → chipX,20 → chipX,28
+    const connectorsHtml = N > 0
+      ? '<svg class="rush-connectors" preserveAspectRatio="none" viewBox="0 0 1000 28">' +
+          placed.map(function(pm) {
+            const dotX = ((pm.segmentIndex + pm.pctWithinSegment / 100) / segments.length) * 1000;
+            const chipX = ((pm.chipIndex + 0.5) / N) * 1000;
+            const pts = dotX.toFixed(1) + ',0 ' +
+                        dotX.toFixed(1) + ',8 ' +
+                        chipX.toFixed(1) + ',20 ' +
+                        chipX.toFixed(1) + ',28';
+            const cls = 'connector' + (pm.isPast ? ' past' : '');
+            return '<polyline class="' + cls + '" data-mkey="' + escapeHtml(pm.milestone.key) + '" points="' + pts + '" />';
+          }).join('') +
+        '</svg>'
+      : '';
 
     return '<div class="rush-centerpiece phase-' + phase.id + '">' +
       '<div class="centerpiece-head">' +
@@ -4975,9 +5061,24 @@
         '<div class="phase-name">' + escapeHtml(phase.label) + '</div>' +
         '<div class="phase-sub">' + escapeHtml(phase.sub) + '</div>' +
       '</div>' +
-      '<div class="rush-segments">' + segmentsHtml + '</div>' +
+      '<div class="rush-bar-stack" onmouseover="handleMilestoneHover(event, true)" onmouseout="handleMilestoneHover(event, false)">' +
+        '<div class="rush-segments">' + segmentsHtml + '</div>' +
+        connectorsHtml +
+        '<div class="rush-chip-row" style="grid-template-columns: repeat(' + Math.max(1, N) + ', 1fr);">' + chipsHtml + '</div>' +
+      '</div>' +
     '</div>';
   }
+
+  // Sync hover state between a dot and its chip (and the connector)
+  window.handleMilestoneHover = function(event, isEnter) {
+    const target = event.target.closest('[data-mkey]');
+    if (!target) return;
+    const key = target.getAttribute('data-mkey');
+    const root = event.currentTarget;
+    root.querySelectorAll('[data-mkey="' + CSS.escape(key) + '"]').forEach(function(el) {
+      el.classList.toggle('is-hover', isEnter);
+    });
+  };
 
   function getTaskUrgency(t) {
     if (!t.dueISO || t.status === 'done') return 'future';
