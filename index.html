@@ -2866,7 +2866,7 @@
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 14px;
-    padding: 24px 28px 76px;
+    padding: 24px 28px 32px;
     margin-bottom: 22px;
     position: relative;
     overflow: hidden;
@@ -2930,90 +2930,153 @@
     font-size: 15px;
     color: var(--fg-soft);
   }
-  .rush-progress-wrap {
-    position: relative;
-    padding: 0 16px;
+  /* ── Phase-segmented progress bar ────────────────────────────── */
+  .rush-segments {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    padding: 0 4px;
   }
-  .rush-progress-track {
+
+  .rush-segment {
     position: relative;
-    height: 4px;
-    background: var(--line-strong);
-    border-radius: 2px;
+    padding-bottom: 56px; /* room for milestone labels below the bar */
   }
-  .rush-progress-fill {
+
+  .rush-segment-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .seg-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--fg-muted);
+    font-weight: 600;
+  }
+  .rush-segment.status-current .seg-label { color: var(--navy); }
+  .rush-segment.status-past .seg-label { color: var(--fg-muted); opacity: 0.7; }
+
+  .seg-meta-current,
+  .seg-meta-past,
+  .seg-meta-future {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .seg-meta-current {
+    color: var(--paper);
+    background: var(--navy);
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  .seg-meta-past   { color: var(--fg-muted); opacity: 0.6; }
+  .seg-meta-future { color: var(--fg-muted); }
+
+  /* The actual bar segment */
+  .rush-segment-bar {
+    position: relative;
+    height: 6px;
+    background: var(--line);
+    border-radius: 3px;
+    margin-top: 18px; /* room for TODAY pill */
+  }
+  .rush-segment.status-current .rush-segment-bar {
+    background: color-mix(in srgb, var(--gold) 18%, var(--surface));
+  }
+
+  .rush-segment-fill {
     position: absolute;
     left: 0; top: 0; bottom: 0;
-    background: linear-gradient(to right, var(--navy), var(--gold));
-    border-radius: 2px;
+    background: linear-gradient(to right, var(--navy), var(--gold-dark));
+    border-radius: 3px;
     transition: width 0.3s ease;
   }
-  .rush-milestone {
+  .rush-segment.status-past .rush-segment-fill {
+    background: var(--navy);
+    opacity: 0.55;
+  }
+
+  /* Milestones within a segment */
+  .seg-milestone {
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
     cursor: pointer;
+    z-index: 2;
   }
-  /* Collision-aware label rows. Tier-0 = adjacent to the bar (18px), tier-1 = pushed further out (34px) so clustered milestones don't overlap. */
-  .rush-milestone.below.tier-0 .milestone-label { top: 18px; bottom: auto; }
-  .rush-milestone.above.tier-0 .milestone-label { top: auto; bottom: 18px; }
-  .rush-milestone.below.tier-1 .milestone-label { top: 34px; bottom: auto; }
-  .rush-milestone.above.tier-1 .milestone-label { top: auto; bottom: 34px; }
-  /* Subtle dotted leader from marker to far-tier label so the connection is clear */
-  .rush-milestone.tier-1::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    width: 0;
-    border-left: 1px dotted var(--line-strong);
-    transform: translateX(-50%);
-    pointer-events: none;
-  }
-  .rush-milestone.below.tier-1::before { top: 7px; height: 26px; }
-  .rush-milestone.above.tier-1::before { bottom: 7px; height: 26px; }
-  .rush-milestone:hover .milestone-marker { transform: scale(1.15); transition: transform 0.15s; }
-  .milestone-marker {
-    width: 14px; height: 14px;
+  .seg-milestone-marker {
+    width: 12px; height: 12px;
     border-radius: 50%;
     background: var(--surface);
     border: 2px solid var(--navy);
     box-shadow: 0 0 0 3px var(--surface);
+    transition: transform 0.15s ease;
   }
-  .milestone-marker.bfc {
+  .seg-milestone:hover .seg-milestone-marker { transform: scale(1.25); }
+  .seg-milestone-marker.past {
+    background: var(--navy);
+    border-color: var(--navy);
+  }
+  .seg-milestone-marker.bfc {
     background: var(--gold);
     border-color: var(--gold-dark);
   }
-  [data-theme="dark"] .milestone-marker { box-shadow: 0 0 0 3px var(--surface); }
-  .milestone-label {
+  .seg-milestone-marker.bfc.past {
+    background: var(--gold-dark);
+  }
+
+  /* Milestone labels */
+  .seg-milestone-text {
     position: absolute;
-    top: 18px;
     left: 50%;
     transform: translateX(-50%);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--fg-muted);
+    text-align: center;
     white-space: nowrap;
   }
-  .rush-today {
-    position: absolute;
-    top: 0;
-    transform: translateX(-50%);
-    z-index: 2;
+  .seg-milestone.label-below .seg-milestone-text { top: 14px; }
+  .seg-milestone.label-above .seg-milestone-text { bottom: 14px; }
+
+  .seg-milestone-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--navy);
+    line-height: 1.2;
   }
-  .today-line {
+  .seg-milestone.label-above .seg-milestone-label,
+  .rush-segment.status-past .seg-milestone-label { color: var(--fg-soft); }
+  .seg-milestone-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--fg-muted);
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+  .seg-milestone:hover .seg-milestone-label { color: var(--gold-dark); }
+
+  /* TODAY marker: vertical line + pill */
+  .seg-today-line {
     position: absolute;
-    top: -16px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: -18px;
+    bottom: -8px;
     width: 2px;
-    height: 36px;
     background: var(--danger);
+    transform: translateX(-50%);
+    z-index: 3;
     border-radius: 1px;
   }
-  .today-label {
+  .seg-today-pill {
     position: absolute;
-    top: -32px;
+    top: -16px;
     left: 50%;
     transform: translateX(-50%);
     background: var(--danger);
@@ -3021,10 +3084,17 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 9px;
     letter-spacing: 0.12em;
-    font-weight: 600;
+    font-weight: 700;
     padding: 2px 7px;
     border-radius: 3px;
     white-space: nowrap;
+  }
+
+  /* When a segment has no milestones, give it a low-key placeholder feel */
+  .rush-segment.status-future .seg-label { opacity: 0.6; }
+
+  @media (max-width: 900px) {
+    .rush-segments { grid-template-columns: 1fr 1fr; gap: 20px 14px; }
   }
 
   /* KPI row — relabeled, lighter weight than countdown hero */
@@ -3249,7 +3319,7 @@
     .countdown-row { grid-template-columns: 1fr; }
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
     .activity-grid { grid-template-columns: 1fr; }
-    .rush-centerpiece { padding: 20px 18px 56px; }
+    .rush-centerpiece { padding: 20px 18px 24px; }
     .phase-name { font-size: 24px; }
     .hero-value { font-size: 34px; }
     .kpi-value { font-size: 30px; }
@@ -4737,87 +4807,175 @@
   //   1 explicit omit: Bid Delivery (no template/chapter_date source yet)
   // Short codes shown on bar; full label+date in title="" attribute for hover.
   // Labels stagger: even index -> below, odd index -> above (§F).
+  // Returns the four rush-cycle phase segments with their boundaries and status.
+  // Each segment has equal visual weight in the bar regardless of actual calendar length.
+  function getRushPhaseSegments() {
+    const byKey = getChapterDatesByKey();
+    const now = Date.now();
+    const toMs = function(iso) { return iso ? new Date(iso + 'T00:00:00').getTime() : null; };
+
+    const slIso  = byKey.soft_launch     && byKey.soft_launch.iso_date;
+    const rwsIso = byKey.rush_week_start && byKey.rush_week_start.iso_date;
+    const ssIso  = byKey.selection_start && byKey.selection_start.iso_date;
+
+    // Fallbacks if chapter_dates haven't been pinned yet
+    const sl  = toMs(slIso)  || (now - 30 * 86400000);
+    const rws = toMs(rwsIso) || (sl + 120 * 86400000);
+    const ss  = toMs(ssIso)  || (rws + 14 * 86400000);
+    const cycleStart = sl - 120 * 86400000; // Pre-launch spans ~4 months before soft launch
+    const cycleEnd   = ss + 14 * 86400000;  // Selection wraps ~2 weeks after selection start
+
+    const segments = [
+      { id: 'pre_launch',  label: 'Pre-launch',  start: cycleStart, end: sl,  short: 'Pre-launch' },
+      { id: 'soft_launch', label: 'Soft launch', start: sl,         end: rws, short: 'Soft launch' },
+      { id: 'rush_week',   label: 'Rush week',   start: rws,        end: ss,  short: 'Rush week' },
+      { id: 'selection',   label: 'Selection',   start: ss,         end: cycleEnd, short: 'Selection' },
+    ];
+
+    segments.forEach(function(s) {
+      const dur = s.end - s.start;
+      s.durDays = Math.max(1, Math.round(dur / 86400000));
+      if (now < s.start)      s.status = 'future';
+      else if (now >= s.end)  s.status = 'past';
+      else                    s.status = 'current';
+      // Today's % within this segment (0..100). Only meaningful when current.
+      s.todayPct = (s.status === 'current') ? Math.max(0, Math.min(100, ((now - s.start) / dur) * 100)) : null;
+      // Days remaining if this is the current segment
+      s.daysRemaining = (s.status === 'current') ? Math.max(0, Math.ceil((s.end - now) / 86400000)) : null;
+    });
+
+    return segments;
+  }
+
+  // Place a milestone into the segment whose date range covers it.
+  // Returns { segmentIndex, pctWithinSegment } or null if outside cycle.
+  function placeMilestoneInSegments(isoDate, segments) {
+    const ms = new Date(isoDate + 'T00:00:00').getTime();
+    for (let i = 0; i < segments.length; i++) {
+      const s = segments[i];
+      if (ms >= s.start && ms <= s.end) {
+        const pct = ((ms - s.start) / (s.end - s.start)) * 100;
+        return { segmentIndex: i, pctWithinSegment: Math.max(0, Math.min(100, pct)) };
+      }
+    }
+    return null;
+  }
+
   function renderRushCenterpiece() {
     const phase = getRushPhase();
     const byKey = getChapterDatesByKey();
-    const SHORT_CODES = {
-      soft_launch: 'SL', hard_deadline: 'HD', bfc_mixer: 'BFC',
-      rush_week_start: 'RWS', selection_start: 'SS'
-    };
-    const candidates = [];
+    const segments = getRushPhaseSegments();
+    const now = Date.now();
+
+    // Build milestone list from chapter_dates + templates
+    const milestones = [];
     ['soft_launch', 'hard_deadline', 'bfc_mixer', 'rush_week_start', 'selection_start'].forEach(function(k) {
       const cd = byKey[k];
       if (cd && cd.iso_date) {
-        candidates.push({ key: k, iso: cd.iso_date, label: cd.label, code: SHORT_CODES[k] });
-      } else {
-        console.warn('[dashboard] chapter_date "' + k + '" has no iso_date - not yet pinned');
+        milestones.push({ key: k, iso: cd.iso_date, label: cd.label });
       }
     });
     const bm = getMilestoneFromTemplate('brother mingle', byKey);
-    if (bm) candidates.push({ key: 'tpl:' + bm.id, iso: bm.iso, label: bm.label, code: 'BM' });
+    if (bm) milestones.push({ key: 'tpl:' + bm.id, iso: bm.iso, label: bm.label });
     const ri = getMilestoneFromTemplate('run interviews', byKey);
-    if (ri) candidates.push({ key: 'tpl:' + ri.id, iso: ri.iso, label: ri.label, code: 'INT' });
-    // Bid Delivery: intentionally omitted (no source data). Surface in iteration backlog when template or chapter_date exists.
+    if (ri) milestones.push({ key: 'tpl:' + ri.id, iso: ri.iso, label: ri.label });
 
-    candidates.sort(function(a, b) { return new Date(a.iso) - new Date(b.iso); });
+    milestones.sort(function(a, b) { return new Date(a.iso) - new Date(b.iso); });
 
-    // Collision-aware label placement.
-    // Each milestone goes in one of 4 "rows": below-near (row 0), above-near (row 1),
-    // below-far (row 2), above-far (row 3). We greedily place each milestone in the
-    // first row where its position is >= MIN_GAP_PCT away from the last placed milestone
-    // in that row. This eliminates the cluttered overlap when multiple milestones fall
-    // close together (e.g. Soft Launch + Hard Deadline + BFC Mixer in late Aug / early Sep).
-    const MIN_GAP_PCT = 9; // label width budget at this scale
-    const ROW_DEFS = [
-      { position: 'below', tier: 0 },
-      { position: 'above', tier: 0 },
-      { position: 'below', tier: 1 },
-      { position: 'above', tier: 1 },
-    ];
-    const lastPctInRow = [-Infinity, -Infinity, -Infinity, -Infinity];
-    const placements = candidates.map(function(m) {
-      const pct = getRushTimelinePct(m.iso);
-      let rowIdx = 0;
-      for (let r = 0; r < ROW_DEFS.length; r++) {
-        if (pct - lastPctInRow[r] >= MIN_GAP_PCT) { rowIdx = r; break; }
-        if (r === ROW_DEFS.length - 1) { rowIdx = r; } // overflow → last row
-      }
-      lastPctInRow[rowIdx] = pct;
-      return { milestone: m, pct: pct, row: ROW_DEFS[rowIdx] };
+    // Group milestones by segment with their within-segment position
+    const milestonesBySegment = [[], [], [], []];
+    milestones.forEach(function(m) {
+      const placement = placeMilestoneInSegments(m.iso, segments);
+      if (!placement) return; // skip milestones outside the cycle window
+      const ms = new Date(m.iso + 'T00:00:00').getTime();
+      const isPast = ms < now;
+      milestonesBySegment[placement.segmentIndex].push({
+        milestone: m,
+        pct: placement.pctWithinSegment,
+        isPast: isPast
+      });
     });
 
-    const todayPct = getRushTimelinePct(Date.now());
-    const milestonesHtml = placements.map(function(p) {
-      const m = p.milestone;
-      const dateStr = new Date(m.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const fullLabel = m.label + ' · ' + dateStr;
-      const markerClass = 'milestone-marker' + (m.key === 'bfc_mixer' ? ' bfc' : '');
-      const rowClass = ' tier-' + p.row.tier;
-      return '<div class="rush-milestone ' + p.row.position + rowClass + '" style="left:' + p.pct.toFixed(1) + '%" onclick="openMilestoneDetail(\'' + m.key + '\')" title="' + escapeHtml(fullLabel) + '">' +
-        '<div class="' + markerClass + '"></div>' +
-        '<div class="milestone-label">' + escapeHtml(m.code) + '</div>' +
+    // Within each segment, alternate label position (above/below) to avoid overlap
+    // when adjacent milestones are close together within the same segment.
+    const segmentsHtml = segments.map(function(seg, segIdx) {
+      const segMilestones = milestonesBySegment[segIdx];
+
+      // Sort by pct within segment, then assign alternating above/below
+      segMilestones.sort(function(a, b) { return a.pct - b.pct; });
+      const placedMilestones = segMilestones.map(function(m, i) {
+        const lastClose = i > 0 && (m.pct - segMilestones[i - 1].pct) < 28;
+        return Object.assign({}, m, {
+          labelPosition: lastClose ? (segMilestones[i - 1]._lp === 'below' ? 'above' : 'below') : 'below',
+          _lp: lastClose ? (segMilestones[i - 1]._lp === 'below' ? 'above' : 'below') : 'below'
+        });
+      });
+
+      const milestoneNodes = placedMilestones.map(function(pm) {
+        const m = pm.milestone;
+        const dateStr = new Date(m.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const markerClasses = ['seg-milestone-marker'];
+        if (pm.isPast) markerClasses.push('past');
+        if (m.key === 'bfc_mixer') markerClasses.push('bfc');
+        return '<div class="seg-milestone label-' + pm.labelPosition + '" ' +
+                'style="left:' + pm.pct.toFixed(1) + '%" ' +
+                'onclick="event.stopPropagation(); openMilestoneDetail(\'' + m.key + '\')" ' +
+                'title="' + escapeHtml(m.label + ' · ' + dateStr) + '">' +
+          '<div class="' + markerClasses.join(' ') + '"></div>' +
+          '<div class="seg-milestone-text">' +
+            '<div class="seg-milestone-label">' + escapeHtml(m.label) + '</div>' +
+            '<div class="seg-milestone-date">' + escapeHtml(dateStr) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      // Header content per segment
+      let headerMeta;
+      if (seg.status === 'current') {
+        headerMeta = '<span class="seg-meta-current">Now · ' + seg.daysRemaining + 'd left</span>';
+      } else if (seg.status === 'past') {
+        headerMeta = '<span class="seg-meta-past">Done</span>';
+      } else {
+        const daysUntil = Math.ceil((seg.start - now) / 86400000);
+        headerMeta = '<span class="seg-meta-future">in ' + daysUntil + 'd</span>';
+      }
+
+      // Today marker if today is inside this segment
+      const todayMarker = seg.status === 'current'
+        ? '<div class="seg-today-line" style="left:' + seg.todayPct.toFixed(1) + '%">' +
+            '<div class="seg-today-pill">TODAY</div>' +
+          '</div>'
+        : '';
+
+      // Fill: full for past segments, partial for current, none for future
+      let fillStyle = '';
+      if (seg.status === 'past') fillStyle = 'width:100%';
+      else if (seg.status === 'current') fillStyle = 'width:' + seg.todayPct.toFixed(1) + '%';
+      else fillStyle = 'width:0%';
+
+      return '<div class="rush-segment status-' + seg.status + '" data-segment="' + seg.id + '">' +
+        '<div class="rush-segment-header">' +
+          '<span class="seg-label">' + escapeHtml(seg.label) + '</span>' +
+          headerMeta +
+        '</div>' +
+        '<div class="rush-segment-bar">' +
+          '<div class="rush-segment-fill" style="' + fillStyle + '"></div>' +
+          milestoneNodes +
+          todayMarker +
+        '</div>' +
       '</div>';
     }).join('');
 
     return '<div class="rush-centerpiece phase-' + phase.id + '">' +
       '<div class="centerpiece-head">' +
-        '<div class="centerpiece-eyebrow">Rush Week Progress</div>' +
+        '<div class="centerpiece-eyebrow">Rush Cycle Progress</div>' +
         '<div class="centerpiece-sync"><span class="sync-dot"></span><span class="sync-text">Live · synced</span></div>' +
       '</div>' +
       '<div class="centerpiece-phase">' +
         '<div class="phase-name">' + escapeHtml(phase.label) + '</div>' +
         '<div class="phase-sub">' + escapeHtml(phase.sub) + '</div>' +
       '</div>' +
-      '<div class="rush-progress-wrap">' +
-        '<div class="rush-progress-track">' +
-          '<div class="rush-progress-fill" style="width:' + todayPct.toFixed(1) + '%"></div>' +
-          milestonesHtml +
-          '<div class="rush-today" style="left:' + todayPct.toFixed(1) + '%">' +
-            '<div class="today-line"></div>' +
-            '<div class="today-label">TODAY</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
+      '<div class="rush-segments">' + segmentsHtml + '</div>' +
     '</div>';
   }
 
