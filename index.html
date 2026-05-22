@@ -483,411 +483,6 @@
     gap: 16px;
   }
 
-  /* ── Notes sections (tag-driven grouping) ─────────────────────── */
-  .notes-section { margin-bottom: 28px; }
-  .notes-section:last-child { margin-bottom: 0; }
-
-  .notes-section-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 0 0 12px 2px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--navy);
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    user-select: none;
-  }
-  .notes-section-header .section-label { position: relative; padding-bottom: 3px; }
-  .notes-section-header .section-label::after {
-    content: '';
-    position: absolute;
-    left: 0; right: 0; bottom: -2px;
-    height: 2px;
-    background: var(--gold);
-    border-radius: 2px;
-  }
-  .notes-section-header .section-count {
-    font-size: 10px;
-    color: var(--fg-muted);
-    background: var(--surface-2);
-    padding: 1px 7px;
-    border-radius: 10px;
-    border: 1px solid var(--line);
-    letter-spacing: 0.06em;
-  }
-
-  /* Pinned section: 2-col wider cards, gold accent visible by default */
-  .notes-section.pinned .notes-grid {
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 18px;
-  }
-  .notes-section.pinned .note-card { min-height: 200px; padding: 24px; }
-  .notes-section.pinned .note-card::before { opacity: 1; }
-
-  /* Archive section: collapsible, dimmed when collapsed */
-  .notes-section.archive .notes-section-header {
-    cursor: pointer;
-    color: var(--fg-muted);
-  }
-  .notes-section.archive .notes-section-header:hover { color: var(--navy); }
-  .notes-section.archive .notes-section-header .section-label::after { background: var(--line-strong); }
-  .notes-section.archive.collapsed .notes-grid { display: none; }
-  .notes-section.archive .notes-section-header .chevron {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    transition: transform 0.18s ease;
-  }
-  .notes-section.archive.collapsed .notes-section-header .chevron { transform: rotate(-90deg); }
-  .notes-section.archive .note-card { opacity: 0.78; }
-  .notes-section.archive .note-card:hover { opacity: 1; }
-
-  /* Untagged section: low-key, hints that these need tagging */
-  .notes-section.untagged .notes-section-header { color: var(--fg-muted); }
-  .notes-section.untagged .notes-section-header .section-label::after { background: var(--line-strong); }
-
-  /* Tag suggestion chips in the editor (zero-tag state only) */
-  .tag-suggestions-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 8px;
-    padding: 8px 10px;
-    background: var(--surface-2);
-    border-radius: 8px;
-    border: 1px dashed var(--line);
-  }
-  .tag-suggestions-row .suggest-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--fg-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-right: 4px;
-  }
-  .tag-suggest-chip {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    padding: 3px 9px;
-    border-radius: 20px;
-    background: var(--surface);
-    color: var(--fg-soft);
-    border: 1px solid var(--line);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .tag-suggest-chip:hover {
-    border-color: var(--navy);
-    color: var(--navy);
-    background: var(--paper);
-  }
-
-  /* ── Tag help button + expandable panel ───────────────────────── */
-  .tag-help-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 1px solid var(--line-strong);
-    background: var(--surface);
-    color: var(--fg-soft);
-    font-family: 'Playfair Display', serif;
-    font-size: 15px;
-    font-style: italic;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.18s ease;
-    line-height: 1;
-    padding: 0;
-    flex-shrink: 0;
-  }
-  .tag-help-btn:hover {
-    border-color: var(--navy);
-    color: var(--navy);
-    background: var(--paper);
-    box-shadow: 0 2px 8px rgba(10, 36, 99, 0.08);
-  }
-  .tag-help-btn.active {
-    border-color: var(--gold);
-    color: var(--gold-dark);
-    background: var(--parchment);
-  }
-
-  .tag-help-panel {
-    background: var(--surface);
-    border: 1px solid var(--line-strong);
-    border-radius: 12px;
-    padding: 20px 22px;
-    margin-bottom: 20px;
-    box-shadow: 0 6px 20px rgba(10, 36, 99, 0.06);
-    animation: tag-help-in 0.22s ease-out;
-  }
-  @keyframes tag-help-in {
-    from { opacity: 0; transform: translateY(-6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .tag-help-panel-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--line);
-  }
-  .tag-help-panel-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--navy);
-  }
-  .tag-help-panel-title em { color: var(--gold-dark); font-weight: 500; }
-  .tag-help-panel-close {
-    background: none;
-    border: none;
-    color: var(--fg-muted);
-    cursor: pointer;
-    font-size: 18px;
-    line-height: 1;
-    padding: 4px 8px;
-    border-radius: 4px;
-  }
-  .tag-help-panel-close:hover { color: var(--navy); background: var(--surface-2); }
-
-  .tag-help-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 14px 22px;
-  }
-  .tag-help-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 12px;
-    background: var(--surface-2);
-    border-radius: 8px;
-    border-left: 3px solid var(--navy);
-  }
-  .tag-help-item .help-tag-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--navy);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-  }
-  .tag-help-item .help-tag-desc {
-    font-size: 12.5px;
-    color: var(--fg-soft);
-    line-height: 1.5;
-  }
-  .tag-help-item .help-tag-example {
-    font-size: 11px;
-    color: var(--fg-muted);
-    font-style: italic;
-    margin-top: 2px;
-  }
-  .tag-help-panel-footer {
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px dashed var(--line);
-    font-size: 11.5px;
-    color: var(--fg-muted);
-    line-height: 1.55;
-  }
-  .tag-help-panel-footer code {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px;
-    background: var(--surface-2);
-    padding: 1px 6px;
-    border-radius: 3px;
-    color: var(--fg-soft);
-  }
-
-  /* ── Note editor modal: refined editorial layout ─────────────── */
-  #noteModalInner {
-    --author-color: var(--navy);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .editor-accent-strip {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: var(--author-color);
-    opacity: 0.85;
-  }
-
-  .editor-meta-rail {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 8px 0 18px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--line);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--fg-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .editor-meta-rail .meta-avatar {
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--paper);
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-size: 10px;
-    flex-shrink: 0;
-  }
-  .editor-meta-rail .meta-sep { color: var(--line-strong); }
-  .editor-meta-rail .meta-strong { color: var(--fg-soft); font-weight: 600; }
-
-  .editor-mode-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-  .editor-mode-toggle {
-    display: inline-flex;
-    background: var(--surface-2);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 2px;
-    gap: 2px;
-  }
-  .editor-mode-toggle .mode-btn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    padding: 5px 12px;
-    border: none;
-    background: transparent;
-    color: var(--fg-muted);
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.15s ease;
-    font-weight: 600;
-  }
-  .editor-mode-toggle .mode-btn:hover { color: var(--fg-soft); }
-  .editor-mode-toggle .mode-btn.active {
-    background: var(--paper);
-    color: var(--navy);
-    box-shadow: 0 1px 2px rgba(10, 36, 99, 0.08);
-  }
-  .editor-mode-hint {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--fg-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  /* Editor surface — neither child shows its own border. */
-  .editor-surface { position: relative; }
-
-  .editor-body {
-    width: 100%;
-    min-height: 320px;
-    border: none;
-    background: transparent;
-    resize: none;
-    outline: none;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13.5px;
-    line-height: 1.7;
-    color: var(--fg);
-    padding: 4px 2px;
-  }
-  .editor-body::placeholder { color: var(--fg-muted); font-style: italic; }
-  .editor-body:focus { outline: none; }
-
-  .editor-read {
-    min-height: 320px;
-    padding: 4px 2px;
-    display: none;
-    font-family: 'Inter', sans-serif;
-    font-size: 15px;
-    line-height: 1.72;
-    color: var(--fg);
-  }
-
-  /* Mode swap */
-  #noteModalInner[data-mode="read"] .editor-body { display: none; }
-  #noteModalInner[data-mode="read"] .editor-read { display: block; }
-  #noteModalInner[data-mode="edit"] .editor-body { display: block; }
-  #noteModalInner[data-mode="edit"] .editor-read { display: none; }
-
-  /* Markdown-prose styles (headings + bullets only, by design) */
-  .editor-read h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--navy);
-    margin: 18px 0 8px;
-    line-height: 1.25;
-  }
-  .editor-read h1:first-child { margin-top: 0; }
-  .editor-read h2 {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--author-color);
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    margin: 22px 0 8px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--line);
-  }
-  .editor-read h2:first-child { margin-top: 0; }
-  .editor-read p {
-    margin: 0 0 12px;
-    color: var(--fg);
-  }
-  .editor-read p:last-child { margin-bottom: 0; }
-  .editor-read ul {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 12px;
-  }
-  .editor-read ul li {
-    position: relative;
-    padding-left: 18px;
-    margin-bottom: 6px;
-    color: var(--fg);
-  }
-  .editor-read ul li::before {
-    content: '';
-    position: absolute;
-    left: 4px; top: 11px;
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: var(--author-color);
-    opacity: 0.7;
-  }
-  .editor-read em.empty-doc {
-    display: block;
-    color: var(--fg-muted);
-    font-style: italic;
-    text-align: center;
-    padding: 40px 0;
-  }
-
   .note-card {
     background: var(--surface);
     border: 1px solid var(--line);
@@ -900,8 +495,6 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    /* Author color, set inline via style="--author-color: <hex>"; fallback to navy */
-    --author-color: var(--navy);
   }
 
   .note-card::before {
@@ -909,18 +502,23 @@
     position: absolute;
     top: 0; left: 0;
     width: 4px; height: 100%;
-    background: var(--author-color);
-    opacity: 0.55;
+    background: var(--gold);
+    opacity: 0;
     transition: opacity 0.2s ease;
   }
 
   .note-card:hover {
     transform: translateY(-2px);
     border-color: var(--line-strong);
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--author-color) 18%, transparent);
+    box-shadow: 0 8px 24px rgba(10, 36, 99, 0.08);
   }
 
   .note-card:hover::before { opacity: 1; }
+  .note-card[data-color="navy"]::before { background: var(--navy); }
+  .note-card[data-color="gold"]::before { background: var(--gold); }
+  .note-card[data-color="crimson"]::before { background: var(--danger); }
+  .note-card[data-color="sage"]::before { background: var(--success); }
+  .note-card[data-color="ink"]::before { background: var(--fg); }
 
   .note-pin {
     position: absolute;
@@ -956,7 +554,7 @@
     flex: 1;
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     white-space: pre-wrap;
   }
@@ -3342,7 +2940,12 @@
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
+    cursor: pointer;
   }
+  /* §F dashboard polish: alternating above/below label staggering */
+  .rush-milestone.below .milestone-label { top: 18px; }
+  .rush-milestone.above .milestone-label { top: auto; bottom: 18px; }
+  .rush-milestone:hover .milestone-marker { transform: scale(1.15); transition: transform 0.15s; }
   .milestone-marker {
     width: 14px; height: 14px;
     border-radius: 50%;
@@ -3685,6 +3288,11 @@
   [data-theme="dark"] .task-group-dot.urgency-week { background: var(--gold); }
   .task-group-dot.urgency-future   { background: var(--fg-muted); }
   .task-group-dot.urgency-done     { background: var(--success); }
+  /* §1D urgency tier spectrum: lighter navy / gray dots */
+  .task-group-dot.urgency-thismonth { background: rgba(10, 36, 99, 0.55); }
+  .task-group-dot.urgency-laterrush { background: var(--fg-muted); }
+  [data-theme="dark"] .task-group-dot.urgency-thismonth { background: rgba(212, 166, 74, 0.55); }
+  [data-theme="dark"] .task-group-dot.urgency-laterrush { background: var(--fg-muted); }
 
   .task-row {
     border-bottom: 1px solid var(--line);
@@ -3999,6 +3607,37 @@
     .quick-add-btn { bottom: 20px; right: 20px; width: 48px; height: 48px; }
     .cal-day-detail { padding: 20px 22px; }
     .template-edit-form .form-row-grid { grid-template-columns: 1fr; }
+
+  /* §2A — Quick-add task bar (Templates tab) */
+  .quick-add-task-bar {
+    background: var(--parchment);
+    border-left: 3px solid var(--gold);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+  }
+  [data-theme="dark"] .quick-add-task-bar { background: rgba(212, 166, 74, 0.06); }
+  .quick-add-task-bar .qa-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-bottom: 10px;
+  }
+  .quick-add-task-bar .qa-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 0.8fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .quick-add-task-bar .qa-title { min-width: 0; }
+  .quick-add-task-bar .qa-select { min-width: 0; }
+  .quick-add-task-bar .qa-add { white-space: nowrap; }
+  @media (max-width: 900px) {
+    .quick-add-task-bar .qa-row { grid-template-columns: 1fr 1fr; }
+    .quick-add-task-bar .qa-add { grid-column: 1 / -1; }
+  }
   }
 
 </style>
@@ -4090,24 +3729,21 @@
 
 <!-- ================ NOTE EDITOR MODAL ================ -->
 <div class="modal-overlay" id="noteModal">
-  <div class="modal wide" id="noteModalInner">
+  <div class="modal wide">
     <button class="modal-close" onclick="closeNoteEditor()">✕</button>
-    <div class="editor-accent-strip" id="editorAccentStrip"></div>
     <input type="text" class="editor-title-input" id="editorTitle" placeholder="Untitled note…" />
-    <div class="editor-meta-rail" id="editorMetaRail"></div>
-    <div class="editor-mode-bar">
-      <div class="editor-mode-toggle">
-        <button class="mode-btn" data-mode="read" onclick="setEditorMode('read')">Read</button>
-        <button class="mode-btn" data-mode="edit" onclick="setEditorMode('edit')">Edit</button>
+    <div class="editor-toolbar">
+      <span class="toolbar-label">Accent</span>
+      <div class="color-picker" id="colorPicker">
+        <div class="color-swatch selected" data-color="navy" style="background: var(--navy)"></div>
+        <div class="color-swatch" data-color="gold" style="background: var(--gold)"></div>
+        <div class="color-swatch" data-color="crimson" style="background: var(--danger)"></div>
+        <div class="color-swatch" data-color="sage" style="background: var(--success)"></div>
+        <div class="color-swatch" data-color="ink" style="background: var(--fg)"></div>
       </div>
-      <div class="editor-mode-hint" id="editorModeHint"></div>
     </div>
-    <div class="editor-surface" id="editorSurface">
-      <textarea class="editor-body" id="editorBody" placeholder="Start writing… use # for headings, - for bullets"></textarea>
-      <div class="editor-read" id="editorRead"></div>
-    </div>
+    <textarea class="editor-body" id="editorBody" placeholder="Start writing…"></textarea>
     <div class="editor-tag-row" id="editorTagRow"></div>
-    <div class="tag-suggestions-row" id="editorTagSuggest" style="display:none;"></div>
     <div class="modal-footer">
       <button class="btn danger" onclick="deleteCurrentNote()" id="deleteNoteBtn" style="display:none">Delete</button>
       <div class="right">
@@ -4528,7 +4164,7 @@
     theme: localStorage.getItem('rush26_theme') || 'light',
 
     editingNoteId: null,
-    editorMode: 'edit', // 'read' | 'edit'
+    editingColor: 'navy',
     editingNoteTags: [],
 
     editingEventId: null,
@@ -4554,8 +4190,6 @@
     taskFilterCategory: 'all',
     calendarFilterCategory: 'all',
     notesViewMode: 'grid',
-    notesArchiveCollapsed: true,
-    notesHelpOpen: false,
     candidateFilter: 'all',
     notesSearchQuery: '',
 
@@ -4595,6 +4229,7 @@
     // ============================================================
     taskTemplates: [],
     taskTemplatesLoaded: false,
+    milestoneDetail: null,            // §G dashboard polish — selected milestone key (or 'tpl:<id>')
     chapterDates: [],
     chapterDatesLoaded: false,
     tasksSubview: 'active',
@@ -5018,21 +4653,84 @@
     return            { id: 'active-rush',  label: 'Active rush',          sub: 'Events underway. PNM evaluations in motion.' };
   }
 
+  // §A dashboard polish: domain shifted from [bfc-180d, bfc] to [soft_launch, selection_start].
+  // Spans the full rush arc. Fallbacks if chapter_dates not yet pinned.
   function getRushTimelinePct(t) {
-    const bfc = new Date(DASHBOARD_DATES.bfcMixer.iso + 'T00:00:00').getTime();
-    const start = bfc - RUSH_TIMELINE_DAYS * 86400000;
+    const byKey = getChapterDatesByKey();
+    const slIso  = (byKey.soft_launch     && byKey.soft_launch.iso_date)     || null;
+    const ssIso  = (byKey.selection_start && byKey.selection_start.iso_date) || null;
+    const bfcIso = (byKey.bfc_mixer       && byKey.bfc_mixer.iso_date)       || DASHBOARD_DATES.bfcMixer.iso;
+    const start = slIso ? new Date(slIso + 'T00:00:00').getTime() : (Date.now() - 30 * 86400000);
+    const end   = ssIso ? new Date(ssIso + 'T00:00:00').getTime() : (new Date(bfcIso + 'T00:00:00').getTime() + 60 * 86400000);
     const ms = (typeof t === 'string') ? new Date(t + 'T00:00:00').getTime() : t;
     if (ms < start) return 0;
-    if (ms > bfc)   return 100;
-    return ((ms - start) / (bfc - start)) * 100;
+    if (ms > end)   return 100;
+    return ((ms - start) / (end - start)) * 100;
   }
 
+  // §B dashboard polish: template-derived milestone lookup with two silent-skip paths.
+  function getMilestoneFromTemplate(titleSubstring, byKey) {
+    if (!state.taskTemplatesLoaded) return null;  // suppress warnings during boot load
+    const lower = titleSubstring.toLowerCase();
+    const tmpl = (state.taskTemplates || []).find(function(t) {
+      return (t.title || '').toLowerCase().indexOf(lower) !== -1;
+    });
+    if (!tmpl) {
+      console.warn('[dashboard] milestone template containing "' + titleSubstring + '" not found in state.taskTemplates - was it renamed?');
+      return null;
+    }
+    const calc = getTemplateCalculatedDue(tmpl, byKey);
+    if (!calc) {
+      console.warn('[dashboard] milestone "' + tmpl.title + '" anchor "' + tmpl.anchor_date_key + '" has no iso_date - not yet pinned');
+      return null;
+    }
+    const isoDate = calc.toISOString().slice(0, 10);
+    return { id: tmpl.id, label: tmpl.title, iso: isoDate };
+  }
+
+  // §C dashboard polish: full rewrite. 8 candidate milestones:
+  //   5 chapter_dates: soft_launch, hard_deadline, bfc_mixer, rush_week_start, selection_start
+  //   2 template-derived: Brother Mingle (BM), Run interviews (INT)
+  //   1 explicit omit: Bid Delivery (no template/chapter_date source yet)
+  // Short codes shown on bar; full label+date in title="" attribute for hover.
+  // Labels stagger: even index -> below, odd index -> above (§F).
   function renderRushCenterpiece() {
     const phase = getRushPhase();
+    const byKey = getChapterDatesByKey();
+    const SHORT_CODES = {
+      soft_launch: 'SL', hard_deadline: 'HD', bfc_mixer: 'BFC',
+      rush_week_start: 'RWS', selection_start: 'SS'
+    };
+    const candidates = [];
+    ['soft_launch', 'hard_deadline', 'bfc_mixer', 'rush_week_start', 'selection_start'].forEach(function(k) {
+      const cd = byKey[k];
+      if (cd && cd.iso_date) {
+        candidates.push({ key: k, iso: cd.iso_date, label: cd.label, code: SHORT_CODES[k] });
+      } else {
+        console.warn('[dashboard] chapter_date "' + k + '" has no iso_date - not yet pinned');
+      }
+    });
+    const bm = getMilestoneFromTemplate('brother mingle', byKey);
+    if (bm) candidates.push({ key: 'tpl:' + bm.id, iso: bm.iso, label: bm.label, code: 'BM' });
+    const ri = getMilestoneFromTemplate('run interviews', byKey);
+    if (ri) candidates.push({ key: 'tpl:' + ri.id, iso: ri.iso, label: ri.label, code: 'INT' });
+    // Bid Delivery: intentionally omitted (no source data). Surface in iteration backlog when template or chapter_date exists.
+
+    candidates.sort(function(a, b) { return new Date(a.iso) - new Date(b.iso); });
+
     const todayPct = getRushTimelinePct(Date.now());
-    const slPct  = getRushTimelinePct(DASHBOARD_DATES.softLaunch.iso);
-    const hdPct  = getRushTimelinePct(DASHBOARD_DATES.hardDeadline.iso);
-    const bfcPct = getRushTimelinePct(DASHBOARD_DATES.bfcMixer.iso);
+    const milestonesHtml = candidates.map(function(m, i) {
+      const pct = getRushTimelinePct(m.iso);
+      const position = (i % 2 === 0) ? 'below' : 'above';
+      const dateStr = new Date(m.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const fullLabel = m.label + ' · ' + dateStr;
+      const markerClass = 'milestone-marker' + (m.key === 'bfc_mixer' ? ' bfc' : '');
+      return '<div class="rush-milestone ' + position + '" style="left:' + pct.toFixed(1) + '%" onclick="openMilestoneDetail(\'' + m.key + '\')" title="' + escapeHtml(fullLabel) + '">' +
+        '<div class="' + markerClass + '"></div>' +
+        '<div class="milestone-label">' + escapeHtml(m.code) + '</div>' +
+      '</div>';
+    }).join('');
+
     return '<div class="rush-centerpiece phase-' + phase.id + '">' +
       '<div class="centerpiece-head">' +
         '<div class="centerpiece-eyebrow">Rush Week Progress</div>' +
@@ -5045,18 +4743,7 @@
       '<div class="rush-progress-wrap">' +
         '<div class="rush-progress-track">' +
           '<div class="rush-progress-fill" style="width:' + todayPct.toFixed(1) + '%"></div>' +
-          '<div class="rush-milestone" style="left:' + slPct.toFixed(1) + '%">' +
-            '<div class="milestone-marker"></div>' +
-            '<div class="milestone-label">Soft launch · Aug 15</div>' +
-          '</div>' +
-          '<div class="rush-milestone" style="left:' + hdPct.toFixed(1) + '%">' +
-            '<div class="milestone-marker"></div>' +
-            '<div class="milestone-label">Hard deadline · Aug 25</div>' +
-          '</div>' +
-          '<div class="rush-milestone" style="left:' + bfcPct.toFixed(1) + '%">' +
-            '<div class="milestone-marker bfc"></div>' +
-            '<div class="milestone-label">BFC Mixer · Sep 8</div>' +
-          '</div>' +
+          milestonesHtml +
           '<div class="rush-today" style="left:' + todayPct.toFixed(1) + '%">' +
             '<div class="today-line"></div>' +
             '<div class="today-label">TODAY</div>' +
@@ -5132,6 +4819,19 @@
       return s >= now && s <= now + 7 * 86400000;
     }).length;
 
+    // §D dashboard polish: gold-italic em wrap only when threshold met.
+    // Rule: overdueCount >= 1 OR (assignedToCurrentUser AND dueWithin24h >= 1)
+    const overdueCount = state.tasks.filter(function(t) {
+      return t.status !== 'done' && t.dueISO && new Date(t.dueISO).getTime() < Date.now();
+    }).length;
+    const myTasks24h = state.tasks.filter(function(t) {
+      if (t.status === 'done' || !t.dueISO || t.assigneeId !== state.currentUser) return false;
+      const due = new Date(t.dueISO).getTime();
+      return due > Date.now() && due - Date.now() <= 24 * 3600000;
+    }).length;
+    const needsAttentionUrgent = overdueCount >= 1 || myTasks24h >= 1;
+    const openTasksDisplay = needsAttentionUrgent ? ('<em>' + openTasks + '</em>') : String(openTasks);
+
     const kpiRow = '<div class="kpi-row">' +
       '<div class="kpi-card" onclick="switchView(\'brothers\')">' +
         '<div class="kpi-label">Active members</div>' +
@@ -5143,9 +4843,10 @@
         '<div class="kpi-value">' + activeCands + '</div>' +
         '<div class="kpi-meta">candidates tracked</div>' +
       '</div>' +
-      '<div class="kpi-card" onclick="switchView(\'tasks\')">' +
+      // §H: Needs Attention card sets tasksView=all before switching (surface all open tasks).
+      '<div class="kpi-card" onclick="state.tasksView = \'all\'; switchView(\'tasks\')">' +
         '<div class="kpi-label">Needs attention</div>' +
-        '<div class="kpi-value"><em>' + openTasks + '</em></div>' +
+        '<div class="kpi-value">' + openTasksDisplay + '</div>' +
         '<div class="kpi-meta">open tasks</div>' +
       '</div>' +
       '<div class="kpi-card" onclick="switchView(\'calendar\')">' +
@@ -5275,6 +4976,7 @@
       kpiRow +
       attentionGrid +
       activityGrid +
+      (state.milestoneDetail ? renderMilestoneDetail() : '') +
     '</div>';
   }
 
@@ -5303,107 +5005,11 @@
           '<button class="view-switch-btn ' + (state.notesViewMode === 'grid' ? 'active' : '') + '" onclick="setNoteView(\'grid\')">Grid</button>' +
           '<button class="view-switch-btn ' + (state.notesViewMode === 'list' ? 'active' : '') + '" onclick="setNoteView(\'list\')">List</button>' +
         '</div>' +
-        '<button class="tag-help-btn ' + (state.notesHelpOpen ? 'active' : '') + '" onclick="toggleTagHelp()" title="What do these tags mean?" aria-label="Tag guide">?</button>' +
         '<button class="btn primary" onclick="openNoteEditor()">+ New note</button>' +
       '</div>' +
-      (state.notesHelpOpen ? renderTagHelpPanel() : '') +
       (state.notesViewMode === 'grid'
-        ? '<div class="notes-grid-wrap">' + renderNotesGrid(filtered) + '</div>'
+        ? '<div class="notes-grid">' + renderNotesGrid(filtered) + '</div>'
         : '<div class="notes-list">' + renderNotesList(filtered) + '</div>');
-  }
-
-  function renderTagHelpPanel() {
-    return '<div class="tag-help-panel">' +
-      '<div class="tag-help-panel-header">' +
-        '<div class="tag-help-panel-title">Tag <em>guide</em></div>' +
-        '<button class="tag-help-panel-close" onclick="toggleTagHelp()" aria-label="Close">✕</button>' +
-      '</div>' +
-      '<div class="tag-help-grid">' +
-        NOTE_PRIMARY_TAGS.map(t =>
-          '<div class="tag-help-item">' +
-            '<div class="help-tag-label">' + escapeHtml(t.label) + '</div>' +
-            '<div class="help-tag-desc">' + escapeHtml(t.desc) + '</div>' +
-            '<div class="help-tag-example">' + escapeHtml(t.example) + '</div>' +
-          '</div>'
-        ).join('') +
-      '</div>' +
-      '<div class="tag-help-panel-footer">' +
-        'A note\'s <strong>first matching primary tag</strong> decides its section. Other tags (like <code>draft</code>, <code>decision</code>, <code>week-of-rush</code>, or a person\'s name) are extra metadata — searchable, but they don\'t affect grouping.' +
-      '</div>' +
-    '</div>';
-  }
-
-  window.toggleTagHelp = function() {
-    state.notesHelpOpen = !state.notesHelpOpen;
-    render();
-  };
-
-  // Primary tag taxonomy. First match (in this order) wins as a note's section.
-  const NOTE_PRIMARY_TAGS = [
-    { id: 'rush-ops',    label: 'Rush Ops',   desc: 'The operational core of rush week itself — schedules, room assignments, event mechanics, day-of run-of-show.', example: 'e.g. Rush Week Rooms & Times, Speed Dating flow' },
-    { id: 'candidates',  label: 'Candidates', desc: 'PNM tracking, evaluations, ranking discussions, bid lists, deliberation notes.', example: 'e.g. Tuesday eval recap, bid list draft' },
-    { id: 'meetings',    label: 'Meetings',   desc: 'Recaps from any meeting — onboarding, exec, PR sync, chapter, alumni, 1-on-1s.', example: 'e.g. Rush x PR Meeting, Mikayla Meeting' },
-    { id: 'pr',          label: 'PR',         desc: 'Post ideas, captions, branding, themes, content calendar, social strategy.', example: 'e.g. IG announcement copy, theme brainstorm' },
-    { id: 'exec',        label: 'Exec',       desc: 'Chair-level decisions, policy, agreements, conflicts, big-picture planning.', example: 'e.g. Rush Agreement, takeover notes' },
-    { id: 'logistics',   label: 'Logistics',  desc: 'Stuff supporting rush but not rush itself — budgets, vendors, merch, food, supplies, transport.', example: 'e.g. T-shirt order, food vendor list' },
-    { id: 'archive',     label: 'Archive',    desc: 'Done, superseded, or inactive. Kept for reference. Collapsed by default.', example: 'e.g. last semester\'s schedule, old policy draft' },
-  ];
-  const NOTE_PRIMARY_TAG_IDS = NOTE_PRIMARY_TAGS.map(t => t.id);
-
-  function getNoteSection(note) {
-    const tags = (note.tags || []).map(t => String(t).toLowerCase().trim());
-    for (const tag of tags) {
-      if (NOTE_PRIMARY_TAG_IDS.includes(tag)) return tag;
-    }
-    return 'untagged';
-  }
-
-  function groupNotesBySection(notes) {
-    // Section order: pinned (synthetic) → primary tags in declared order → untagged → archive
-    const buckets = { pinned: [] };
-    NOTE_PRIMARY_TAG_IDS.forEach(id => { buckets[id] = []; });
-    buckets.untagged = [];
-
-    notes.forEach(n => {
-      if (n.pinned) { buckets.pinned.push(n); return; }
-      buckets[getNoteSection(n)].push(n);
-    });
-
-    // Within each section, newest first (pinned section: also newest-first since "pinned" itself is the ordering signal)
-    Object.keys(buckets).forEach(k => buckets[k].sort((a, b) => b.updatedAt - a.updatedAt));
-
-    const order = [
-      { id: 'pinned',     label: 'Pinned',     cls: 'pinned' },
-      { id: 'rush-ops',   label: 'Rush Ops',   cls: '' },
-      { id: 'candidates', label: 'Candidates', cls: '' },
-      { id: 'meetings',   label: 'Meetings',   cls: '' },
-      { id: 'pr',         label: 'PR',         cls: '' },
-      { id: 'exec',       label: 'Exec',       cls: '' },
-      { id: 'logistics',  label: 'Logistics',  cls: '' },
-      { id: 'untagged',   label: 'Untagged',   cls: 'untagged' },
-      { id: 'archive',    label: 'Archive',    cls: 'archive' },
-    ];
-    return order
-      .map(s => Object.assign({}, s, { notes: buckets[s.id] }))
-      .filter(s => s.notes.length > 0);
-  }
-
-  function renderNoteCard(n) {
-    const author = MEMBERS.find(m => m.id === n.authorId);
-    const authorColor = author ? author.color : 'var(--navy)';
-    const tags = (n.tags || []).slice(0, 3);
-    return '<div class="note-card" style="--author-color: ' + authorColor + '" onclick="openNoteEditor(\'' + n.id + '\')">' +
-      '<button class="note-pin ' + (n.pinned ? 'pinned' : '') + '" onclick="event.stopPropagation(); togglePin(\'' + n.id + '\')" title="' + (n.pinned ? 'Unpin' : 'Pin') + '">' + (n.pinned ? '★' : '☆') + '</button>' +
-      '<div class="note-title">' + escapeHtml(n.title || 'Untitled') + '</div>' +
-      '<div class="note-preview">' + escapeHtml(n.body || 'No content…') + '</div>' +
-      (tags.length > 0 ? '<div class="note-tags">' + tags.map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('') + ((n.tags || []).length > 3 ? '<span class="tag">+' + (n.tags.length - 3) + '</span>' : '') + '</div>' : '') +
-      '<div class="note-footer">' +
-        '<div class="note-author">' +
-          (author ? '<div class="mini-avatar" style="background:' + author.color + '">' + author.name[0] + '</div>' + escapeHtml(author.name) : '—') +
-        '</div>' +
-        '<div>' + timeAgo(n.updatedAt) + '</div>' +
-      '</div>' +
-    '</div>';
   }
 
   function renderNotesGrid(notes) {
@@ -5414,25 +5020,20 @@
         '<div style="font-size:13px;">Create the first one — it\'ll show up for the whole committee.</div>' +
       '</div>';
     }
-
-    // Search active → flat grid, no sectioning (search is a different mental model)
-    if (state.notesSearchQuery.trim()) {
-      return '<div class="notes-grid">' + notes.map(renderNoteCard).join('') + '</div>';
-    }
-
-    const sections = groupNotesBySection(notes);
-    return sections.map(section => {
-      const isArchive = section.id === 'archive';
-      const collapsedCls = (isArchive && state.notesArchiveCollapsed) ? ' collapsed' : '';
-      const headerClick = isArchive ? ' onclick="toggleArchiveSection()"' : '';
-      const chevron = isArchive ? '<span class="chevron">▾</span>' : '';
-      return '<div class="notes-section ' + section.cls + collapsedCls + '">' +
-        '<div class="notes-section-header"' + headerClick + '>' +
-          chevron +
-          '<span class="section-label">' + section.label + '</span>' +
-          '<span class="section-count">' + section.notes.length + '</span>' +
+    return notes.map(n => {
+      const author = MEMBERS.find(m => m.id === n.authorId);
+      const tags = (n.tags || []).slice(0, 3);
+      return '<div class="note-card" data-color="' + (n.color || 'navy') + '" onclick="openNoteEditor(\'' + n.id + '\')">' +
+        '<button class="note-pin ' + (n.pinned ? 'pinned' : '') + '" onclick="event.stopPropagation(); togglePin(\'' + n.id + '\')" title="' + (n.pinned ? 'Unpin' : 'Pin') + '">' + (n.pinned ? '★' : '☆') + '</button>' +
+        '<div class="note-title">' + escapeHtml(n.title || 'Untitled') + '</div>' +
+        '<div class="note-preview">' + escapeHtml(n.body || 'No content…') + '</div>' +
+        (tags.length > 0 ? '<div class="note-tags">' + tags.map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('') + ((n.tags || []).length > 3 ? '<span class="tag">+' + (n.tags.length - 3) + '</span>' : '') + '</div>' : '') +
+        '<div class="note-footer">' +
+          '<div class="note-author">' +
+            (author ? '<div class="mini-avatar" style="background:' + author.color + '">' + author.name[0] + '</div>' + escapeHtml(author.name) : '—') +
+          '</div>' +
+          '<div>' + timeAgo(n.updatedAt) + '</div>' +
         '</div>' +
-        '<div class="notes-grid">' + section.notes.map(renderNoteCard).join('') + '</div>' +
       '</div>';
     }).join('');
   }
@@ -5444,7 +5045,8 @@
     return '<div class="list-row header"><div></div><div>Title</div><div>Tags</div><div>Author</div><div>Updated</div><div></div></div>' +
       notes.map(n => {
         const author = MEMBERS.find(m => m.id === n.authorId);
-        const color = author ? author.color : 'var(--navy)';
+        const colorMap = { navy: 'var(--navy)', gold: 'var(--gold)', crimson: 'var(--danger)', sage: 'var(--success)', ink: 'var(--fg)' };
+        const color = colorMap[n.color] || 'var(--navy)';
         const tags = (n.tags || []).slice(0, 2);
         return '<div class="list-row" onclick="openNoteEditor(\'' + n.id + '\')">' +
           '<div class="list-color-dot" style="background:' + color + '"></div>' +
@@ -5465,22 +5067,10 @@
     const notes = state.notes
       .filter(n => !qLow || (n.title || '').toLowerCase().includes(qLow) || (n.body || '').toLowerCase().includes(qLow) || (n.tags || []).some(t => t.toLowerCase().includes(qLow)))
       .sort((a, b) => (!!b.pinned - !!a.pinned) || (b.updatedAt - a.updatedAt));
-    const wrap = document.querySelector('.notes-grid-wrap');
+    const grid = document.querySelector('.notes-grid');
     const list = document.querySelector('.notes-list');
-    if (wrap) wrap.innerHTML = renderNotesGrid(notes);
+    if (grid) grid.innerHTML = renderNotesGrid(notes);
     if (list) list.innerHTML = renderNotesList(notes);
-  };
-
-  window.toggleArchiveSection = function() {
-    state.notesArchiveCollapsed = !state.notesArchiveCollapsed;
-    const wrap = document.querySelector('.notes-grid-wrap');
-    if (wrap) {
-      const qLow = state.notesSearchQuery.toLowerCase().trim();
-      const notes = state.notes
-        .filter(n => !qLow || (n.title || '').toLowerCase().includes(qLow) || (n.body || '').toLowerCase().includes(qLow) || (n.tags || []).some(t => t.toLowerCase().includes(qLow)))
-        .sort((a, b) => (!!b.pinned - !!a.pinned) || (b.updatedAt - a.updatedAt));
-      wrap.innerHTML = renderNotesGrid(notes);
-    }
   };
 
   window.togglePin = async function(id) {
@@ -5491,134 +5081,26 @@
     render();
   };
 
-  // ── Lightweight markdown: # / ## headings, - or * bullets, blank lines = paragraphs ──
-  function renderNoteMarkdown(src) {
-    const raw = (src || '').trim();
-    if (!raw) return '<em class="empty-doc">No content yet. Switch to Edit to write.</em>';
-
-    const lines = raw.split(/\r?\n/);
-    const out = [];
-    let listOpen = false;
-    let paraBuf = [];
-
-    function flushPara() {
-      if (paraBuf.length === 0) return;
-      out.push('<p>' + paraBuf.map(escapeHtml).join('<br/>') + '</p>');
-      paraBuf = [];
-    }
-    function closeList() {
-      if (listOpen) { out.push('</ul>'); listOpen = false; }
-    }
-
-    for (const rawLine of lines) {
-      const line = rawLine.trimEnd();
-      if (!line.trim()) { flushPara(); closeList(); continue; }
-
-      const h1 = line.match(/^#\s+(.+)$/);
-      const h2 = line.match(/^##\s+(.+)$/);
-      const bullet = line.match(/^\s*[-*]\s+(.+)$/);
-
-      if (h2) { flushPara(); closeList(); out.push('<h2>' + escapeHtml(h2[1]) + '</h2>'); continue; }
-      if (h1) { flushPara(); closeList(); out.push('<h1>' + escapeHtml(h1[1]) + '</h1>'); continue; }
-      if (bullet) {
-        flushPara();
-        if (!listOpen) { out.push('<ul>'); listOpen = true; }
-        out.push('<li>' + escapeHtml(bullet[1]) + '</li>');
-        continue;
-      }
-      // Normal paragraph line
-      closeList();
-      paraBuf.push(line);
-    }
-    flushPara();
-    closeList();
-    return out.join('');
-  }
-
-  window.setEditorMode = function(mode) {
-    state.editorMode = mode;
-    applyEditorMode();
-  };
-
-  function applyEditorMode() {
-    const inner = document.getElementById('noteModalInner');
-    if (!inner) return;
-    inner.setAttribute('data-mode', state.editorMode);
-    // Sync the toggle buttons
-    document.querySelectorAll('#noteModalInner .mode-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.mode === state.editorMode);
-    });
-    // Hint text on the right of the toggle
-    const hint = document.getElementById('editorModeHint');
-    if (hint) {
-      hint.textContent = state.editorMode === 'edit'
-        ? 'Use # heading · ## section · - bullet'
-        : '';
-    }
-    // If switching to Read, re-render markdown from the current body
-    if (state.editorMode === 'read') {
-      const body = document.getElementById('editorBody').value;
-      document.getElementById('editorRead').innerHTML = renderNoteMarkdown(body);
-    } else {
-      // Focus the textarea when entering Edit
-      setTimeout(() => document.getElementById('editorBody')?.focus(), 30);
-    }
-  }
-
-  function renderEditorMetaRail(note) {
-    const rail = document.getElementById('editorMetaRail');
-    if (!rail) return;
-    if (!note) {
-      const me = MEMBERS.find(m => m.id === state.currentUser);
-      const myColor = me ? me.color : 'var(--navy)';
-      rail.innerHTML =
-        '<div class="meta-avatar" style="background:' + myColor + '">' + (me ? me.name[0] : '?') + '</div>' +
-        '<span class="meta-strong">New briefing</span>' +
-        '<span class="meta-sep">·</span>' +
-        '<span>by ' + (me ? escapeHtml(me.name) : 'you') + '</span>';
-      return;
-    }
-    const author = MEMBERS.find(m => m.id === note.authorId);
-    const editor = MEMBERS.find(m => m.id === note.lastEditedBy);
-    const authorColor = author ? author.color : 'var(--navy)';
-    const parts = [];
-    parts.push('<div class="meta-avatar" style="background:' + authorColor + '">' + (author ? author.name[0] : '?') + '</div>');
-    parts.push('<span class="meta-strong">' + (author ? escapeHtml(author.name) : 'Unknown') + '</span>');
-    parts.push('<span class="meta-sep">·</span>');
-    parts.push('<span>Created ' + timeAgo(note.createdAt) + '</span>');
-    if (note.updatedAt && note.updatedAt !== note.createdAt) {
-      parts.push('<span class="meta-sep">·</span>');
-      const editorName = editor ? editor.name : (author ? author.name : '');
-      parts.push('<span>Updated ' + timeAgo(note.updatedAt) + (editorName ? ' by ' + escapeHtml(editorName) : '') + '</span>');
-    }
-    rail.innerHTML = parts.join('');
-  }
-
   window.openNoteEditor = function(id) {
     state.editingNoteId = id || null;
     const note = id ? state.notes.find(n => n.id === id) : null;
     document.getElementById('editorTitle').value = note?.title || '';
     document.getElementById('editorBody').value = note?.body || '';
+    state.editingColor = note?.color || 'navy';
     state.editingNoteTags = (note?.tags || []).slice();
 
-    // Author-color: existing note → original author; new note → current user
-    const authorId = note ? note.authorId : state.currentUser;
-    const author = MEMBERS.find(m => m.id === authorId);
-    const authorColor = author ? author.color : 'var(--navy)';
-    const inner = document.getElementById('noteModalInner');
-    if (inner) inner.style.setProperty('--author-color', authorColor);
-
-    // Smart mode default: Read for existing, Edit for new
-    state.editorMode = note ? 'read' : 'edit';
-
-    renderEditorMetaRail(note);
+    document.querySelectorAll('#colorPicker .color-swatch').forEach(s => {
+      s.classList.toggle('selected', s.dataset.color === state.editingColor);
+      s.onclick = () => {
+        state.editingColor = s.dataset.color;
+        document.querySelectorAll('#colorPicker .color-swatch').forEach(x => x.classList.remove('selected'));
+        s.classList.add('selected');
+      };
+    });
     renderEditorTags();
     document.getElementById('deleteNoteBtn').style.display = id ? 'inline-flex' : 'none';
     document.getElementById('noteModal').classList.add('active');
-    applyEditorMode();
-    if (state.editorMode === 'edit') {
-      setTimeout(() => document.getElementById('editorTitle').focus(), 50);
-    }
+    setTimeout(() => document.getElementById('editorTitle').focus(), 50);
   };
 
   function renderEditorTags() {
@@ -5629,28 +5111,7 @@
       ).join('') +
       '<input type="text" class="tag-input" id="newTagInput" placeholder="+ tag" maxlength="20" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addNoteTag();}" />' +
       '<button class="btn small" onclick="addNoteTag()">Add</button>';
-
-    // Suggestion chips: only when this note has zero tags
-    const suggestEl = document.getElementById('editorTagSuggest');
-    if (suggestEl) {
-      if (state.editingNoteTags.length === 0) {
-        suggestEl.innerHTML = '<span class="suggest-label">Suggest:</span>' +
-          NOTE_PRIMARY_TAGS.map(t =>
-            '<span class="tag-suggest-chip" onclick="addSuggestedTag(\'' + t.id + '\')">' + escapeHtml(t.label) + '</span>'
-          ).join('');
-        suggestEl.style.display = 'flex';
-      } else {
-        suggestEl.style.display = 'none';
-        suggestEl.innerHTML = '';
-      }
-    }
   }
-
-  window.addSuggestedTag = function(tagId) {
-    if (state.editingNoteTags.includes(tagId)) return;
-    state.editingNoteTags.push(tagId);
-    renderEditorTags();
-  };
 
   window.addNoteTag = function() {
     const input = document.getElementById('newTagInput');
@@ -5687,6 +5148,7 @@
       if (note) {
         note.title = title;
         note.body = body;
+        note.color = state.editingColor;
         note.tags = state.editingNoteTags.slice();
         note.updatedAt = Date.now();
         note.lastEditedBy = state.currentUser;
@@ -5695,6 +5157,7 @@
       state.notes.unshift({
         id: 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         title, body,
+        color: state.editingColor,
         tags: state.editingNoteTags.slice(),
         pinned: false,
         authorId: state.currentUser,
@@ -5876,6 +5339,7 @@
   }
 
   window.openCalDayDetail = function(dateIso) {
+    state.milestoneDetail = null;  // §G mutual exclusion
     state.calendarDayDetail = dateIso;
     document.body.style.overflow = 'hidden';
     render();
@@ -5886,6 +5350,78 @@
     document.body.style.overflow = '';
     render();
   };
+
+  // ============================================================
+  // MILESTONE DETAIL PANEL (Dashboard polish §G)
+  // Slide-from-right panel showing tasks anchored to a milestone.
+  // Reuses .cal-day-detail-overlay styling (shipped Diff 1).
+  // Mutually exclusive with state.calendarDayDetail.
+  // ============================================================
+  function renderMilestoneDetail() {
+    const key = state.milestoneDetail;
+    if (!key) return '';
+    const byKey = getChapterDatesByKey();
+    let milestoneLabel, milestoneIso, matchingTasks;
+    if (key.indexOf('tpl:') === 0) {
+      const templateId = key.slice(4);
+      const tmpl = (state.taskTemplates || []).find(function(t) { return t.id === templateId; });
+      if (!tmpl) return '';
+      milestoneLabel = tmpl.title;
+      const calc = getTemplateCalculatedDue(tmpl, byKey);
+      milestoneIso = calc ? calc.toISOString().slice(0, 10) : null;
+      matchingTasks = (state.tasks || []).filter(function(t) { return t.templateId === templateId; });
+    } else {
+      const cd = byKey[key];
+      if (!cd) return '';
+      milestoneLabel = cd.label;
+      milestoneIso = cd.iso_date;
+      const templateIds = (state.taskTemplates || []).filter(function(t) { return t.anchor_date_key === key; }).map(function(t) { return t.id; });
+      matchingTasks = (state.tasks || []).filter(function(t) { return templateIds.indexOf(t.templateId) !== -1; });
+    }
+    matchingTasks = matchingTasks.slice().sort(function(a, b) {
+      const ad = a.dueISO ? new Date(a.dueISO).getTime() : Infinity;
+      const bd = b.dueISO ? new Date(b.dueISO).getTime() : Infinity;
+      return ad - bd;
+    });
+    const dateStr = milestoneIso ? new Date(milestoneIso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Date not pinned';
+    return '<div class="cal-day-detail-overlay" onclick="if (event.target === this) closeMilestoneDetail()">' +
+      '<div class="cal-day-detail">' +
+        '<button class="cal-day-detail-close" onclick="closeMilestoneDetail()">&times;</button>' +
+        '<div class="cal-day-detail-head">' + escapeHtml(milestoneLabel) + '</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace; font-size:11px; color:var(--fg-muted); margin-bottom:14px;">' + escapeHtml(dateStr) + '</div>' +
+        '<div class="cal-day-section">' +
+          '<div class="cal-day-section-label">Tasks anchored here (' + matchingTasks.length + ')</div>' +
+          (matchingTasks.length === 0
+            ? '<div style="font-size:13px; color:var(--fg-muted); padding:6px 0;">No tasks anchored to this milestone.</div>'
+            : matchingTasks.map(function(t) {
+                const isDone = t.status === 'done';
+                const due = t.dueISO ? new Date(t.dueISO).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-';
+                const assignee = MEMBERS.find(function(m) { return m.id === t.assigneeId; });
+                const meta = due + (assignee ? ' · ' + assignee.name : '');
+                return '<div class="cal-day-item' + (isDone ? ' done' : '') + '" onclick="closeMilestoneDetail(); openTaskModal(\'' + t.id + '\')" style="' + (isDone ? 'opacity:0.55; text-decoration:line-through;' : '') + '">' +
+                  '<div class="cal-day-item-title">' + escapeHtml(t.text || t.title || '(untitled task)') + '</div>' +
+                  '<div class="cal-day-item-time">' + escapeHtml(meta) + '</div>' +
+                '</div>';
+              }).join('')
+          ) +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.openMilestoneDetail = function(key) {
+    state.calendarDayDetail = null;
+    state.milestoneDetail = key;
+    document.body.style.overflow = 'hidden';
+    render();
+  };
+
+  window.closeMilestoneDetail = function() {
+    state.milestoneDetail = null;
+    document.body.style.overflow = '';
+    render();
+  };
+
 
   window.toggleTaskDoneFromChip = async function(taskId) {
     const t = state.tasks.find(function(x) { return x.id === taskId; });
@@ -8466,6 +8002,100 @@
     (sub === 'templates' ? renderTemplatesView() : renderActiveTasksView());
   }
 
+
+  // ============================================================
+  // QUICK-ADD TASK BAR (Templates tab) — manual task creation
+  // Sits above chapter_dates editor. No templateId on created tasks.
+  // ============================================================
+  function renderQuickAddTaskBar() {
+    const assigneeOpts = MEMBERS.map(function(m) {
+      const sel = (m.id === state.currentUser) ? ' selected' : '';
+      return '<option value="' + escapeHtml(m.id) + '"' + sel + '>' + escapeHtml(m.name) + '</option>';
+    }).join('') + '<option value="all">All chairs</option>';
+
+    const categoryOpts = (state.taskCategories || []).map(function(c) {
+      return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.name) + '</option>';
+    }).join('');
+
+    return '<div class="quick-add-task-bar">' +
+      '<div class="qa-eyebrow">Quick add task</div>' +
+      '<div class="qa-row">' +
+        '<input type="text" id="quickAddTitle" class="field-input qa-title" placeholder="Quick task..." ' +
+          'onkeydown="if (event.key === \'Enter\') submitQuickAddTask()">' +
+        '<select id="quickAddUrgency" class="field-select qa-select">' +
+          '<option value="today">Today</option>' +
+          '<option value="tomorrow">Tomorrow</option>' +
+          '<option value="week" selected>This week</option>' +
+          '<option value="thismonth">This month</option>' +
+          '<option value="laterrush">Later this rush</option>' +
+          '<option value="future">Future</option>' +
+        '</select>' +
+        '<select id="quickAddAssignee" class="field-select qa-select">' + assigneeOpts + '</select>' +
+        '<select id="quickAddPriority" class="field-select qa-select">' +
+          '<option value="med" selected>Med</option>' +
+          '<option value="high">High</option>' +
+          '<option value="low">Low</option>' +
+        '</select>' +
+        '<select id="quickAddCategory" class="field-select qa-select">' + categoryOpts + '</select>' +
+        '<button class="btn primary qa-add" onclick="submitQuickAddTask()">+ Add</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // Urgency dropdown → days-offset map (matches taskUrgency tier boundaries).
+  // Future = +180d ("indefinite future anchor" per spec).
+  const QUICK_ADD_URGENCY_DAYS = {
+    today: 0, tomorrow: 1, week: 7, thismonth: 30, laterrush: 90, future: 180
+  };
+
+  window.submitQuickAddTask = async function() {
+    const titleEl    = document.getElementById('quickAddTitle');
+    const urgencyEl  = document.getElementById('quickAddUrgency');
+    const assigneeEl = document.getElementById('quickAddAssignee');
+    const priorityEl = document.getElementById('quickAddPriority');
+    const categoryEl = document.getElementById('quickAddCategory');
+    if (!titleEl) return;
+    const title = (titleEl.value || '').trim();
+    if (!title) {
+      toast('Enter a task title.', 'error');
+      titleEl.focus();
+      return;
+    }
+    const urgencyKey = urgencyEl ? urgencyEl.value : 'week';
+    const days = QUICK_ADD_URGENCY_DAYS[urgencyKey] != null ? QUICK_ADD_URGENCY_DAYS[urgencyKey] : 7;
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + days);
+    dueDate.setHours(23, 59, 59, 999);
+    const dueISO = dueDate.toISOString();
+    const newTask = {
+      id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      text: title,
+      assigneeId: assigneeEl ? assigneeEl.value : state.currentUser,
+      categoryId: categoryEl && categoryEl.value ? categoryEl.value : null,
+      status: 'open',
+      priority: priorityEl ? priorityEl.value : 'med',
+      notes: '',
+      dueISO: dueISO,
+      dueISOMovedAt: Date.now(),
+      authorId: state.currentUser,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    state.tasks.push(newTask);
+    try {
+      await persist('tasks', state.tasks);
+    } catch (err) {
+      state.tasks = state.tasks.filter(function(x) { return x.id !== newTask.id; });
+      render();
+      console.error('[quickadd] persist failed', err);
+      toast('Save failed - reverted', 'error');
+      return;
+    }
+    toast('Task added.', 'success');
+    if (titleEl) titleEl.value = '';
+    render();
+  };
+
   function renderTemplatesView() {
     ensureTemplatesExpansionInitialized();
     const templates = state.taskTemplates || [];
@@ -8502,6 +8132,7 @@
     const generateDisabled = plan.canGenerate === 0;
 
     return '<div class="templates-view">' +
+      renderQuickAddTaskBar() +
       renderChapterDatesEditor() +
       '<div class="templates-section">' +
         '<div class="templates-section-head">' +
@@ -8937,18 +8568,26 @@
   // ============================================================
   // §2 — TASK FILTERING + GROUPING (Active Tasks)
   // ============================================================
+  // §1A urgency tier spectrum: 7 active tiers + done.
+  // End-of-day boundary comparisons so quick-add +Nd lands in the matching tier
+  // regardless of current time of day.
   function taskUrgency(t) {
-    if (!t.dueISO) return 'future';
     if (t.status === 'done') return 'done';
+    if (!t.dueISO) return 'future';
     const due = new Date(t.dueISO).getTime();
     const now = Date.now();
     if (due < now) return 'overdue';
-    const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
-    const tomorrowEnd = new Date(); tomorrowEnd.setDate(tomorrowEnd.getDate() + 1); tomorrowEnd.setHours(23, 59, 59, 999);
-    if (due <= todayEnd.getTime())    return 'today';
-    if (due <= tomorrowEnd.getTime()) return 'tomorrow';
-    if (due <= now + 7 * 86400000)    return 'week';
-    if (due <= now + 14 * 86400000)   return 'two_week';
+    const eod = function(offsetDays) {
+      const d = new Date();
+      d.setDate(d.getDate() + offsetDays);
+      d.setHours(23, 59, 59, 999);
+      return d.getTime();
+    };
+    if (due <= eod(0))  return 'today';
+    if (due <= eod(1))  return 'tomorrow';
+    if (due <= eod(7))  return 'week';
+    if (due <= eod(30)) return 'thismonth';
+    if (due <= eod(90)) return 'laterrush';
     return 'future';
   }
 
@@ -8963,21 +8602,22 @@
     });
   }
 
+  // §1B group into 8 tiers (matches taskUrgency).
   function groupTasksByUrgency(tasks) {
-    const groups = { overdue: [], today: [], tomorrow: [], week: [], future: [], done: [] };
+    const groups = { overdue: [], today: [], tomorrow: [], week: [], thismonth: [], laterrush: [], future: [], done: [] };
     tasks.forEach(function(t) {
       const u = taskUrgency(t);
-      if (u === 'two_week') groups.future.push(t);
-      else if (!groups[u]) groups.future.push(t);
-      else groups[u].push(t);
+      if (groups[u]) groups[u].push(t);
+      else groups.future.push(t);  // safety fallback for unknown tier strings
     });
-    // sort each by dueISO ascending (overdue oldest first; done newest first)
     function byDueAsc(a, b) { return new Date(a.dueISO || 0) - new Date(b.dueISO || 0); }
     function byUpdatedDesc(a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); }
     groups.overdue.sort(byDueAsc);
     groups.today.sort(byDueAsc);
     groups.tomorrow.sort(byDueAsc);
     groups.week.sort(byDueAsc);
+    groups.thismonth.sort(byDueAsc);
+    groups.laterrush.sort(byDueAsc);
     groups.future.sort(byDueAsc);
     groups.done.sort(byUpdatedDesc);
     return groups;
@@ -8991,7 +8631,8 @@
     const scope = state.tasksView || 'mine';
     const allTasks = tasksForView(scope);
     const groups = groupTasksByUrgency(allTasks);
-    const visibleNow = [].concat(groups.overdue, groups.today, groups.tomorrow, groups.week);
+    // §1C extended: thismonth + laterrush now visible by default (no 90-day blackout).
+    const visibleNow = [].concat(groups.overdue, groups.today, groups.tomorrow, groups.week, groups.thismonth, groups.laterrush);
     const futureCount = groups.future.length;
     const completedCount = groups.done.length;
 
@@ -9020,7 +8661,9 @@
         (groups.overdue.length  ? renderTaskGroupSection('Overdue',  'overdue',  groups.overdue)  : '') +
         (groups.today.length    ? renderTaskGroupSection('Today',    'today',    groups.today)    : '') +
         (groups.tomorrow.length ? renderTaskGroupSection('Tomorrow', 'tomorrow', groups.tomorrow) : '') +
-        (groups.week.length     ? renderTaskGroupSection('This week','week',     groups.week)     : '') +
+        (groups.week.length      ? renderTaskGroupSection('This week',      'week',      groups.week)      : '') +
+        (groups.thismonth.length ? renderTaskGroupSection('This month',     'thismonth', groups.thismonth) : '') +
+        (groups.laterrush.length ? renderTaskGroupSection('Later this rush','laterrush', groups.laterrush) : '') +
       '</div>' +
       (futureCount > 0
         ? '<div class="task-section-toggle' + (state.tasksShowFuture ? ' open' : '') + '" onclick="toggleTasksShowFuture()">' +
