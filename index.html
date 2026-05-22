@@ -4021,6 +4021,67 @@
   .cal-task-chip.fading { opacity: 0; pointer-events: none; }
   .cal-task-chip.done { opacity: 0.55; text-decoration: line-through; }
   .cal-task-chip.overdue { background: rgba(184, 40, 50, 0.18); color: var(--danger); }
+
+  /* Phase 0 #5 — Marketing Calendar: pink post chips */
+  .cal-post-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(232, 196, 208, 0.55);
+    color: var(--fg);
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    margin: 2px 2px 0 0;
+    cursor: pointer;
+    max-width: 100%;
+    transition: background 0.15s;
+  }
+  .cal-post-chip:hover { background: rgba(232, 196, 208, 0.75); }
+  [data-theme="dark"] .cal-post-chip { background: rgba(232, 196, 208, 0.30); color: var(--fg); }
+  [data-theme="dark"] .cal-post-chip:hover { background: rgba(232, 196, 208, 0.45); }
+  .cal-post-chip .post-channel {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+  }
+  .cal-post-chip .post-title {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .marketing-view .marketing-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .marketing-view .marketing-header-actions { display: flex; gap: 8px; }
+  /* Inline post-channel pill in the list table also uses cal-post-chip styling */
+  .marketing-view .post-channel {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(232, 196, 208, 0.55);
+    color: var(--fg);
+    margin-right: 6px;
+  }
+  [data-theme="dark"] .marketing-view .post-channel { background: rgba(232, 196, 208, 0.30); }
+  @media (max-width: 900px) {
+    .marketing-view .marketing-header-row { flex-direction: column; align-items: stretch; }
+    .marketing-view .marketing-header-actions { justify-content: flex-end; }
+  }
   .cal-task-chip .cal-task-check {
     width: 12px; height: 12px;
     accent-color: var(--navy);
@@ -4650,6 +4711,14 @@
         render();
       }, 250);
     });
+    // Phase 0 #5: marketing_posts realtime
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'marketing_posts' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => {
+        await loadMarketingPosts();
+        render();
+      }, 250);
+    });
     channel.subscribe();
   }
 
@@ -4783,6 +4852,12 @@
     // ============================================================
     taskTemplates: [],
     taskTemplatesLoaded: false,
+    // Phase 0 #5 — Marketing Calendar
+    marketingPosts: [],
+    marketingPostsLoaded: false,
+    marketingViewMode: 'calendar',     // 'calendar' | 'list'
+    editingMarketingPostId: null,
+    editingMarketingPost: {},
     milestoneDetail: null,            // §G dashboard polish — selected milestone key (or 'tpl:<id>')
     chapterDates: [],
     chapterDatesLoaded: false,
@@ -4853,6 +4928,8 @@
       // Phase 0 #4: typed-table reads for parametric to-do list.
       await loadTaskTemplates();
       await loadChapterDates();
+      // Phase 0 #5
+      await loadMarketingPosts();
       // Phase 0 #4 v2: silent boot-time sync. No toast, no banner — generation
       // is invisible to chairs at boot. Explicit saveChapterDate triggers
       // surface counts in their own toast.
@@ -4954,6 +5031,7 @@
           '<div class="view ' + (state.currentView === 'candidates' ? 'active' : '') + '">' + renderCandidates() + '</div>' +
           '<div class="view ' + (state.currentView === 'brothers' ? 'active' : '') + '">' + renderBrothers() + '</div>' +
           '<div class="view ' + (state.currentView === 'nametags' ? 'active' : '') + '">' + renderNametagsView() + '</div>' +
+          '<div class="view ' + (state.currentView === 'marketing' ? 'active' : '') + '">' + renderMarketingView() + renderMarketingPostModal() + '</div>' +
         '</main>' +
       '</div>';
 
@@ -5037,6 +5115,7 @@
       { id: 'candidates', label: 'Candidates', icon: '★', count: state.candidates.length },
       { id: 'brothers', label: 'Brothers', icon: '◍', count: state.brothers.length },
       { id: 'nametags', label: 'Nametags', icon: '◇', count: state.nametagSelected.size || undefined },
+      { id: 'marketing', label: 'Marketing', icon: '◭', count: state.marketingPosts.length },
     ];
 
     return '' +
@@ -5673,6 +5752,351 @@
   // ============================================================
   // NOTES
   // ============================================================
+
+  // ============================================================
+  // MARKETING CALENDAR (Phase 0 #5)
+  // Top-level tab. Fixed-date posts (no anchor system).
+  // Calendar/List subviews. PDF export. Reused calendar grid CSS.
+  // ============================================================
+  async function loadMarketingPosts() {
+    try {
+      const { data, error } = await sb.from('marketing_posts').select('*').order('post_date', { ascending: true });
+      if (error) throw error;
+      state.marketingPosts = data || [];
+      state.marketingPostsLoaded = true;
+    } catch (e) {
+      console.error('loadMarketingPosts failed', e);
+      state.marketingPosts = [];
+      state.marketingPostsLoaded = true;
+    }
+  }
+
+  function getChannelLabel(channel) {
+    if (channel === 'instagram_post')  return 'IG';
+    if (channel === 'instagram_story') return 'IG/ST';
+    if (channel === 'instagram_reel')  return 'IG/RL';
+    if (channel === 'tiktok')          return 'TT';
+    return channel || '?';
+  }
+
+  function getChannelFullLabel(channel) {
+    if (channel === 'instagram_post')  return 'Instagram Post';
+    if (channel === 'instagram_story') return 'Instagram Story';
+    if (channel === 'instagram_reel')  return 'Instagram Reel';
+    if (channel === 'tiktok')          return 'TikTok';
+    return channel || '(unknown)';
+  }
+
+  function formatMcDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function renderMarketingView() {
+    const mode = state.marketingViewMode || 'calendar';
+    return '<div class="marketing-view">' +
+      '<div class="marketing-header-row">' +
+        '<div class="tasks-scope-toggle">' +
+          '<button class="scope-pill' + (mode === 'calendar' ? ' active' : '') + '" onclick="setMarketingViewMode(\'calendar\')">Calendar</button>' +
+          '<button class="scope-pill' + (mode === 'list' ? ' active' : '') + '" onclick="setMarketingViewMode(\'list\')">List</button>' +
+        '</div>' +
+        '<div class="marketing-header-actions">' +
+          '<button class="btn small" onclick="exportMarketingCalendarPDF()">Export to PDF</button>' +
+          '<button class="btn primary small" onclick="openMarketingPostModal()">+ Add post</button>' +
+        '</div>' +
+      '</div>' +
+      (mode === 'list' ? renderMarketingListSubview() : renderMarketingCalendarSubview()) +
+    '</div>';
+  }
+
+  function renderMarketingCalendarSubview() {
+    const posts = state.marketingPosts || [];
+    if (posts.length === 0) {
+      return '<div class="empty-state-polished" style="margin-top:32px;">' +
+        '<div class="empty-glyph">◭</div>' +
+        '<div class="empty-text" style="font-family:\'Playfair Display\',serif; font-style:italic;">No posts on the calendar yet. Tap + Add post.</div>' +
+      '</div>';
+    }
+    const d = state.calendarDate || new Date();
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const monthName = d.toLocaleDateString('en-US', { month: 'long' });
+    const firstDay = new Date(year, month, 1);
+    const startWeekday = firstDay.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrev = new Date(year, month, 0).getDate();
+    const todayStr = new Date().toDateString();
+    const cells = [];
+    for (let i = startWeekday - 1; i >= 0; i--) cells.push({ date: new Date(year, month - 1, daysInPrev - i), otherMonth: true });
+    for (let i = 1; i <= daysInMonth; i++) cells.push({ date: new Date(year, month, i), otherMonth: false });
+    while (cells.length % 7 !== 0 || cells.length < 42) {
+      const last = cells[cells.length - 1].date;
+      cells.push({ date: new Date(last.getTime() + 86400000), otherMonth: true });
+      if (cells.length >= 42) break;
+    }
+    const dayHeaders = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    return '<div class="calendar-header">' +
+        '<div class="calendar-month">' + monthName + ' <em>' + year + '</em></div>' +
+        '<div class="calendar-nav">' +
+          '<button class="btn btn-icon" onclick="calNav(-1)">‹</button>' +
+          '<button class="btn" onclick="calToday()">Today</button>' +
+          '<button class="btn btn-icon" onclick="calNav(1)">›</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="calendar-grid">' +
+        dayHeaders.map(function(h) { return '<div class="cal-day-header">' + h + '</div>'; }).join('') +
+        cells.map(function(c) {
+          const dateKey = c.date.toDateString();
+          const dateIso = c.date.toISOString().slice(0,10);
+          const dayPosts = posts.filter(function(p) { return new Date(p.post_date + 'T00:00:00').toDateString() === dateKey; })
+                                .sort(function(a,b){ return (a.post_time || '99:99').localeCompare(b.post_time || '99:99'); });
+          const isToday = dateKey === todayStr;
+          const visiblePosts = dayPosts.slice(0, 4);
+          const overflow = dayPosts.length - visiblePosts.length;
+          return '<div class="cal-cell ' + (c.otherMonth ? 'other-month' : '') + ' ' + (isToday ? 'today' : '') + '">' +
+            '<div class="cal-date">' + c.date.getDate() + '</div>' +
+            visiblePosts.map(function(p) {
+              return '<div class="cal-post-chip" onclick="event.stopPropagation(); openMarketingPostModal(\'' + p.id + '\')" title="' + escapeHtml(p.title + ' · ' + getChannelFullLabel(p.channel)) + '">' +
+                '<span class="post-channel">' + escapeHtml(getChannelLabel(p.channel)) + '</span>' +
+                '<span class="post-title">' + escapeHtml(p.title) + '</span>' +
+              '</div>';
+            }).join('') +
+            (overflow > 0 ? '<div style="font-size:9px; color:var(--fg-muted); font-family:\'JetBrains Mono\',monospace;">+' + overflow + '</div>' : '') +
+          '</div>';
+        }).join('') +
+      '</div>';
+  }
+
+  function renderMarketingListSubview() {
+    const posts = (state.marketingPosts || []).slice().sort(function(a,b){
+      const ad = (a.post_date || '') + ' ' + (a.post_time || '99:99');
+      const bd = (b.post_date || '') + ' ' + (b.post_time || '99:99');
+      return ad < bd ? -1 : ad > bd ? 1 : 0;
+    });
+    if (posts.length === 0) {
+      return '<div class="empty-state-polished" style="margin-top:32px;">' +
+        '<div class="empty-glyph">◭</div>' +
+        '<div class="empty-text" style="font-family:\'Playfair Display\',serif; font-style:italic;">No posts on the calendar yet. Tap + Add post.</div>' +
+      '</div>';
+    }
+    return '<table class="brothers-table" style="margin-top:18px;">' +
+      '<thead><tr>' +
+        '<th>Title</th><th>Date</th><th>Time</th><th>Channel</th><th>Asset</th><th>Notes</th>' +
+      '</tr></thead><tbody>' +
+      posts.map(function(p) {
+        const dateStr = formatMcDate(p.post_date);
+        const timeStr = p.post_time ? p.post_time.slice(0,5) : '—';
+        const assetCell = p.asset_link
+          ? '<a href="' + escapeHtml(p.asset_link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation();">link ↗</a>'
+          : '<span style="color:var(--fg-muted);">—</span>';
+        const notesCell = p.notes ? escapeHtml(p.notes.length > 60 ? p.notes.slice(0,57) + '…' : p.notes) : '<span style="color:var(--fg-muted);">—</span>';
+        return '<tr style="cursor:pointer;" onclick="openMarketingPostModal(\'' + p.id + '\')">' +
+          '<td><strong>' + escapeHtml(p.title) + '</strong></td>' +
+          '<td>' + escapeHtml(dateStr) + '</td>' +
+          '<td>' + escapeHtml(timeStr) + '</td>' +
+          '<td><span class="post-channel">' + escapeHtml(getChannelLabel(p.channel)) + '</span> ' + escapeHtml(getChannelFullLabel(p.channel)) + '</td>' +
+          '<td>' + assetCell + '</td>' +
+          '<td>' + notesCell + '</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  window.setMarketingViewMode = function(mode) {
+    state.marketingViewMode = mode;
+    render();
+  };
+
+  window.openMarketingPostModal = function(postId) {
+    if (postId) {
+      const p = (state.marketingPosts || []).find(function(x){ return x.id === postId; });
+      if (!p) { toast('Post not found.', 'error'); return; }
+      state.editingMarketingPostId = postId;
+      state.editingMarketingPost = Object.assign({}, p);
+    } else {
+      state.editingMarketingPostId = null;
+      state.editingMarketingPost = {
+        title: '', post_date: new Date().toISOString().slice(0,10),
+        post_time: '', channel: 'instagram_post', asset_link: '', notes: ''
+      };
+    }
+    render();
+    setTimeout(function() {
+      const el = document.getElementById('mcModalTitle');
+      if (el) el.focus();
+    }, 50);
+  };
+
+  window.closeMarketingPostModal = function() {
+    state.editingMarketingPostId = null;
+    state.editingMarketingPost = {};
+    render();
+  };
+
+  window.saveMarketingPost = async function() {
+    const titleEl    = document.getElementById('mcModalTitle');
+    const dateEl     = document.getElementById('mcModalDate');
+    const timeEl     = document.getElementById('mcModalTime');
+    const channelEl  = document.getElementById('mcModalChannel');
+    const assetEl    = document.getElementById('mcModalAsset');
+    const notesEl    = document.getElementById('mcModalNotes');
+    const title = (titleEl ? titleEl.value : '').trim();
+    if (!title) { toast('Title is required.', 'error'); if (titleEl) titleEl.focus(); return; }
+    const post_date = dateEl ? dateEl.value : null;
+    if (!post_date) { toast('Date is required.', 'error'); if (dateEl) dateEl.focus(); return; }
+    const post_time = timeEl && timeEl.value ? timeEl.value : null;
+    const channel = channelEl ? channelEl.value : 'instagram_post';
+    const asset_link = assetEl && assetEl.value ? assetEl.value.trim() : null;
+    const notes = notesEl && notesEl.value ? notesEl.value.trim() : null;
+    const payload = {
+      title: title, post_date: post_date, post_time: post_time, channel: channel,
+      asset_link: asset_link, notes: notes,
+      updated_at: new Date().toISOString(), updated_by: state.currentUser
+    };
+    try {
+      if (state.editingMarketingPostId) {
+        const { error } = await sb.from('marketing_posts').update(payload).eq('id', state.editingMarketingPostId);
+        if (error) throw error;
+      } else {
+        payload.created_by = state.currentUser;
+        const { error } = await sb.from('marketing_posts').insert(payload);
+        if (error) throw error;
+      }
+      await loadMarketingPosts();
+      toast(state.editingMarketingPostId ? 'Post updated.' : 'Post added.', 'success');
+      closeMarketingPostModal();
+    } catch (e) {
+      console.error('saveMarketingPost failed', e);
+      toast('Save failed — check console.', 'error');
+    }
+  };
+
+  window.deleteMarketingPost = async function() {
+    if (!state.editingMarketingPostId) return;
+    if (!confirm('Delete this post?')) return;
+    try {
+      const { error } = await sb.from('marketing_posts').delete().eq('id', state.editingMarketingPostId);
+      if (error) throw error;
+      await loadMarketingPosts();
+      toast('Post deleted.', 'success');
+      closeMarketingPostModal();
+    } catch (e) {
+      console.error('deleteMarketingPost failed', e);
+      toast('Delete failed — check console.', 'error');
+    }
+  };
+
+  function renderMarketingPostModal() {
+    if (state.editingMarketingPostId === null && (!state.editingMarketingPost || !state.editingMarketingPost.title && state.editingMarketingPost.title !== '')) return '';
+    if (!state.editingMarketingPost || (state.editingMarketingPostId === null && state.editingMarketingPost.post_date === undefined)) return '';
+    const p = state.editingMarketingPost;
+    const isEdit = !!state.editingMarketingPostId;
+    return '<div class="modal-overlay active" id="mcPostModal" onclick="if (event.target === this) closeMarketingPostModal()">' +
+      '<div class="modal">' +
+        '<button class="modal-close" onclick="closeMarketingPostModal()" aria-label="Close">×</button>' +
+        '<div class="modal-head">' +
+          '<h2>' + (isEdit ? 'Edit post' : 'New post') + '</h2>' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label">Title *</label>' +
+          '<input type="text" id="mcModalTitle" class="field-input" value="' + escapeHtml(p.title || '') + '" placeholder="Post title" onkeydown="if (event.key === \'Enter\' && !event.shiftKey) { event.preventDefault(); saveMarketingPost(); }">' +
+        '</div>' +
+        '<div class="form-row-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">' +
+          '<div><label class="field-label">Date *</label>' +
+          '<input type="date" id="mcModalDate" class="field-input" value="' + escapeHtml(p.post_date || '') + '"></div>' +
+          '<div><label class="field-label">Time</label>' +
+          '<input type="time" id="mcModalTime" class="field-input" value="' + escapeHtml(p.post_time ? p.post_time.slice(0,5) : '') + '"></div>' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label">Channel</label>' +
+          '<select id="mcModalChannel" class="field-select">' +
+            ['instagram_post','instagram_story','instagram_reel','tiktok'].map(function(c){
+              return '<option value="' + c + '"' + (p.channel === c ? ' selected' : '') + '>' + escapeHtml(getChannelFullLabel(c)) + '</option>';
+            }).join('') +
+          '</select>' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label">Asset link (Canva, Drive, etc.)</label>' +
+          '<input type="url" id="mcModalAsset" class="field-input" value="' + escapeHtml(p.asset_link || '') + '" placeholder="https://...">' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label">Notes (chair-internal)</label>' +
+          '<textarea id="mcModalNotes" class="field-textarea" rows="3" placeholder="Scratchpad notes...">' + escapeHtml(p.notes || '') + '</textarea>' +
+        '</div>' +
+        '<div class="modal-actions">' +
+          (isEdit ? '<button class="btn small" style="color:var(--danger);" onclick="deleteMarketingPost()">Delete</button>' : '<span></span>') +
+          '<div>' +
+            '<button class="btn" onclick="closeMarketingPostModal()">Cancel</button> ' +
+            '<button class="btn primary" onclick="saveMarketingPost()">Save</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.exportMarketingCalendarPDF = function() {
+    const posts = (state.marketingPosts || []).slice().sort(function(a,b){
+      const ad = (a.post_date || '') + ' ' + (a.post_time || '99:99');
+      const bd = (b.post_date || '') + ' ' + (b.post_time || '99:99');
+      return ad < bd ? -1 : ad > bd ? 1 : 0;
+    });
+    if (posts.length === 0) { toast('No posts to export yet.', 'error'); return; }
+    if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+      toast('PDF library not loaded.', 'error');
+      console.error('jsPDF not available on window');
+      return;
+    }
+    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'landscape' });
+    const now = new Date();
+    const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toLowerCase().replace(/\s+/g, '_');
+    const today = now.toISOString().slice(0,10);
+    const filename = 'marketing_calendar_' + monthLabel + '_' + today + '.pdf';
+
+    // Header
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+    doc.text('Marketing Calendar', 40, 40);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.text('Generated ' + now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }), 40, 58);
+    doc.text(String(posts.length) + ' post' + (posts.length === 1 ? '' : 's'), 40, 72);
+
+    // Table
+    const startY = 96;
+    const colX = { title: 40, date: 220, time: 340, channel: 400, asset: 510, notes: 640 };
+    const rowH = 18;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    doc.text('Title', colX.title, startY);
+    doc.text('Date', colX.date, startY);
+    doc.text('Time', colX.time, startY);
+    doc.text('Channel', colX.channel, startY);
+    doc.text('Asset', colX.asset, startY);
+    doc.text('Notes', colX.notes, startY);
+    doc.setLineWidth(0.5);
+    doc.line(40, startY + 4, 780, startY + 4);
+
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+    let y = startY + rowH;
+    const pageHeight = 612;  // letter landscape = 792 x 612 — height is 612
+    posts.forEach(function(p, i) {
+      if (y > pageHeight - 40) { doc.addPage(); y = 40; }
+      const dateStr = formatMcDate(p.post_date);
+      const timeStr = p.post_time ? p.post_time.slice(0,5) : '-';
+      const channelStr = getChannelFullLabel(p.channel);
+      const assetStr = p.asset_link ? p.asset_link.slice(0, 24) + (p.asset_link.length > 24 ? '...' : '') : '-';
+      const notesStr = p.notes ? p.notes.slice(0, 36) + (p.notes.length > 36 ? '...' : '') : '-';
+      doc.text((p.title || '').slice(0, 30), colX.title, y);
+      doc.text(dateStr, colX.date, y);
+      doc.text(timeStr, colX.time, y);
+      doc.text(channelStr, colX.channel, y);
+      doc.text(assetStr, colX.asset, y);
+      doc.text(notesStr, colX.notes, y);
+      y += rowH;
+    });
+    doc.save(filename);
+    toast('PDF exported: ' + filename, 'success');
+  };
+
   function renderNotesView() {
     const query = state.notesSearchQuery.toLowerCase().trim();
     let filtered = state.notes;
@@ -6164,15 +6588,25 @@
           const dayTasks = state.tasks
             .filter(t => t.dueISO && t.status !== 'done' && new Date(t.dueISO).toDateString() === dateKey)
             .sort((a, b) => (a.priority === 'high' ? -1 : 1) - (b.priority === 'high' ? -1 : 1));
+          // Phase 0 #5: marketing posts on day cells (pink chips).
+          const dayPosts = (state.marketingPosts || [])
+            .filter(p => new Date(p.post_date + 'T00:00:00').toDateString() === dateKey)
+            .sort((a, b) => (a.post_time || '99:99').localeCompare(b.post_time || '99:99'));
           const itemBudget = 4;
+          // Order: events first, tasks second, posts third (per Phase 0 #5 spec).
           const visibleEvents = dayEvents.slice(0, itemBudget);
-          const remainingBudget = Math.max(0, itemBudget - visibleEvents.length);
+          let remainingBudget = Math.max(0, itemBudget - visibleEvents.length);
           const visibleTasks = dayTasks.slice(0, remainingBudget);
-          const overflowCount = (dayEvents.length - visibleEvents.length) + (dayTasks.length - visibleTasks.length);
+          remainingBudget = Math.max(0, remainingBudget - visibleTasks.length);
+          const visiblePosts = dayPosts.slice(0, remainingBudget);
+          const overflowCount =
+            (dayEvents.length - visibleEvents.length) +
+            (dayTasks.length - visibleTasks.length) +
+            (dayPosts.length - visiblePosts.length);
           const isToday = dateKey === todayStr;
           const dateIso = c.date.toISOString();
           // v2 (Diff 4): empty cells keep v1 quick-add; populated cells route to day-detail.
-          const cellOnClick = (dayEvents.length + dayTasks.length) === 0
+          const cellOnClick = (dayEvents.length + dayTasks.length + dayPosts.length) === 0
             ? 'openEventModal(\'' + dateIso + '\')'
             : 'openCalDayDetail(\'' + dateIso + '\')';
           return '<div class="cal-cell ' + (c.otherMonth ? 'other-month' : '') + ' ' + (isToday ? 'today' : '') + '" onclick="' + cellOnClick + '">' +
@@ -6189,11 +6623,18 @@
                 '<span class="cal-task-text">' + escapeHtml(t.title) + '</span>' +
               '</div>';
             }).join('') +
+            visiblePosts.map(p => {
+              return '<div class="cal-post-chip" onclick="event.stopPropagation(); openMarketingPostModal(\'' + p.id + '\')" title="' + escapeHtml(p.title + ' \u00b7 ' + getChannelFullLabel(p.channel)) + '">' +
+                '<span class="post-channel">' + escapeHtml(getChannelLabel(p.channel)) + '</span>' +
+                '<span class="post-title">' + escapeHtml(p.title) + '</span>' +
+              '</div>';
+            }).join('') +
             (overflowCount > 0 ? '<div style="font-size:9px; color:var(--fg-muted); font-family:\'JetBrains Mono\',monospace;">+' + overflowCount + '</div>' : '') +
           '</div>';
         }).join('') +
       '</div>' +
       (state.calendarDayDetail ? renderCalDayDetail() : '') +
+      renderMarketingPostModal() +
       '<div style="margin-top: 14px; font-family:\'JetBrains Mono\',monospace; font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.12em;">Empty day click to add · populated day click to inspect · chip checkbox toggles done</div>';
   }
 
@@ -6255,6 +6696,31 @@
           ) +
           '<button class="btn small" style="margin-top:8px;" onclick="closeCalDayDetail(); openTaskModal(null)">+ Task</button>' +
         '</div>' +
+
+        // Phase 0 #5: third section — Marketing Posts anchored to this day
+        (function() {
+          const dayPosts = (state.marketingPosts || []).filter(function(p) {
+            return new Date(p.post_date + 'T00:00:00').toDateString() === dateKey;
+          }).sort(function(a, b) { return (a.post_time || '99:99').localeCompare(b.post_time || '99:99'); });
+          return '<div class="cal-day-section">' +
+            '<div class="cal-day-section-label">Marketing Posts (' + dayPosts.length + ')</div>' +
+            (dayPosts.length === 0
+              ? '<div style="font-size:13px; color:var(--fg-muted); padding:6px 0;">No posts scheduled.</div>'
+              : dayPosts.map(function(p) {
+                  const timeStr = p.post_time ? p.post_time.slice(0,5) : '\u2014';
+                  return '<div class="cal-day-item" onclick="closeCalDayDetail(); openMarketingPostModal(\'' + p.id + '\')">' +
+                    '<div class="cal-day-item-title">' +
+                      '<span class="post-channel">' + escapeHtml(getChannelLabel(p.channel)) + '</span>' +
+                      escapeHtml(p.title) +
+                    '</div>' +
+                    '<div class="cal-day-item-time">' + escapeHtml(timeStr) + '</div>' +
+                  '</div>';
+                }).join('')
+            ) +
+            '<button class="btn small" style="margin-top:8px;" onclick="closeCalDayDetail(); openMarketingPostModal(null)">+ Post</button>' +
+          '</div>';
+        })() +
+
       '</div>' +
     '</div>';
   }
@@ -9383,696 +9849,4 @@
     (state.tasks || []).forEach(function(t) {
       if (!t.templateId) return;
       if (!byTemplateId[t.templateId]) byTemplateId[t.templateId] = [];
-      byTemplateId[t.templateId].push(t);
-    });
-    const groups = [];
-    Object.keys(byTemplateId).forEach(function(tid) {
-      if (byTemplateId[tid].length >= 2) groups.push({ templateId: tid, tasks: byTemplateId[tid] });
-    });
-    return groups;
-  }
-
-  async function autoSyncTasksToTemplates(opts) {
-    // Core engine. Idempotent. Called from:
-    //   - loadAll (boot-time pass)
-    //   - saveChapterDate success
-    //   - saveTemplateEdit success
-    //   - deleteTemplateRow success
-    // Returns { created, updated, deletedOrphans, driftMarked } counts.
-    if (!sb) return { created: 0, updated: 0, deletedOrphans: 0, driftMarked: 0 };
-    opts = opts || {};
-    const templates = state.taskTemplates || [];
-    const tasks     = state.tasks || [];
-    const byKey     = getChapterDatesByKey();
-    const byTemplateId = {};
-    tasks.forEach(function(t) { if (t.templateId) byTemplateId[t.templateId] = t; });
-
-    let created = 0, updated = 0, deletedOrphans = 0, driftMarked = 0;
-    const newTasks = tasks.slice();  // mutable copy
-    const generatedTemplateIds = new Set();
-
-    // 1. For each template: create task if missing (and anchor pinned)
-    templates.forEach(function(tmpl) {
-      generatedTemplateIds.add(tmpl.id);
-      const anchor = byKey[tmpl.anchor_date_key];
-      if (!anchor || !anchor.iso_date) return;  // can't compute due, skip
-      const existing = byTemplateId[tmpl.id];
-      const newDue = computeDueDate(anchor.iso_date, tmpl.days_offset);
-      if (!existing) {
-        // Create
-        let categoryId = null;
-        if (tmpl.category) {
-          const match = (state.taskCategories || []).find(function(c) {
-            return c.name && c.name.toLowerCase() === tmpl.category.toLowerCase();
-          });
-          if (match) categoryId = match.id;
-        }
-        newTasks.push({
-          id:         't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-          templateId: tmpl.id,
-          text:       tmpl.title,
-          notes:      tmpl.description || '',
-          assigneeId: tmpl.default_assignee || null,
-          categoryId: categoryId,
-          status:     'todo',
-          priority:   tmpl.priority || 'med',
-          dueISO:     newDue.toISOString(),
-          dueISOMovedAt: Date.now(),
-          edited:     false,
-          driftFromAnchor: false,
-          authorId:   state.currentUser,
-          createdAt:  Date.now(),
-          updatedAt:  Date.now(),
-        });
-        created++;
-      } else {
-        // Update or flag drift on existing
-        const taskDueMs = existing.dueISO ? new Date(existing.dueISO).getTime() : 0;
-        const newDueMs  = newDue.getTime();
-        if (Math.abs(taskDueMs - newDueMs) > 60000) {  // >1 min difference = real change
-          if (!existing.edited) {
-            existing.dueISO = newDue.toISOString();
-            existing.dueISOMovedAt = Date.now();
-            existing.driftFromAnchor = false;
-            updated++;
-          } else if (!existing.driftFromAnchor) {
-            existing.driftFromAnchor = true;
-            driftMarked++;
-          }
-        }
-      }
-    });
-
-    // 2. For each task with a templateId: if the template no longer exists,
-    //    delete the task IF not edited (preserve chair work otherwise).
-    for (let i = newTasks.length - 1; i >= 0; i--) {
-      const t = newTasks[i];
-      if (!t.templateId) continue;
-      if (generatedTemplateIds.has(t.templateId)) continue;
-      if (!t.edited) {
-        console.log('[autoSync] removing orphan task', t.id, 'for missing template', t.templateId);
-        newTasks.splice(i, 1);
-        deletedOrphans++;
-      }
-    }
-
-    if (created || updated || deletedOrphans || driftMarked) {
-      state.tasks = newTasks;
-      const ok = await Storage.set('tasks', state.tasks);
-      if (!ok) {
-        console.error('[autoSync] persist failed; reverting in-memory changes is not possible without snapshot');
-      }
-    }
-    return { created, updated, deletedOrphans, driftMarked };
-  }
-
-  // ============================================================
-  // §2 — TASK FILTERING + GROUPING (Active Tasks)
-  // ============================================================
-  // §1A urgency tier spectrum: 7 active tiers + done.
-  // End-of-day boundary comparisons so quick-add +Nd lands in the matching tier
-  // regardless of current time of day.
-  function taskUrgency(t) {
-    if (t.status === 'done') return 'done';
-    if (!t.dueISO) return 'future';
-    const due = new Date(t.dueISO).getTime();
-    const now = Date.now();
-    if (due < now) return 'overdue';
-    const eod = function(offsetDays) {
-      const d = new Date();
-      d.setDate(d.getDate() + offsetDays);
-      d.setHours(23, 59, 59, 999);
-      return d.getTime();
-    };
-    if (due <= eod(0))  return 'today';
-    if (due <= eod(1))  return 'tomorrow';
-    if (due <= eod(7))  return 'week';
-    if (due <= eod(30)) return 'thismonth';
-    if (due <= eod(90)) return 'laterrush';
-    return 'future';
-  }
-
-  function tasksForView(scope) {
-    // scope === 'mine' or 'all'
-    const me = state.currentUser;
-    return (state.tasks || []).filter(function(t) {
-      if (scope === 'mine') {
-        if (t.assigneeId && t.assigneeId !== me && t.assigneeId !== 'all') return false;
-      }
-      return true;
-    });
-  }
-
-  // §1B group into 8 tiers (matches taskUrgency).
-  function groupTasksByUrgency(tasks) {
-    const groups = { overdue: [], today: [], tomorrow: [], week: [], thismonth: [], laterrush: [], future: [], done: [] };
-    tasks.forEach(function(t) {
-      const u = taskUrgency(t);
-      if (groups[u]) groups[u].push(t);
-      else groups.future.push(t);  // safety fallback for unknown tier strings
-    });
-    function byDueAsc(a, b) { return new Date(a.dueISO || 0) - new Date(b.dueISO || 0); }
-    function byUpdatedDesc(a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); }
-    groups.overdue.sort(byDueAsc);
-    groups.today.sort(byDueAsc);
-    groups.tomorrow.sort(byDueAsc);
-    groups.week.sort(byDueAsc);
-    groups.thismonth.sort(byDueAsc);
-    groups.laterrush.sort(byDueAsc);
-    groups.future.sort(byDueAsc);
-    groups.done.sort(byUpdatedDesc);
-    return groups;
-  }
-
-  // ============================================================
-  // §3 — RENDERERS (Active Tasks list-based view)
-  // ============================================================
-  function renderActiveTasksView() {
-    ensureLastVisitedAtLoaded();
-    const scope = state.tasksView || 'mine';
-    const allTasks = tasksForView(scope);
-    const groups = groupTasksByUrgency(allTasks);
-    // §1C extended: thismonth + laterrush now visible by default (no 90-day blackout).
-    const visibleNow = [].concat(groups.overdue, groups.today, groups.tomorrow, groups.week, groups.thismonth, groups.laterrush);
-    const futureCount = groups.future.length;
-    const completedCount = groups.done.length;
-
-    // Banners (drift, what-changed, duplicates)
-    const driftedTasks = allTasks.filter(function(t) { return t.driftFromAnchor; });
-    const duplicateGroups = detectDuplicateTaskGroups();
-
-    return '' +
-      renderDuplicatesBanner(duplicateGroups) +
-      renderDriftBanner(driftedTasks) +
-      renderWhatChangedBanner() +
-      '<div class="tasks-header-row">' +
-        '<div class="tasks-scope-toggle">' +
-          '<button class="scope-pill' + (scope === 'mine' ? ' active' : '') + '" onclick="setTasksView(\'mine\')">My tasks</button>' +
-          '<button class="scope-pill' + (scope === 'all'  ? ' active' : '') + '" onclick="setTasksView(\'all\')">All tasks</button>' +
-        '</div>' +
-        '<div class="tasks-count">' + visibleNow.length + ' visible · ' + futureCount + ' future · ' + completedCount + ' done</div>' +
-      '</div>' +
-      '<div class="task-list">' +
-        (visibleNow.length === 0 && !state.tasksShowFuture && !state.tasksShowCompleted
-          ? '<div class="empty-state-polished">' +
-              '<div class="empty-glyph">○</div>' +
-              '<div class="empty-text">Nothing on the radar.</div>' +
-            '</div>'
-          : '') +
-        (groups.overdue.length  ? renderTaskGroupSection('Overdue',  'overdue',  groups.overdue)  : '') +
-        (groups.today.length    ? renderTaskGroupSection('Today',    'today',    groups.today)    : '') +
-        (groups.tomorrow.length ? renderTaskGroupSection('Tomorrow', 'tomorrow', groups.tomorrow) : '') +
-        (groups.week.length      ? renderTaskGroupSection('This week',      'week',      groups.week)      : '') +
-        (groups.thismonth.length ? renderTaskGroupSection('This month',     'thismonth', groups.thismonth) : '') +
-        (groups.laterrush.length ? renderTaskGroupSection('Later this rush','laterrush', groups.laterrush) : '') +
-      '</div>' +
-      (futureCount > 0
-        ? '<div class="task-section-toggle' + (state.tasksShowFuture ? ' open' : '') + '" onclick="toggleTasksShowFuture()">' +
-            (state.tasksShowFuture ? '▾ Hide ' + futureCount + ' future tasks' : '▸ Show ' + futureCount + ' future tasks') +
-          '</div>' +
-          (state.tasksShowFuture ? '<div class="task-list secondary">' + renderTaskGroupSection('Future', 'future', groups.future, true) + '</div>' : '')
-        : '') +
-      (completedCount > 0
-        ? '<div class="task-section-toggle' + (state.tasksShowCompleted ? ' open' : '') + '" onclick="toggleTasksShowCompleted()">' +
-            (state.tasksShowCompleted ? '▾ Hide ' + completedCount + ' completed' : '▸ Show ' + completedCount + ' completed') +
-          '</div>' +
-          (state.tasksShowCompleted ? '<div class="task-list secondary">' + renderTaskGroupSection('Completed', 'done', groups.done, true) + '</div>' : '')
-        : '') +
-      renderQuickAddButton('tasks');
-  }
-
-  function renderTaskGroupSection(label, key, tasks, headerless) {
-    return (headerless ? '' :
-      '<div class="task-group-head urgency-' + key + '">' +
-        '<span class="task-group-dot urgency-' + key + '"></span>' +
-        '<span class="task-group-label">' + escapeHtml(label) + '</span>' +
-        '<span class="task-group-count">' + tasks.length + '</span>' +
-      '</div>') +
-      tasks.map(renderTaskRow).join('');
-  }
-
-  function renderTaskRow(t) {
-    const isExpanded = state.expandedTaskId === t.id;
-    const due = t.dueISO ? new Date(t.dueISO) : null;
-    const dueLabel = due
-      ? due.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-      : 'no date';
-    const assignee = MEMBERS.find(function(m) { return m.id === t.assigneeId; });
-    const assigneeLabel = t.assigneeId === 'all' ? 'All' : (assignee ? assignee.name : (t.assigneeId || '—'));
-    const u = taskUrgency(t);
-    const titleClass = (t.status === 'done') ? 'task-title done' : 'task-title';
-
-    // Badges — hide noise ones
-    const badges = [];
-    if (t.priority === 'high') badges.push('<span class="task-badge priority-high">high</span>');
-    if (t.priority === 'low')  badges.push('<span class="task-badge priority-low">low</span>');
-    if (t.status === 'progress') badges.push('<span class="task-badge status-progress">in progress</span>');
-    if (t.driftFromAnchor)     badges.push('<span class="task-badge drifted" onclick="event.stopPropagation(); resetTaskToTemplate(\'' + t.id + '\')" title="Reset to template default">drifted</span>');
-
-    return '<div class="task-row urgency-' + u + (isExpanded ? ' expanded' : '') + (t.status === 'done' ? ' done' : '') + '" data-task-id="' + t.id + '">' +
-      '<div class="task-row-main" onclick="toggleTaskRowExpanded(\'' + t.id + '\')">' +
-        '<input type="checkbox" class="task-checkbox-inline" ' + (t.status === 'done' ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleTaskDone(\'' + t.id + '\')">' +
-        '<div class="task-row-body">' +
-          '<div class="' + titleClass + '">' + escapeHtml(t.text || '(untitled)') + '</div>' +
-          '<div class="task-meta">' +
-            escapeHtml(dueLabel) + ' · ' + escapeHtml(assigneeLabel) +
-            (badges.length ? ' · ' + badges.join(' ') : '') +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      (isExpanded
-        ? '<div class="task-row-expanded">' +
-            (t.notes ? '<div class="task-notes">' + escapeHtml(t.notes) + '</div>' : '<div class="task-notes empty">No description.</div>') +
-            '<div class="task-row-actions">' +
-              '<button class="btn small" onclick="openTaskModal(\'' + t.id + '\')">Edit</button>' +
-            '</div>' +
-          '</div>'
-        : '') +
-    '</div>';
-  }
-
-  // ============================================================
-  // §4 — DRIFT, DUPLICATES, WHAT-CHANGED BANNERS
-  // ============================================================
-  function renderDriftBanner(driftedTasks) {
-    if (!driftedTasks || driftedTasks.length === 0) return '';
-    if (state.driftBannerDismissed) return '';
-    return '<div class="task-banner drift-banner">' +
-      '<span class="banner-icon">⚠</span>' +
-      '<span class="banner-text"><strong>' + driftedTasks.length + ' task' + (driftedTasks.length === 1 ? '' : 's') + '</strong> have stale dates from anchor changes.</span>' +
-      '<button class="banner-action" onclick="state.tasksShowFuture = true; state.driftBannerDismissed = true; render();">Review</button>' +
-      '<button class="banner-dismiss" onclick="dismissDriftBanner()" aria-label="Dismiss">×</button>' +
-    '</div>';
-  }
-
-  function renderDuplicatesBanner(groups) {
-    if (!groups || groups.length === 0) return '';
-    if (state.duplicatesBannerDismissed) return '';
-    const totalDupes = groups.reduce(function(n, g) { return n + g.tasks.length - 1; }, 0);
-    return '<div class="task-banner duplicates-banner">' +
-      '<span class="banner-icon">⚠</span>' +
-      '<span class="banner-text"><strong>' + totalDupes + ' duplicate generated task' + (totalDupes === 1 ? '' : 's') + '</strong> detected (legacy v1 bug).</span>' +
-      '<button class="banner-action" onclick="openDuplicatesReview()">Review</button>' +
-      '<button class="banner-dismiss" onclick="dismissDuplicatesBanner()" aria-label="Dismiss">×</button>' +
-    '</div>';
-  }
-
-  function renderWhatChangedBanner() {
-    if (state.whatChangedDismissed) return '';
-    if (!state.lastVisitedAt) return '';
-    const wc = computeWhatChanged();
-    if (wc.totalSignal === 0) return '';
-    const parts = [];
-    if (wc.created)   parts.push('+' + wc.created + ' tasks');
-    if (wc.completed) parts.push(wc.completed + ' completed');
-    if (wc.moved)     parts.push(wc.moved + ' deadline' + (wc.moved === 1 ? '' : 's') + ' moved');
-    if (wc.autoGen)   parts.push(wc.autoGen + ' tasks auto-generated from anchor changes');
-    return '<div class="task-banner what-changed-banner">' +
-      '<span class="banner-icon">✨</span>' +
-      '<span class="banner-text">Since you were last here: ' + parts.join(', ') + '.</span>' +
-      '<button class="banner-dismiss" onclick="dismissWhatChangedBanner()" aria-label="Dismiss">×</button>' +
-    '</div>';
-  }
-
-  function computeWhatChanged() {
-    const since = state.lastVisitedAt || 0;
-    let created = 0, completed = 0, moved = 0, autoGen = 0;
-    (state.tasks || []).forEach(function(t) {
-      if ((t.createdAt || 0) > since) {
-        created++;
-        // auto-generated subset: templateId set AND created very recently
-        if (t.templateId) autoGen++;
-      }
-      if (t.status === 'done' && (t.updatedAt || 0) > since) completed++;
-      if ((t.dueISOMovedAt || 0) > since && (t.createdAt || 0) <= since) moved++;
-    });
-    return { created: created, completed: completed, moved: moved, autoGen: autoGen, totalSignal: created + completed + moved };
-  }
-
-  function ensureLastVisitedAtLoaded() {
-    if (state.lastVisitedAt === null) {
-      try {
-        const v = localStorage.getItem('rush26_lastVisitedAt');
-        state.lastVisitedAt = v ? Number(v) : 0;
-      } catch (_) { state.lastVisitedAt = 0; }
-    }
-  }
-
-  function stampLastVisitedAt() {
-    state.lastVisitedAt = Date.now();
-    try { localStorage.setItem('rush26_lastVisitedAt', String(state.lastVisitedAt)); } catch (_) {}
-  }
-
-  // ============================================================
-  // §5 — CALENDAR INTEGRATION (task chips + day detail)
-  // ============================================================
-  function tasksForDate(dateIso) {
-    // dateIso like '2026-08-15' — match by yyyy-mm-dd of dueISO
-    return (state.tasks || []).filter(function(t) {
-      if (!t.dueISO) return false;
-      if (state.tasksShowCompleted === false && t.status === 'done') return false;
-      return new Date(t.dueISO).toISOString().slice(0, 10) === dateIso;
-    });
-  }
-
-  function renderCalendarTaskChip(t) {
-    const titleAttr = escapeHtml((t.text || '(untitled)') + (t.assigneeId ? ' · ' + (t.assigneeId === 'all' ? 'All' : (MEMBERS.find(function(m){return m.id === t.assigneeId;}) || {name: t.assigneeId}).name) : ''));
-    const doneCls = t.status === 'done' ? ' done' : '';
-    return '<div class="cal-task-chip' + doneCls + '" title="' + titleAttr + '" ' +
-      'onclick="event.stopPropagation(); openTaskModal(\'' + t.id + '\')">' +
-      '<input type="checkbox" class="cal-task-check" ' + (t.status === 'done' ? 'checked' : '') +
-        ' onclick="event.stopPropagation(); completeTaskFromCalendar(\'' + t.id + '\')">' +
-      '<span class="cal-task-text">' + escapeHtml(t.text || '(untitled)') + '</span>' +
-    '</div>';
-  }
-
-  function renderCalendarDayDetail() {
-    if (!state.calendarDayDetail) return '';
-    const dateIso = state.calendarDayDetail;
-    const d = new Date(dateIso + 'T00:00:00');
-    const heading = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    const dayEvents = (state.events || []).filter(function(e) {
-      return e.startISO && new Date(e.startISO).toISOString().slice(0, 10) === dateIso;
-    });
-    const dayTasks = tasksForDate(dateIso);
-    return '<div class="cal-day-detail-overlay" onclick="closeCalendarDayDetail()">' +
-      '<div class="cal-day-detail" onclick="event.stopPropagation()">' +
-        '<button class="cal-day-detail-close" onclick="closeCalendarDayDetail()" aria-label="Close">×</button>' +
-        '<div class="cal-day-detail-head">' + escapeHtml(heading) + '</div>' +
-        (dayEvents.length
-          ? '<div class="cal-day-section">' +
-              '<div class="cal-day-section-label">Events</div>' +
-              dayEvents.map(function(e) {
-                return '<div class="cal-day-item event" onclick="openEventModal(null, \'' + e.id + '\')">' +
-                  '<span class="cal-day-item-title">' + escapeHtml(e.title || '(untitled event)') + '</span>' +
-                  '<span class="cal-day-item-time">' + escapeHtml(formatEventTime(e)) + '</span>' +
-                '</div>';
-              }).join('') +
-            '</div>'
-          : '') +
-        (dayTasks.length
-          ? '<div class="cal-day-section">' +
-              '<div class="cal-day-section-label">Tasks</div>' +
-              dayTasks.map(renderTaskRow).join('') +
-            '</div>'
-          : '') +
-        (!dayEvents.length && !dayTasks.length
-          ? '<div class="empty-state-polished"><div class="empty-glyph">○</div><div class="empty-text">Nothing on this day.</div></div>'
-          : '') +
-      '</div>' +
-    '</div>';
-  }
-
-  // ============================================================
-  // §6 — QUICK-ADD (reuses existing taskModal in quickMode)
-  // ============================================================
-  function renderQuickAddButton(context) {
-    return '<button class="quick-add-btn" data-ctx="' + context + '" onclick="openQuickAdd()" aria-label="Quick add task">+</button>';
-  }
-
-  // ============================================================
-  // §7 — TEMPLATE INLINE EDIT FORM (CRUD)
-  // ============================================================
-  function renderTemplateEditForm(t, mode) {
-    // mode: 'edit' (existing template, t is the row) or 'add' (new, t is { phase: '...' })
-    const isEdit = mode === 'edit';
-    const phases = ['pre_rush','pre_bfc','rush_week','selection','post_rush'];
-    const anchors = (state.chapterDates || []).map(function(d) { return d.key; });
-    if (anchors.length === 0) anchors.push('soft_launch', 'bfc_mixer', 'rush_week_start', 'selection_start', 'hard_deadline');
-    const cats = (state.taskCategories || []).map(function(c) { return c.name; });
-    const tid = isEdit ? t.id : 'new_' + (t.phase || 'pre_rush');
-    return '<div class="template-edit-form">' +
-      '<div class="form-row">' +
-        '<label class="field-label">Title</label>' +
-        '<input type="text" class="field-input" data-tef="title" data-tid="' + tid + '" value="' + escapeHtml(t.title || '') + '" placeholder="Required">' +
-      '</div>' +
-      '<div class="form-row">' +
-        '<label class="field-label">Description</label>' +
-        '<textarea class="field-textarea" data-tef="description" data-tid="' + tid + '" rows="2">' + escapeHtml(t.description || '') + '</textarea>' +
-      '</div>' +
-      '<div class="form-row form-row-grid">' +
-        '<div>' +
-          '<label class="field-label">Phase</label>' +
-          '<select class="field-select" data-tef="phase" data-tid="' + tid + '">' +
-            phases.map(function(p) {
-              return '<option value="' + p + '"' + ((t.phase || 'pre_rush') === p ? ' selected' : '') + '>' + escapeHtml(PHASE_LABELS[p]) + '</option>';
-            }).join('') +
-          '</select>' +
-        '</div>' +
-        '<div>' +
-          '<label class="field-label">Anchor</label>' +
-          '<select class="field-select" data-tef="anchor_date_key" data-tid="' + tid + '">' +
-            anchors.map(function(k) {
-              return '<option value="' + k + '"' + ((t.anchor_date_key || 'soft_launch') === k ? ' selected' : '') + '>' + escapeHtml(k) + '</option>';
-            }).join('') +
-          '</select>' +
-        '</div>' +
-        '<div>' +
-          '<label class="field-label">Offset (days)</label>' +
-          '<input type="number" class="field-input" data-tef="days_offset" data-tid="' + tid + '" value="' + (t.days_offset != null ? t.days_offset : 0) + '">' +
-        '</div>' +
-      '</div>' +
-      '<div class="form-row form-row-grid">' +
-        '<div>' +
-          '<label class="field-label">Assignee</label>' +
-          '<select class="field-select" data-tef="default_assignee" data-tid="' + tid + '">' +
-            '<option value="">— unassigned —</option>' +
-            MEMBERS.map(function(m) {
-              return '<option value="' + m.id + '"' + (t.default_assignee === m.id ? ' selected' : '') + '>' + escapeHtml(m.name) + '</option>';
-            }).join('') +
-            '<option value="all"' + (t.default_assignee === 'all' ? ' selected' : '') + '>All chairs</option>' +
-          '</select>' +
-        '</div>' +
-        '<div>' +
-          '<label class="field-label">Priority</label>' +
-          '<select class="field-select" data-tef="priority" data-tid="' + tid + '">' +
-            ['high','med','low'].map(function(p) {
-              return '<option value="' + p + '"' + ((t.priority || 'med') === p ? ' selected' : '') + '>' + p + '</option>';
-            }).join('') +
-          '</select>' +
-        '</div>' +
-        '<div>' +
-          '<label class="field-label">Category</label>' +
-          '<select class="field-select" data-tef="category" data-tid="' + tid + '">' +
-            '<option value="">—</option>' +
-            cats.map(function(c) {
-              return '<option value="' + escapeHtml(c) + '"' + (t.category === c ? ' selected' : '') + '>' + escapeHtml(c) + '</option>';
-            }).join('') +
-          '</select>' +
-        '</div>' +
-      '</div>' +
-      '<div class="form-row form-actions">' +
-        '<button class="btn primary" onclick="saveTemplateEdit(\'' + tid + '\', ' + (isEdit ? 'true' : 'false') + ')">Save</button>' +
-        '<button class="btn" onclick="cancelTemplateEdit()">Cancel</button>' +
-        (isEdit ? '<button class="btn danger" onclick="deleteTemplateRow(\'' + t.id + '\')" style="margin-left:auto;">Delete</button>' : '') +
-      '</div>' +
-    '</div>';
-  }
-
-  // ============================================================
-  // §8 — WINDOW HANDLERS
-  // ============================================================
-  window.setTasksView = function(scope) {
-    state.tasksView = scope;
-    render();
-  };
-
-  window.toggleTasksShowFuture = function() {
-    state.tasksShowFuture = !state.tasksShowFuture;
-    render();
-  };
-
-  window.toggleTasksShowCompleted = function() {
-    state.tasksShowCompleted = !state.tasksShowCompleted;
-    render();
-  };
-
-  window.toggleTaskRowExpanded = function(id) {
-    state.expandedTaskId = state.expandedTaskId === id ? null : id;
-    render();
-  };
-
-  window.dismissDriftBanner = function() {
-    state.driftBannerDismissed = true;
-    render();
-  };
-
-  window.dismissDuplicatesBanner = function() {
-    state.duplicatesBannerDismissed = true;
-    try { localStorage.setItem('rush26_duplicatesBannerDismissed', '1'); } catch (_) {}
-    render();
-  };
-
-  window.dismissWhatChangedBanner = function() {
-    state.whatChangedDismissed = true;
-    stampLastVisitedAt();
-    render();
-  };
-
-  window.openDuplicatesReview = function() {
-    const groups = detectDuplicateTaskGroups();
-    if (groups.length === 0) { toast('No duplicates detected.', 'default'); return; }
-    let msg = 'Duplicate task groups (newest of each group will be removed if you proceed):\n\n';
-    groups.forEach(function(g) {
-      const sorted = g.tasks.slice().sort(function(a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
-      const keep = sorted[0];
-      const remove = sorted.slice(1);
-      msg += '- "' + (keep.text || '(untitled)') + '" — keep oldest, remove ' + remove.length + ' duplicate(s)\n';
-    });
-    msg += '\nProceed?';
-    if (!confirm(msg)) return;
-    const removed = [];
-    groups.forEach(function(g) {
-      const sorted = g.tasks.slice().sort(function(a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
-      sorted.slice(1).forEach(function(t) {
-        console.log('[duplicates review] removing', t.id, t.text);
-        removed.push(t.id);
-      });
-    });
-    state.tasks = state.tasks.filter(function(t) { return removed.indexOf(t.id) === -1; });
-    Storage.set('tasks', state.tasks);
-    toast('Removed ' + removed.length + ' duplicate task(s). Originals preserved.', 'success');
-    render();
-  };
-
-  window.resetTaskToTemplate = function(taskId) {
-    const t = (state.tasks || []).find(function(x) { return x.id === taskId; });
-    if (!t || !t.templateId) return;
-    const ok = confirm('This will discard your edits and reset to template defaults. Continue?');
-    if (!ok) return;
-    const tmpl = (state.taskTemplates || []).find(function(x) { return x.id === t.templateId; });
-    if (!tmpl) { toast('Template no longer exists — can’t reset.', 'error'); return; }
-    const anchor = getChapterDatesByKey()[tmpl.anchor_date_key];
-    if (!anchor || !anchor.iso_date) { toast('Anchor not set — can’t reset.', 'error'); return; }
-    const newDue = computeDueDate(anchor.iso_date, tmpl.days_offset);
-    t.text = tmpl.title;
-    t.notes = tmpl.description || '';
-    t.assigneeId = tmpl.default_assignee || null;
-    t.priority = tmpl.priority || 'med';
-    t.dueISO = newDue.toISOString();
-    t.dueISOMovedAt = Date.now();
-    t.edited = false;
-    t.driftFromAnchor = false;
-    t.updatedAt = Date.now();
-    Storage.set('tasks', state.tasks);
-    toast('Reset to template default.', 'success');
-    render();
-  };
-
-  window.openCalendarDayDetail = function(dateIso) {
-    state.calendarDayDetail = dateIso;
-    render();
-  };
-
-  window.closeCalendarDayDetail = function() {
-    state.calendarDayDetail = null;
-    render();
-  };
-
-  window.completeTaskFromCalendar = function(taskId) {
-    const t = (state.tasks || []).find(function(x) { return x.id === taskId; });
-    if (!t) return;
-    // Fade-then-undo window: defer the actual flip by 300ms, allow click-undo within window
-    const chip = document.querySelector('.cal-task-chip[data-task-id="' + taskId + '"]');
-    if (chip) chip.classList.add('fading');
-    const flipMs = 320;
-    setTimeout(function() {
-      // confirm chip is still fading (chair didn't click undo)
-      const still = document.querySelector('.cal-task-chip.fading[data-task-id="' + taskId + '"]');
-      if (!still) return;  // undo happened, abort
-      t.status = (t.status === 'done') ? 'todo' : 'done';
-      t.updatedAt = Date.now();
-      Storage.set('tasks', state.tasks);
-      render();
-    }, flipMs);
-  };
-
-  window.openQuickAdd = function() {
-    state.taskModalQuickMode = true;
-    openTaskModal();
-  };
-
-  window.editTemplateInline = function(templateId) {
-    state.taskEditingTemplateId = templateId;
-    state.taskTemplateAddingForPhase = null;
-    render();
-  };
-
-  window.cancelTemplateEdit = function() {
-    state.taskEditingTemplateId = null;
-    state.taskTemplateAddingForPhase = null;
-    render();
-  };
-
-  window.openAddTemplate = function(phase) {
-    state.taskTemplateAddingForPhase = phase;
-    state.taskEditingTemplateId = null;
-    render();
-  };
-
-  window.saveTemplateEdit = async function(tid, isEdit) {
-    function readField(name) {
-      const el = document.querySelector('[data-tef="' + name + '"][data-tid="' + tid + '"]');
-      return el ? el.value : '';
-    }
-    const title           = readField('title').trim();
-    const description     = readField('description').trim();
-    const phase           = readField('phase');
-    const anchor_date_key = readField('anchor_date_key');
-    const days_offset     = parseInt(readField('days_offset'), 10) || 0;
-    const default_assignee = readField('default_assignee') || null;
-    const priority        = readField('priority');
-    const category        = readField('category') || null;
-    if (!title) { toast('Title required.', 'error'); return; }
-    if (!phase) { toast('Phase required.', 'error'); return; }
-    if (!anchor_date_key) { toast('Anchor required.', 'error'); return; }
-    try {
-      const payload = { phase: phase, title: title, description: description || null,
-                        anchor_date_key: anchor_date_key, days_offset: days_offset,
-                        default_assignee: default_assignee, priority: priority, category: category };
-      if (isEdit && tid && tid.indexOf('new_') !== 0) {
-        const { error } = await sb.from('task_templates').update(payload).eq('id', tid);
-        if (error) throw error;
-      } else {
-        const { error } = await sb.from('task_templates').insert(payload);
-        if (error) throw error;
-      }
-      state.taskEditingTemplateId = null;
-      state.taskTemplateAddingForPhase = null;
-      await loadTaskTemplates();
-      await autoSyncTasksToTemplates();
-      toast(isEdit ? 'Template updated.' : 'Template added.', 'success');
-      render();
-    } catch (e) {
-      console.error('saveTemplateEdit failed', e);
-      toast('Save failed — check console.', 'error');
-    }
-  };
-
-  window.deleteTemplateRow = async function(templateId) {
-    const tmpl = (state.taskTemplates || []).find(function(x) { return x.id === templateId; });
-    if (!tmpl) return;
-    const ok = confirm('Delete this template? Tasks already generated from it will be preserved (and orphaned).');
-    if (!ok) return;
-    try {
-      const { error } = await sb.from('task_templates').delete().eq('id', templateId);
-      if (error) throw error;
-      state.taskEditingTemplateId = null;
-      await loadTaskTemplates();
-      // autoSync will mark orphaned tasks but won't delete edited ones.
-      // For deleted-template case, we DO want to preserve all existing tasks (even non-edited):
-      // chair explicitly asked to delete the template, not its tasks. So we skip autoSync here.
-      toast('Template deleted. Tasks preserved.', 'success');
-      render();
-    } catch (e) {
-      console.error('deleteTemplateRow failed', e);
-      toast('Delete failed — check console.', 'error');
-    }
-  };
-
-
-  if (sb) init();
-</script>
-</body>
-</html>
-     
+      byT
