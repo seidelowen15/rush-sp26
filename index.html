@@ -2561,7 +2561,7 @@
   .nametag-template-strip {
     display: flex;
     gap: 10px;
-    margin-bottom: 14px;
+    margin-bottom: 20px;
     overflow-x: auto;
     padding-bottom: 4px;
   }
@@ -2605,37 +2605,77 @@
     border: 1px solid var(--line);
     border-radius: 10px;
     padding: 14px 16px;
-    margin-bottom: 14px;
+    margin-bottom: 20px;
+  }
+  .nametag-overrides-panel .overrides-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--line);
   }
   .nametag-overrides-panel .overrides-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
     color: var(--fg-muted);
-    margin-bottom: 10px;
   }
   .nametag-overrides-panel .overrides-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
-    align-items: end;
+    gap: 12px;
+    align-items: start;
   }
   .nametag-overrides-panel .override-field {
-    display: flex; flex-direction: column; gap: 4px;
+    display: flex; flex-direction: column; gap: 6px;
   }
   .nametag-overrides-panel .field-label {
     font-size: 11px; color: var(--fg-muted);
     text-transform: uppercase; letter-spacing: 0.04em;
+    line-height: 1.3;
   }
   .nametag-overrides-panel .field-input,
   .nametag-overrides-panel .field-select {
-    font-size: 13px; padding: 7px 9px;
+    font-size: 13px; padding: 0 10px;
+    height: 34px;
   }
-  .nametag-overrides-panel input[type="color"] {
-    height: 32px; padding: 2px; cursor: pointer;
+  .nametag-overrides-panel .nametag-color-swatch {
+    position: relative;
+    display: block;
+    height: 34px;
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    overflow: hidden;
+    background: var(--surface);
+    cursor: pointer;
+  }
+  .nametag-overrides-panel .nametag-color-swatch input[type="color"] {
+    position: absolute;
+    top: -8px; left: -8px;
+    width: calc(100% + 16px);
+    height: calc(100% + 16px);
+    border: none; padding: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .nametag-overrides-panel .overrides-checkbox-row {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    display: flex;
+  }
+  .nametag-picker .brothers-toolbar {
+    margin-bottom: 12px;
+  }
+  .nametag-picker .brothers-toolbar .field-select {
+    flex: 1 1 140px;
+    width: auto;
+    min-width: 120px;
   }
   .nametag-picker-actions {
     display: flex; gap: 10px; align-items: center;
-    margin: 10px 0;
+    margin: 0 0 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
   }
   .nametag-picker-actions .selection-count {
     margin-left: auto;
@@ -2812,6 +2852,7 @@
     letter-spacing: 0;
     font-size: 12px;
     color: var(--fg);
+    white-space: nowrap;
   }
 
   /* Print history groups */
@@ -8557,7 +8598,10 @@
       }).join('');
 
     return '<div class="nametag-overrides-panel">' +
-      '<div class="overrides-label">Overrides (this print job only)</div>' +
+      '<div class="overrides-header">' +
+        '<div class="overrides-label">Overrides (this print job only)</div>' +
+        '<button class="btn small overrides-reset" onclick="resetNametagOverrides()">Reset overrides</button>' +
+      '</div>' +
       '<div class="overrides-grid">' +
         '<label class="override-field">' +
           '<span class="field-label">Dimensions</span>' +
@@ -8606,20 +8650,25 @@
         '</label>' +
         '<label class="override-field">' +
           '<span class="field-label">Background</span>' +
-          '<input type="color" class="field-input" value="' + (ov.bgColor || tmpl.bg) + '" ' +
-            'oninput="setNametagOverride(\'bgColor\', this.value)">' +
+          '<span class="nametag-color-swatch">' +
+            '<input type="color" value="' + (ov.bgColor || tmpl.bg) + '" ' +
+              'oninput="setNametagOverride(\'bgColor\', this.value)">' +
+          '</span>' +
         '</label>' +
         '<label class="override-field">' +
           '<span class="field-label">Accent</span>' +
-          '<input type="color" class="field-input" value="' + (ov.accentColor || tmpl.accent) + '" ' +
-            'oninput="setNametagOverride(\'accentColor\', this.value)">' +
+          '<span class="nametag-color-swatch">' +
+            '<input type="color" value="' + (ov.accentColor || tmpl.accent) + '" ' +
+              'oninput="setNametagOverride(\'accentColor\', this.value)">' +
+          '</span>' +
         '</label>' +
+      '</div>' +
+      '<div class="overrides-checkbox-row">' +
         '<label class="override-field override-checkbox">' +
           '<input type="checkbox" id="ov-show-event" ' + (ov.showEventOnCard ? 'checked' : '') +
             ' onchange="setNametagOverride(\'showEventOnCard\', this.checked)">' +
           '<span class="field-label">Show event label on card</span>' +
         '</label>' +
-        '<button class="btn small" onclick="resetNametagOverrides()" style="align-self:end;">Reset overrides</button>' +
       '</div>' +
       customWarning +
     '</div>';
