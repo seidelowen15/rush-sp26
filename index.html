@@ -1278,6 +1278,92 @@
 
   .modal-footer .right { display: flex; gap: 8px; margin-left: auto; }
 
+  /* Marketing post modal — scoped redesign (Phase 0 #5 visual polish) */
+  .mc-post-modal {
+    max-width: 640px;
+    border-radius: 16px;
+    box-shadow: 0 28px 80px rgba(3, 16, 46, 0.40);
+  }
+  .mc-post-modal .field-label {
+    font-family: 'Inter', sans-serif;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 12px;
+    color: var(--fg-soft);
+  }
+  .mc-post-modal .mc-section { margin-bottom: 20px; }
+  .mc-post-modal .mc-section:last-of-type { margin-bottom: 0; }
+  .mc-post-modal .mc-section-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--fg-muted);
+    margin-bottom: 10px;
+  }
+  .mc-post-modal .mc-card {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .mc-post-modal .mc-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .mc-post-modal .mc-scheduled-for {
+    margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+  }
+  .mc-post-modal .mc-scheduled-for strong {
+    color: var(--gold-dark);
+    font-weight: 500;
+  }
+  .mc-post-modal .mc-asset-wrap { position: relative; }
+  .mc-post-modal .mc-asset-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--fg-muted);
+    pointer-events: none;
+  }
+  .mc-post-modal .mc-asset-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+  .mc-post-modal .mc-asset-wrap .field-input { padding-left: 32px; }
+  .mc-post-modal .mc-asset-help {
+    font-size: 11px;
+    color: var(--fg-muted);
+    margin-top: 4px;
+  }
+  .mc-post-modal .mc-notes-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--fg-muted);
+    user-select: none;
+  }
+  .mc-post-modal .mc-notes-chevron {
+    display: inline-block;
+    transition: transform 0.15s;
+  }
+  .mc-post-modal .mc-notes-toggle.open .mc-notes-chevron {
+    transform: rotate(90deg);
+  }
+  .mc-post-modal .mc-notes-body { margin-top: 10px; }
+
   /* ========== CHIPS ========== */
   .chip-row {
     display: flex;
@@ -6190,6 +6276,39 @@
     render();
   };
 
+  // Marketing modal helpers (Phase 0 #5 visual polish)
+  window.updateMcScheduledFor = function() {
+    const el = document.getElementById('mcScheduledFor');
+    if (!el) return;
+    const dateEl = document.getElementById('mcModalDate');
+    const timeEl = document.getElementById('mcModalTime');
+    const dateVal = dateEl ? dateEl.value : '';
+    const timeVal = timeEl ? timeEl.value : '';
+    if (!dateVal) {
+      el.innerHTML = 'Pick a date and time';
+      return;
+    }
+    const dateLabel = formatMcDate(dateVal);
+    let timeLabel = '';
+    if (timeVal) {
+      const hh = parseInt(timeVal.slice(0, 2), 10);
+      const mm = timeVal.slice(3, 5);
+      const ampm = hh >= 12 ? 'PM' : 'AM';
+      const h12 = hh % 12 || 12;
+      timeLabel = ' at ' + h12 + ':' + mm + ' ' + ampm;
+    }
+    el.innerHTML = 'Scheduled for <strong>' + escapeHtml(dateLabel + timeLabel) + '</strong>';
+  };
+
+  window.toggleMcNotes = function() {
+    const body = document.getElementById('mcNotesBody');
+    const toggle = document.querySelector('.mc-post-modal .mc-notes-toggle');
+    if (!body || !toggle) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    toggle.classList.toggle('open', !isOpen);
+  };
+
   window.saveMarketingPost = async function() {
     const titleEl    = document.getElementById('mcModalTitle');
     const dateEl     = document.getElementById('mcModalDate');
@@ -6248,43 +6367,84 @@
     if (!state.editingMarketingPost || (state.editingMarketingPostId === null && state.editingMarketingPost.post_date === undefined)) return '';
     const p = state.editingMarketingPost;
     const isEdit = !!state.editingMarketingPostId;
+    // Initial scheduledFor text (kept in sync via updateMcScheduledFor on input)
+    let initialSched = 'Pick a date and time';
+    if (p.post_date) {
+      const dateLabel = formatMcDate(p.post_date);
+      let timeLabel = '';
+      if (p.post_time) {
+        const hh = parseInt(p.post_time.slice(0, 2), 10);
+        const mm = p.post_time.slice(3, 5);
+        const ampm = hh >= 12 ? 'PM' : 'AM';
+        const h12 = hh % 12 || 12;
+        timeLabel = ' at ' + h12 + ':' + mm + ' ' + ampm;
+      }
+      initialSched = 'Scheduled for <strong>' + escapeHtml(dateLabel + timeLabel) + '</strong>';
+    }
+    const notesHasContent = !!(p.notes && p.notes.trim());
+    const notesBodyStyle = notesHasContent ? '' : 'style="display:none"';
+    const notesToggleClass = notesHasContent ? 'mc-notes-toggle open' : 'mc-notes-toggle';
+
     return '<div class="modal-overlay active" id="mcPostModal" onclick="if (event.target === this) closeMarketingPostModal()">' +
-      '<div class="modal">' +
+      '<div class="modal mc-post-modal">' +
         '<button class="modal-close" onclick="closeMarketingPostModal()" aria-label="Close">×</button>' +
-        '<div class="modal-head">' +
-          '<h2>' + (isEdit ? 'Edit post' : 'New post') + '</h2>' +
+        '<div class="modal-title">' + (isEdit ? 'Edit marketing post' : 'Create marketing post') + '</div>' +
+        '<div class="modal-sub">Add a post to the content pipeline</div>' +
+
+        '<div class="mc-section">' +
+          '<div class="mc-section-header">Content</div>' +
+          '<div class="form-row">' +
+            '<label class="field-label" for="mcModalTitle">Title</label>' +
+            '<input type="text" id="mcModalTitle" class="field-input serif" value="' + escapeHtml(p.title || '') + '" placeholder="What\'s the post?" onkeydown="if (event.key === \'Enter\' && !event.shiftKey) { event.preventDefault(); saveMarketingPost(); }">' +
+          '</div>' +
+          '<div class="form-row">' +
+            '<label class="field-label" for="mcModalChannel">Channel</label>' +
+            '<select id="mcModalChannel" class="field-select">' +
+              ['instagram_post','instagram_story','instagram_reel','tiktok'].map(function(c){
+                return '<option value="' + c + '"' + (p.channel === c ? ' selected' : '') + '>' + escapeHtml(getChannelFullLabel(c)) + '</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
         '</div>' +
-        '<div class="form-row">' +
-          '<label class="field-label">Title *</label>' +
-          '<input type="text" id="mcModalTitle" class="field-input" value="' + escapeHtml(p.title || '') + '" placeholder="Post title" onkeydown="if (event.key === \'Enter\' && !event.shiftKey) { event.preventDefault(); saveMarketingPost(); }">' +
+
+        '<div class="mc-section mc-card">' +
+          '<div class="mc-section-header">Schedule</div>' +
+          '<div class="mc-grid-2">' +
+            '<div><label class="field-label" for="mcModalDate">Date</label>' +
+            '<input type="date" id="mcModalDate" class="field-input" value="' + escapeHtml(p.post_date || '') + '" oninput="updateMcScheduledFor()"></div>' +
+            '<div><label class="field-label" for="mcModalTime">Time</label>' +
+            '<input type="time" id="mcModalTime" class="field-input" value="' + escapeHtml(p.post_time ? p.post_time.slice(0, 5) : '') + '" oninput="updateMcScheduledFor()"></div>' +
+          '</div>' +
+          '<div id="mcScheduledFor" class="mc-scheduled-for">' + initialSched + '</div>' +
         '</div>' +
-        '<div class="form-row-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">' +
-          '<div><label class="field-label">Date *</label>' +
-          '<input type="date" id="mcModalDate" class="field-input" value="' + escapeHtml(p.post_date || '') + '"></div>' +
-          '<div><label class="field-label">Time</label>' +
-          '<input type="time" id="mcModalTime" class="field-input" value="' + escapeHtml(p.post_time ? p.post_time.slice(0,5) : '') + '"></div>' +
+
+        '<div class="mc-section">' +
+          '<div class="mc-section-header">Assets</div>' +
+          '<div class="form-row">' +
+            '<label class="field-label" for="mcModalAsset">Design asset</label>' +
+            '<div class="mc-asset-wrap">' +
+              '<span class="mc-asset-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></span>' +
+              '<input type="url" id="mcModalAsset" class="field-input" value="' + escapeHtml(p.asset_link || '') + '" placeholder="https://...">' +
+            '</div>' +
+            '<div class="mc-asset-help">Canva, Drive, etc.</div>' +
+          '</div>' +
         '</div>' +
-        '<div class="form-row">' +
-          '<label class="field-label">Channel</label>' +
-          '<select id="mcModalChannel" class="field-select">' +
-            ['instagram_post','instagram_story','instagram_reel','tiktok'].map(function(c){
-              return '<option value="' + c + '"' + (p.channel === c ? ' selected' : '') + '>' + escapeHtml(getChannelFullLabel(c)) + '</option>';
-            }).join('') +
-          '</select>' +
+
+        '<div class="mc-section">' +
+          '<div class="' + notesToggleClass + '" onclick="toggleMcNotes()">' +
+            '<span class="mc-notes-chevron">▸</span>' +
+            '<span>Internal notes</span>' +
+          '</div>' +
+          '<div id="mcNotesBody" class="mc-notes-body" ' + notesBodyStyle + '>' +
+            '<textarea id="mcModalNotes" class="field-textarea" rows="3" placeholder="Anything chairs should know...">' + escapeHtml(p.notes || '') + '</textarea>' +
+          '</div>' +
         '</div>' +
-        '<div class="form-row">' +
-          '<label class="field-label">Asset link (Canva, Drive, etc.)</label>' +
-          '<input type="url" id="mcModalAsset" class="field-input" value="' + escapeHtml(p.asset_link || '') + '" placeholder="https://...">' +
-        '</div>' +
-        '<div class="form-row">' +
-          '<label class="field-label">Notes (chair-internal)</label>' +
-          '<textarea id="mcModalNotes" class="field-textarea" rows="3" placeholder="Scratchpad notes...">' + escapeHtml(p.notes || '') + '</textarea>' +
-        '</div>' +
-        '<div class="modal-actions">' +
+
+        '<div class="modal-footer">' +
           (isEdit ? '<button class="btn small" style="color:var(--danger);" onclick="deleteMarketingPost()">Delete</button>' : '<span></span>') +
-          '<div>' +
-            '<button class="btn" onclick="closeMarketingPostModal()">Cancel</button> ' +
-            '<button class="btn primary" onclick="saveMarketingPost()">Save</button>' +
+          '<div class="right">' +
+            '<button class="btn" onclick="closeMarketingPostModal()">Cancel</button>' +
+            '<button class="btn primary" onclick="saveMarketingPost()">Schedule post</button>' +
           '</div>' +
         '</div>' +
       '</div>' +
