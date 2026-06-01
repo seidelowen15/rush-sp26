@@ -81,7 +81,7 @@
     padding: 28px 18px 24px;
     position: sticky;
     top: 0;
-    min-height: 100vh;
+    height: 100vh;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -213,7 +213,12 @@
   .sidebar-spacer { flex: 1; }
 
   .team-block {
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    background: var(--surface);
     padding-top: 20px;
+    padding-bottom: 8px;
     border-top: 1px solid var(--line);
   }
 
@@ -4062,6 +4067,67 @@
   .cal-task-chip.fading { opacity: 0; pointer-events: none; }
   .cal-task-chip.done { opacity: 0.55; text-decoration: line-through; }
   .cal-task-chip.overdue { background: rgba(184, 40, 50, 0.18); color: var(--danger); }
+
+  /* Phase 0 #5 — Marketing Calendar: pink post chips */
+  .cal-post-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(232, 196, 208, 0.55);
+    color: var(--fg);
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    margin: 2px 2px 0 0;
+    cursor: pointer;
+    max-width: 100%;
+    transition: background 0.15s;
+  }
+  .cal-post-chip:hover { background: rgba(232, 196, 208, 0.75); }
+  [data-theme="dark"] .cal-post-chip { background: rgba(232, 196, 208, 0.30); color: var(--fg); }
+  [data-theme="dark"] .cal-post-chip:hover { background: rgba(232, 196, 208, 0.45); }
+  .cal-post-chip .post-channel {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+  }
+  .cal-post-chip .post-title {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .marketing-view .marketing-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .marketing-view .marketing-header-actions { display: flex; gap: 8px; }
+  /* Inline post-channel pill in the list table also uses cal-post-chip styling */
+  .marketing-view .post-channel {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(232, 196, 208, 0.55);
+    color: var(--fg);
+    margin-right: 6px;
+  }
+  [data-theme="dark"] .marketing-view .post-channel { background: rgba(232, 196, 208, 0.30); }
+  @media (max-width: 900px) {
+    .marketing-view .marketing-header-row { flex-direction: column; align-items: stretch; }
+    .marketing-view .marketing-header-actions { justify-content: flex-end; }
+  }
   .cal-task-chip .cal-task-check {
     width: 12px; height: 12px;
     accent-color: var(--navy);
@@ -4858,6 +4924,14 @@
         render();
       }, 250);
     });
+    // Phase 0 #5: marketing_posts realtime
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'marketing_posts' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => {
+        await loadMarketingPosts();
+        render();
+      }, 250);
+    });
     channel.subscribe();
   }
 
@@ -4991,6 +5065,12 @@
     // ============================================================
     taskTemplates: [],
     taskTemplatesLoaded: false,
+    // Phase 0 #5 — Marketing Calendar
+    marketingPosts: [],
+    marketingPostsLoaded: false,
+    marketingViewMode: 'calendar',     // 'calendar' | 'list'
+    editingMarketingPostId: null,
+    editingMarketingPost: {},
     milestoneDetail: null,            // §G dashboard polish — selected milestone key (or 'tpl:<id>')
     chapterDates: [],
     chapterDatesLoaded: false,
@@ -5061,6 +5141,8 @@
       // Phase 0 #4: typed-table reads for parametric to-do list.
       await loadTaskTemplates();
       await loadChapterDates();
+      // Phase 0 #5
+      await loadMarketingPosts();
       // Phase 0 #4 v2: silent boot-time sync. No toast, no banner — generation
       // is invisible to chairs at boot. Explicit saveChapterDate triggers
       // surface counts in their own toast.
@@ -5162,6 +5244,7 @@
           '<div class="view ' + (state.currentView === 'candidates' ? 'active' : '') + '">' + renderCandidates() + '</div>' +
           '<div class="view ' + (state.currentView === 'brothers' ? 'active' : '') + '">' + renderBrothers() + '</div>' +
           '<div class="view ' + (state.currentView === 'nametags' ? 'active' : '') + '">' + renderNametagsView() + '</div>' +
+          '<div class="view ' + (state.currentView === 'marketing' ? 'active' : '') + '">' + renderMarketingView() + renderMarketingPostModal() + '</div>' +
         '</main>' +
       '</div>';
 
@@ -5258,6 +5341,7 @@
       { id: 'candidates', label: 'Candidates', icon: '★', count: state.candidates.length },
       { id: 'brothers', label: 'Brothers', icon: '◍', count: state.brothers.length },
       { id: 'nametags', label: 'Nametags', icon: '◇', count: state.nametagSelected.size || undefined },
+      { id: 'marketing', label: 'Marketing', icon: '◭', count: state.marketingPosts.length },
     ];
 
     return '' +
@@ -5922,6 +6006,351 @@
   // ============================================================
   // NOTES
   // ============================================================
+
+  // ============================================================
+  // MARKETING CALENDAR (Phase 0 #5)
+  // Top-level tab. Fixed-date posts (no anchor system).
+  // Calendar/List subviews. PDF export. Reused calendar grid CSS.
+  // ============================================================
+  async function loadMarketingPosts() {
+    try {
+      const { data, error } = await sb.from('marketing_posts').select('*').order('post_date', { ascending: true });
+      if (error) throw error;
+      state.marketingPosts = data || [];
+      state.marketingPostsLoaded = true;
+    } catch (e) {
+      console.error('loadMarketingPosts failed', e);
+      state.marketingPosts = [];
+      state.marketingPostsLoaded = true;
+    }
+  }
+
+  function getChannelLabel(channel) {
+    if (channel === 'instagram_post')  return 'IG';
+    if (channel === 'instagram_story') return 'IG/ST';
+    if (channel === 'instagram_reel')  return 'IG/RL';
+    if (channel === 'tiktok')          return 'TT';
+    return channel || '?';
+  }
+
+  function getChannelFullLabel(channel) {
+    if (channel === 'instagram_post')  return 'Instagram Post';
+    if (channel === 'instagram_story') return 'Instagram Story';
+    if (channel === 'instagram_reel')  return 'Instagram Reel';
+    if (channel === 'tiktok')          return 'TikTok';
+    return channel || '(unknown)';
+  }
+
+  function formatMcDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function renderMarketingView() {
+    const mode = state.marketingViewMode || 'calendar';
+    return '<div class="marketing-view">' +
+      '<div class="marketing-header-row">' +
+        '<div class="tasks-scope-toggle">' +
+          '<button class="scope-pill' + (mode === 'calendar' ? ' active' : '') + '" onclick="setMarketingViewMode(\'calendar\')">Calendar</button>' +
+          '<button class="scope-pill' + (mode === 'list' ? ' active' : '') + '" onclick="setMarketingViewMode(\'list\')">List</button>' +
+        '</div>' +
+        '<div class="marketing-header-actions">' +
+          '<button class="btn small" onclick="exportMarketingCalendarPDF()">Export to PDF</button>' +
+          '<button class="btn primary small" onclick="openMarketingPostModal()">+ Add post</button>' +
+        '</div>' +
+      '</div>' +
+      (mode === 'list' ? renderMarketingListSubview() : renderMarketingCalendarSubview()) +
+    '</div>';
+  }
+
+  function renderMarketingCalendarSubview() {
+    const posts = state.marketingPosts || [];
+    if (posts.length === 0) {
+      return '<div class="empty-state-polished" style="margin-top:32px;">' +
+        '<div class="empty-glyph">◭</div>' +
+        '<div class="empty-text" style="font-family:\'Playfair Display\',serif; font-style:italic;">No posts on the calendar yet. Tap + Add post.</div>' +
+      '</div>';
+    }
+    const d = state.calendarDate || new Date();
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const monthName = d.toLocaleDateString('en-US', { month: 'long' });
+    const firstDay = new Date(year, month, 1);
+    const startWeekday = firstDay.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrev = new Date(year, month, 0).getDate();
+    const todayStr = new Date().toDateString();
+    const cells = [];
+    for (let i = startWeekday - 1; i >= 0; i--) cells.push({ date: new Date(year, month - 1, daysInPrev - i), otherMonth: true });
+    for (let i = 1; i <= daysInMonth; i++) cells.push({ date: new Date(year, month, i), otherMonth: false });
+    while (cells.length % 7 !== 0 || cells.length < 42) {
+      const last = cells[cells.length - 1].date;
+      cells.push({ date: new Date(last.getTime() + 86400000), otherMonth: true });
+      if (cells.length >= 42) break;
+    }
+    const dayHeaders = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    return '<div class="calendar-header">' +
+        '<div class="calendar-month">' + monthName + ' <em>' + year + '</em></div>' +
+        '<div class="calendar-nav">' +
+          '<button class="btn btn-icon" onclick="calNav(-1)">‹</button>' +
+          '<button class="btn" onclick="calToday()">Today</button>' +
+          '<button class="btn btn-icon" onclick="calNav(1)">›</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="calendar-grid">' +
+        dayHeaders.map(function(h) { return '<div class="cal-day-header">' + h + '</div>'; }).join('') +
+        cells.map(function(c) {
+          const dateKey = c.date.toDateString();
+          const dateIso = c.date.toISOString().slice(0,10);
+          const dayPosts = posts.filter(function(p) { return new Date(p.post_date + 'T00:00:00').toDateString() === dateKey; })
+                                .sort(function(a,b){ return (a.post_time || '99:99').localeCompare(b.post_time || '99:99'); });
+          const isToday = dateKey === todayStr;
+          const visiblePosts = dayPosts.slice(0, 4);
+          const overflow = dayPosts.length - visiblePosts.length;
+          return '<div class="cal-cell ' + (c.otherMonth ? 'other-month' : '') + ' ' + (isToday ? 'today' : '') + '">' +
+            '<div class="cal-date">' + c.date.getDate() + '</div>' +
+            visiblePosts.map(function(p) {
+              return '<div class="cal-post-chip" onclick="event.stopPropagation(); openMarketingPostModal(\'' + p.id + '\')" title="' + escapeHtml(p.title + ' · ' + getChannelFullLabel(p.channel)) + '">' +
+                '<span class="post-channel">' + escapeHtml(getChannelLabel(p.channel)) + '</span>' +
+                '<span class="post-title">' + escapeHtml(p.title) + '</span>' +
+              '</div>';
+            }).join('') +
+            (overflow > 0 ? '<div style="font-size:9px; color:var(--fg-muted); font-family:\'JetBrains Mono\',monospace;">+' + overflow + '</div>' : '') +
+          '</div>';
+        }).join('') +
+      '</div>';
+  }
+
+  function renderMarketingListSubview() {
+    const posts = (state.marketingPosts || []).slice().sort(function(a,b){
+      const ad = (a.post_date || '') + ' ' + (a.post_time || '99:99');
+      const bd = (b.post_date || '') + ' ' + (b.post_time || '99:99');
+      return ad < bd ? -1 : ad > bd ? 1 : 0;
+    });
+    if (posts.length === 0) {
+      return '<div class="empty-state-polished" style="margin-top:32px;">' +
+        '<div class="empty-glyph">◭</div>' +
+        '<div class="empty-text" style="font-family:\'Playfair Display\',serif; font-style:italic;">No posts on the calendar yet. Tap + Add post.</div>' +
+      '</div>';
+    }
+    return '<table class="brothers-table" style="margin-top:18px;">' +
+      '<thead><tr>' +
+        '<th>Title</th><th>Date</th><th>Time</th><th>Channel</th><th>Asset</th><th>Notes</th>' +
+      '</tr></thead><tbody>' +
+      posts.map(function(p) {
+        const dateStr = formatMcDate(p.post_date);
+        const timeStr = p.post_time ? p.post_time.slice(0,5) : '—';
+        const assetCell = p.asset_link
+          ? '<a href="' + escapeHtml(p.asset_link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation();">link ↗</a>'
+          : '<span style="color:var(--fg-muted);">—</span>';
+        const notesCell = p.notes ? escapeHtml(p.notes.length > 60 ? p.notes.slice(0,57) + '…' : p.notes) : '<span style="color:var(--fg-muted);">—</span>';
+        return '<tr style="cursor:pointer;" onclick="openMarketingPostModal(\'' + p.id + '\')">' +
+          '<td><strong>' + escapeHtml(p.title) + '</strong></td>' +
+          '<td>' + escapeHtml(dateStr) + '</td>' +
+          '<td>' + escapeHtml(timeStr) + '</td>' +
+          '<td><span class="post-channel">' + escapeHtml(getChannelLabel(p.channel)) + '</span> ' + escapeHtml(getChannelFullLabel(p.channel)) + '</td>' +
+          '<td>' + assetCell + '</td>' +
+          '<td>' + notesCell + '</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  window.setMarketingViewMode = function(mode) {
+    state.marketingViewMode = mode;
+    render();
+  };
+
+  window.openMarketingPostModal = function(postId) {
+    if (postId) {
+      const p = (state.marketingPosts || []).find(function(x){ return x.id === postId; });
+      if (!p) { toast('Post not found.', 'error'); return; }
+      state.editingMarketingPostId = postId;
+      state.editingMarketingPost = Object.assign({}, p);
+    } else {
+      state.editingMarketingPostId = null;
+      state.editingMarketingPost = {
+        title: '', post_date: new Date().toISOString().slice(0,10),
+        post_time: '', channel: 'instagram_post', asset_link: '', notes: ''
+      };
+    }
+    render();
+    setTimeout(function() {
+      const el = document.getElementById('mcModalTitle');
+      if (el) el.focus();
+    }, 50);
+  };
+
+  window.closeMarketingPostModal = function() {
+    state.editingMarketingPostId = null;
+    state.editingMarketingPost = {};
+    render();
+  };
+
+  window.saveMarketingPost = async function() {
+    const titleEl    = document.getElementById('mcModalTitle');
+    const dateEl     = document.getElementById('mcModalDate');
+    const timeEl     = document.getElementById('mcModalTime');
+    const channelEl  = document.getElementById('mcModalChannel');
+    const assetEl    = document.getElementById('mcModalAsset');
+    const notesEl    = document.getElementById('mcModalNotes');
+    const title = (titleEl ? titleEl.value : '').trim();
+    if (!title) { toast('Title is required.', 'error'); if (titleEl) titleEl.focus(); return; }
+    const post_date = dateEl ? dateEl.value : null;
+    if (!post_date) { toast('Date is required.', 'error'); if (dateEl) dateEl.focus(); return; }
+    const post_time = timeEl && timeEl.value ? timeEl.value : null;
+    const channel = channelEl ? channelEl.value : 'instagram_post';
+    const asset_link = assetEl && assetEl.value ? assetEl.value.trim() : null;
+    const notes = notesEl && notesEl.value ? notesEl.value.trim() : null;
+    const payload = {
+      title: title, post_date: post_date, post_time: post_time, channel: channel,
+      asset_link: asset_link, notes: notes,
+      updated_at: new Date().toISOString(), updated_by: state.currentUser
+    };
+    try {
+      if (state.editingMarketingPostId) {
+        const { error } = await sb.from('marketing_posts').update(payload).eq('id', state.editingMarketingPostId);
+        if (error) throw error;
+      } else {
+        payload.created_by = state.currentUser;
+        const { error } = await sb.from('marketing_posts').insert(payload);
+        if (error) throw error;
+      }
+      await loadMarketingPosts();
+      toast(state.editingMarketingPostId ? 'Post updated.' : 'Post added.', 'success');
+      closeMarketingPostModal();
+    } catch (e) {
+      console.error('saveMarketingPost failed', e);
+      toast('Save failed — check console.', 'error');
+    }
+  };
+
+  window.deleteMarketingPost = async function() {
+    if (!state.editingMarketingPostId) return;
+    if (!confirm('Delete this post?')) return;
+    try {
+      const { error } = await sb.from('marketing_posts').delete().eq('id', state.editingMarketingPostId);
+      if (error) throw error;
+      await loadMarketingPosts();
+      toast('Post deleted.', 'success');
+      closeMarketingPostModal();
+    } catch (e) {
+      console.error('deleteMarketingPost failed', e);
+      toast('Delete failed — check console.', 'error');
+    }
+  };
+
+  function renderMarketingPostModal() {
+    if (state.editingMarketingPostId === null && (!state.editingMarketingPost || !state.editingMarketingPost.title && state.editingMarketingPost.title !== '')) return '';
+    if (!state.editingMarketingPost || (state.editingMarketingPostId === null && state.editingMarketingPost.post_date === undefined)) return '';
+    const p = state.editingMarketingPost;
+    const isEdit = !!state.editingMarketingPostId;
+    return '<div class="modal-overlay active" id="mcPostModal" onclick="if (event.target === this) closeMarketingPostModal()">' +
+      '<div class="modal">' +
+        '<button class="modal-close" onclick="closeMarketingPostModal()" aria-label="Close">×</button>' +
+        '<div class="modal-head">' +
+          '<h2>' + (isEdit ? 'Edit post' : 'New post') + '</h2>' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label">Title *</label>' +
+          '<input type="text" id="mcModalTitle" class="field-input" value="' + escapeHtml(p.title || '') + '" placeholder="Post title" onkeydown="if (event.key === \'Enter\' && !event.shiftKey) { event.preventDefault(); saveMarketingPost(); }">' +
+        '</div>' +
+        '<div class="form-row-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">' +
+          '<div><label class="field-label">Date *</label>' +
+          '<input type="date" id="mcModalDate" class="field-input" value="' + escapeHtml(p.post_date || '') + '"></div>' +
+          '<div><label class="field-label">Time</label>' +
+          '<input type="time" id="mcModalTime" class="field-input" value="' + escapeHtml(p.post_time ? p.post_time.slice(0,5) : '') + '"></div>' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label">Channel</label>' +
+          '<select id="mcModalChannel" class="field-select">' +
+            ['instagram_post','instagram_story','instagram_reel','tiktok'].map(function(c){
+              return '<option value="' + c + '"' + (p.channel === c ? ' selected' : '') + '>' + escapeHtml(getChannelFullLabel(c)) + '</option>';
+            }).join('') +
+          '</select>' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label">Asset link (Canva, Drive, etc.)</label>' +
+          '<input type="url" id="mcModalAsset" class="field-input" value="' + escapeHtml(p.asset_link || '') + '" placeholder="https://...">' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label">Notes (chair-internal)</label>' +
+          '<textarea id="mcModalNotes" class="field-textarea" rows="3" placeholder="Scratchpad notes...">' + escapeHtml(p.notes || '') + '</textarea>' +
+        '</div>' +
+        '<div class="modal-actions">' +
+          (isEdit ? '<button class="btn small" style="color:var(--danger);" onclick="deleteMarketingPost()">Delete</button>' : '<span></span>') +
+          '<div>' +
+            '<button class="btn" onclick="closeMarketingPostModal()">Cancel</button> ' +
+            '<button class="btn primary" onclick="saveMarketingPost()">Save</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.exportMarketingCalendarPDF = function() {
+    const posts = (state.marketingPosts || []).slice().sort(function(a,b){
+      const ad = (a.post_date || '') + ' ' + (a.post_time || '99:99');
+      const bd = (b.post_date || '') + ' ' + (b.post_time || '99:99');
+      return ad < bd ? -1 : ad > bd ? 1 : 0;
+    });
+    if (posts.length === 0) { toast('No posts to export yet.', 'error'); return; }
+    if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+      toast('PDF library not loaded.', 'error');
+      console.error('jsPDF not available on window');
+      return;
+    }
+    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'landscape' });
+    const now = new Date();
+    const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toLowerCase().replace(/\s+/g, '_');
+    const today = now.toISOString().slice(0,10);
+    const filename = 'marketing_calendar_' + monthLabel + '_' + today + '.pdf';
+
+    // Header
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+    doc.text('Marketing Calendar', 40, 40);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.text('Generated ' + now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }), 40, 58);
+    doc.text(String(posts.length) + ' post' + (posts.length === 1 ? '' : 's'), 40, 72);
+
+    // Table
+    const startY = 96;
+    const colX = { title: 40, date: 220, time: 340, channel: 400, asset: 510, notes: 640 };
+    const rowH = 18;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    doc.text('Title', colX.title, startY);
+    doc.text('Date', colX.date, startY);
+    doc.text('Time', colX.time, startY);
+    doc.text('Channel', colX.channel, startY);
+    doc.text('Asset', colX.asset, startY);
+    doc.text('Notes', colX.notes, startY);
+    doc.setLineWidth(0.5);
+    doc.line(40, startY + 4, 780, startY + 4);
+
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+    let y = startY + rowH;
+    const pageHeight = 612;  // letter landscape = 792 x 612 — height is 612
+    posts.forEach(function(p, i) {
+      if (y > pageHeight - 40) { doc.addPage(); y = 40; }
+      const dateStr = formatMcDate(p.post_date);
+      const timeStr = p.post_time ? p.post_time.slice(0,5) : '-';
+      const channelStr = getChannelFullLabel(p.channel);
+      const assetStr = p.asset_link ? p.asset_link.slice(0, 24) + (p.asset_link.length > 24 ? '...' : '') : '-';
+      const notesStr = p.notes ? p.notes.slice(0, 36) + (p.notes.length > 36 ? '...' : '') : '-';
+      doc.text((p.title || '').slice(0, 30), colX.title, y);
+      doc.text(dateStr, colX.date, y);
+      doc.text(timeStr, colX.time, y);
+      doc.text(channelStr, colX.channel, y);
+      doc.text(assetStr, colX.asset, y);
+      doc.text(notesStr, colX.notes, y);
+      y += rowH;
+    });
+    doc.save(filename);
+    toast('PDF exported: ' + filename, 'success');
+  };
+
   function renderNotesView() {
     const query = state.notesSearchQuery.toLowerCase().trim();
     let filtered = state.notes;
@@ -6413,15 +6842,25 @@
           const dayTasks = state.tasks
             .filter(t => t.dueISO && t.status !== 'done' && new Date(t.dueISO).toDateString() === dateKey)
             .sort((a, b) => (a.priority === 'high' ? -1 : 1) - (b.priority === 'high' ? -1 : 1));
+          // Phase 0 #5: marketing posts on day cells (pink chips).
+          const dayPosts = (state.marketingPosts || [])
+            .filter(p => new Date(p.post_date + 'T00:00:00').toDateString() === dateKey)
+            .sort((a, b) => (a.post_time || '99:99').localeCompare(b.post_time || '99:99'));
           const itemBudget = 4;
+          // Order: events first, tasks second, posts third (per Phase 0 #5 spec).
           const visibleEvents = dayEvents.slice(0, itemBudget);
-          const remainingBudget = Math.max(0, itemBudget - visibleEvents.length);
+          let remainingBudget = Math.max(0, itemBudget - visibleEvents.length);
           const visibleTasks = dayTasks.slice(0, remainingBudget);
-          const overflowCount = (dayEvents.length - visibleEvents.length) + (dayTasks.length - visibleTasks.length);
+          remainingBudget = Math.max(0, remainingBudget - visibleTasks.length);
+          const visiblePosts = dayPosts.slice(0, remainingBudget);
+          const overflowCount =
+            (dayEvents.length - visibleEvents.length) +
+            (dayTasks.length - visibleTasks.length) +
+            (dayPosts.length - visiblePosts.length);
           const isToday = dateKey === todayStr;
           const dateIso = c.date.toISOString();
           // v2 (Diff 4): empty cells keep v1 quick-add; populated cells route to day-detail.
-          const cellOnClick = (dayEvents.length + dayTasks.length) === 0
+          const cellOnClick = (dayEvents.length + dayTasks.length + dayPosts.length) === 0
             ? 'openEventModal(\'' + dateIso + '\')'
             : 'openCalDayDetail(\'' + dateIso + '\')';
           return '<div class="cal-cell ' + (c.otherMonth ? 'other-month' : '') + ' ' + (isToday ? 'today' : '') + '" onclick="' + cellOnClick + '">' +
@@ -6438,11 +6877,18 @@
                 '<span class="cal-task-text">' + escapeHtml(t.title) + '</span>' +
               '</div>';
             }).join('') +
+            visiblePosts.map(p => {
+              return '<div class="cal-post-chip" onclick="event.stopPropagation(); openMarketingPostModal(\'' + p.id + '\')" title="' + escapeHtml(p.title + ' \u00b7 ' + getChannelFullLabel(p.channel)) + '">' +
+                '<span class="post-channel">' + escapeHtml(getChannelLabel(p.channel)) + '</span>' +
+                '<span class="post-title">' + escapeHtml(p.title) + '</span>' +
+              '</div>';
+            }).join('') +
             (overflowCount > 0 ? '<div style="font-size:9px; color:var(--fg-muted); font-family:\'JetBrains Mono\',monospace;">+' + overflowCount + '</div>' : '') +
           '</div>';
         }).join('') +
       '</div>' +
       (state.calendarDayDetail ? renderCalDayDetail() : '') +
+      renderMarketingPostModal() +
       '<div style="margin-top: 14px; font-family:\'JetBrains Mono\',monospace; font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.12em;">Empty day click to add · populated day click to inspect · chip checkbox toggles done</div>';
   }
 
@@ -6504,6 +6950,31 @@
           ) +
           '<button class="btn small" style="margin-top:8px;" onclick="closeCalDayDetail(); openTaskModal(null)">+ Task</button>' +
         '</div>' +
+
+        // Phase 0 #5: third section — Marketing Posts anchored to this day
+        (function() {
+          const dayPosts = (state.marketingPosts || []).filter(function(p) {
+            return new Date(p.post_date + 'T00:00:00').toDateString() === dateKey;
+          }).sort(function(a, b) { return (a.post_time || '99:99').localeCompare(b.post_time || '99:99'); });
+          return '<div class="cal-day-section">' +
+            '<div class="cal-day-section-label">Marketing Posts (' + dayPosts.length + ')</div>' +
+            (dayPosts.length === 0
+              ? '<div style="font-size:13px; color:var(--fg-muted); padding:6px 0;">No posts scheduled.</div>'
+              : dayPosts.map(function(p) {
+                  const timeStr = p.post_time ? p.post_time.slice(0,5) : '\u2014';
+                  return '<div class="cal-day-item" onclick="closeCalDayDetail(); openMarketingPostModal(\'' + p.id + '\')">' +
+                    '<div class="cal-day-item-title">' +
+                      '<span class="post-channel">' + escapeHtml(getChannelLabel(p.channel)) + '</span>' +
+                      escapeHtml(p.title) +
+                    '</div>' +
+                    '<div class="cal-day-item-time">' + escapeHtml(timeStr) + '</div>' +
+                  '</div>';
+                }).join('')
+            ) +
+            '<button class="btn small" style="margin-top:8px;" onclick="closeCalDayDetail(); openMarketingPostModal(null)">+ Post</button>' +
+          '</div>';
+        })() +
+
       '</div>' +
     '</div>';
   }
