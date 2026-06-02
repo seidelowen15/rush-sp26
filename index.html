@@ -1292,6 +1292,7 @@
     color: var(--fg-soft);
   }
   .mc-post-modal .form-row { display: block; }
+  .mc-post-modal .form-row + .form-row { margin-top: 16px; }
   .mc-post-modal .form-row > .field-label { margin-bottom: 6px; }
   .mc-post-modal .mc-section { margin-bottom: 20px; }
   .mc-post-modal .mc-section:last-of-type { margin-bottom: 0; }
@@ -4428,7 +4429,7 @@
   .main { padding: 32px 40px 64px; max-width: none; }
 
   /* ---- sidebar ---- */
-  .sidebar { background: var(--navy-sidebar); border-right: none; padding: 26px 16px 20px; }
+  .sidebar { background: var(--navy-sidebar); border-right: none; padding: 26px 16px 20px; align-self: start; }
   .brand-block { border-bottom: none; padding: 0 6px 4px; margin-bottom: 22px; }
   .brand-head { gap: 12px; margin-bottom: 0; align-items: center; }
   .akpsi-shield {
@@ -5456,13 +5457,6 @@
         '<div class="sidebar-spacer"></div>' +
 
         '<div class="team-block">' +
-          '<div class="nav-label" style="margin-top:0">Committee</div>' +
-          MEMBERS.map(m =>
-            '<div class="member-row">' +
-              '<div class="member-avatar" style="background:' + m.color + '">' + m.name[0] + '</div>' +
-              '<span>' + escapeHtml(m.name) + (m.id === state.currentUser ? ' (you)' : '') + '</span>' +
-            '</div>'
-          ).join('') +
           '<button class="theme-toggle" onclick="toggleTheme()">' +
             '<span>' + (state.theme === 'dark' ? '☼' : '☾') + '</span>' +
             '<span>' + (state.theme === 'dark' ? 'Light mode' : 'Dark mode') + '</span>' +
@@ -9300,8 +9294,11 @@
       '<div class="overrides-checkbox-row">' +
         '<label class="override-field override-checkbox">' +
           '<input type="checkbox" id="ov-show-event" ' + (ov.showEventOnCard ? 'checked' : '') +
+            (state.nametagEventLabel && state.nametagEventLabel.trim() ? '' : ' disabled') +
             ' onchange="setNametagOverride(\'showEventOnCard\', this.checked)">' +
-          '<span class="field-label">Show event label on card</span>' +
+          '<span class="field-label">Show event label on card' +
+            (state.nametagEventLabel && state.nametagEventLabel.trim() ? '' : ' — enter an event label first') +
+          '</span>' +
         '</label>' +
       '</div>' +
       customWarning +
