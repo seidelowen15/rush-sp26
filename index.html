@@ -2263,6 +2263,26 @@
     background: rgba(212, 166, 74, 0.04); border-color: rgba(212, 166, 74, 0.14);
   }
   [data-theme="dark"] .budget-cap-bar { background: rgba(212, 166, 74, 0.12); }
+  .budget-cat-section { display: flex; flex-direction: column; gap: 18px; }
+  .budget-section-header {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.16em; color: var(--fg-muted);
+    margin-bottom: 2px;
+  }
+  .budget-cat-row { display: flex; flex-direction: column; gap: 8px; }
+  .budget-cat-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .budget-cat-name { font-size: 14px; color: var(--fg); font-weight: 500; }
+  .budget-cat-uncat { color: var(--fg-muted); font-style: italic; font-weight: 400; }
+  .budget-cat-figures { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--fg-soft); }
+  .budget-cat-bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .budget-cat-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--navy), var(--gold-dark));
+    transition: width 0.4s ease;
+  }
+  .budget-cat-fill.over { background: var(--danger); }
+  .budget-cat-fill.none { background: transparent; }
+  [data-theme="dark"] .budget-cat-bar { background: rgba(212, 166, 74, 0.12); }
 
   /* ========== RESPONSIVE ========== */
   @media (max-width: 900px) {
@@ -6400,6 +6420,50 @@
     return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function budgetCategoryActual(catId) {
+    return (state.expenses || []).reduce(function(s, e) {
+      return e.category_id === catId ? s + Number(e.actual_amount || 0) : s;
+    }, 0);
+  }
+
+  function renderBudgetCategoryBars() {
+    const cats = (state.budgetCategories || []).slice().sort(function(a, b) {
+      return (a.sort_order || 0) - (b.sort_order || 0);
+    });
+    const uncatActual = (state.expenses || []).reduce(function(s, e) {
+      return !e.category_id ? s + Number(e.actual_amount || 0) : s;
+    }, 0);
+    const rows = cats.map(function(c) {
+      const approved = Number(c.approved_amount || 0);
+      const actual = budgetCategoryActual(c.id);
+      const hasApproved = approved > 0;
+      const over = hasApproved && actual > approved;
+      const pct = hasApproved ? Math.min(100, (actual / approved) * 100) : 0;
+      return '<div class="budget-cat-row">' +
+        '<div class="budget-cat-head">' +
+          '<span class="budget-cat-name">' + escapeHtml(c.name) + '</span>' +
+          '<span class="budget-cat-figures">' + fmtMoney(actual) + ' <span class="budget-of">/ ' + (hasApproved ? fmtMoney(approved) : '—') + '</span></span>' +
+        '</div>' +
+        '<div class="budget-cat-bar">' +
+          '<div class="budget-cat-fill' + (over ? ' over' : '') + (hasApproved ? '' : ' none') + '" style="width:' + pct + '%"></div>' +
+        '</div>' +
+      '</div>';
+    });
+    if (uncatActual > 0) {
+      rows.push('<div class="budget-cat-row">' +
+        '<div class="budget-cat-head">' +
+          '<span class="budget-cat-name budget-cat-uncat">Uncategorized</span>' +
+          '<span class="budget-cat-figures">' + fmtMoney(uncatActual) + ' <span class="budget-of">/ —</span></span>' +
+        '</div>' +
+        '<div class="budget-cat-bar"><div class="budget-cat-fill none" style="width:0%"></div></div>' +
+      '</div>');
+    }
+    return '<div class="budget-cat-section">' +
+      '<div class="budget-section-header">By category</div>' +
+      rows.join('') +
+    '</div>';
+  }
+
   function renderBudgetView() {
     const t = computeBudgetTotals();
     const hasCap = t.cap > 0;
@@ -6434,6 +6498,7 @@
             '<div class="budget-figure-value">' + (hasCap ? fmtMoney(t.cap) : '—') + '</div>' +
           '</div>' +
         '</div>' +
+        renderBudgetCategoryBars() +
       '</div>';
   }
 
