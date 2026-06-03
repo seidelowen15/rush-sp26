@@ -2283,6 +2283,21 @@
   .budget-cat-fill.over { background: var(--danger); }
   .budget-cat-fill.none { background: transparent; }
   [data-theme="dark"] .budget-cat-bar { background: rgba(212, 166, 74, 0.12); }
+  .budget-items-section { display: flex; flex-direction: column; gap: 14px; }
+  .budget-items-table tbody tr { cursor: default; }
+  .budget-item-name { font-weight: 600; color: var(--navy); }
+  [data-theme="dark"] .budget-item-name { color: var(--gold); }
+  .budget-num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  .budget-num.over { color: var(--danger); }
+  .budget-num.under { color: var(--success); }
+  .budget-chip {
+    display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.06em;
+    background: var(--surface-2); color: var(--fg-soft); border: 1px solid var(--line);
+  }
+  .budget-chip.need { color: var(--navy); border-color: var(--navy); }
+  [data-theme="dark"] .budget-chip { background: rgba(212, 166, 74, 0.06); border-color: rgba(212, 166, 74, 0.16); }
+  [data-theme="dark"] .budget-chip.need { color: var(--gold); border-color: rgba(212, 166, 74, 0.4); }
 
   /* ========== RESPONSIVE ========== */
   @media (max-width: 900px) {
@@ -6464,6 +6479,52 @@
     '</div>';
   }
 
+  function renderBudgetLineItems() {
+    const exps = (state.expenses || []).slice();
+    if (exps.length === 0) {
+      return '<div class="budget-items-section">' +
+        '<div class="budget-section-header">Line items</div>' +
+        '<div class="empty-state-polished">' +
+          '<div class="empty-glyph">$</div>' +
+          '<div class="empty-text">No expenses logged yet.</div>' +
+        '</div>' +
+      '</div>';
+    }
+    const catById = {};
+    (state.budgetCategories || []).forEach(function(c) { catById[c.id] = c; });
+    const sortOf = function(e) {
+      const c = e.category_id ? catById[e.category_id] : null;
+      return c ? (c.sort_order || 0) : 999;
+    };
+    exps.sort(function(a, b) {
+      const d = sortOf(a) - sortOf(b);
+      return d !== 0 ? d : (a.item || '').localeCompare(b.item || '');
+    });
+    const rows = exps.map(function(e) {
+      const cat = e.category_id ? catById[e.category_id] : null;
+      const catName = cat ? cat.name : 'Uncategorized';
+      const est = e.estimated_amount, act = e.actual_amount;
+      const chip = e.priority ? '<span class="budget-chip ' + e.priority + '">' + e.priority + '</span>' : '';
+      let actClass = '';
+      if (act != null && est != null) actClass = Number(act) > Number(est) ? ' over' : ' under';
+      return '<tr>' +
+        '<td class="budget-item-name">' + escapeHtml(e.item || '') + '</td>' +
+        '<td>' + escapeHtml(catName) + '</td>' +
+        '<td>' + chip + '</td>' +
+        '<td class="budget-num">' + (est != null ? fmtMoney(est) : '—') + '</td>' +
+        '<td class="budget-num' + actClass + '">' + (act != null ? fmtMoney(act) : '—') + '</td>' +
+        '<td>' + (e.paid_by ? escapeHtml(e.paid_by) : '—') + '</td>' +
+      '</tr>';
+    }).join('');
+    return '<div class="budget-items-section">' +
+      '<div class="budget-section-header">Line items</div>' +
+      '<table class="brothers-table budget-items-table">' +
+        '<thead><tr><th>Item</th><th>Category</th><th>Priority</th><th>Estimated</th><th>Actual</th><th>Paid by</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>' +
+    '</div>';
+  }
+
   function renderBudgetView() {
     const t = computeBudgetTotals();
     const hasCap = t.cap > 0;
@@ -6499,6 +6560,7 @@
           '</div>' +
         '</div>' +
         renderBudgetCategoryBars() +
+        renderBudgetLineItems() +
       '</div>';
   }
 
