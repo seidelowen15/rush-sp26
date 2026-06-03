@@ -2284,7 +2284,7 @@
   .budget-cat-fill.none { background: transparent; }
   [data-theme="dark"] .budget-cat-bar { background: rgba(212, 166, 74, 0.12); }
   .budget-items-section { display: flex; flex-direction: column; gap: 14px; }
-  .budget-items-table tbody tr { cursor: default; }
+  .budget-items-table tbody tr { cursor: pointer; }
   .budget-item-name { font-weight: 600; color: var(--navy); }
   [data-theme="dark"] .budget-item-name { color: var(--gold); }
   .budget-num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
@@ -2298,6 +2298,17 @@
   .budget-chip.need { color: var(--navy); border-color: var(--navy); }
   [data-theme="dark"] .budget-chip { background: rgba(212, 166, 74, 0.06); border-color: rgba(212, 166, 74, 0.16); }
   [data-theme="dark"] .budget-chip.need { color: var(--gold); border-color: rgba(212, 166, 74, 0.4); }
+  .budget-actions { display: flex; justify-content: flex-end; }
+  .budget-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-top: 14px; }
+  .budget-cat-figures { cursor: pointer; }
+  .budget-cat-edit { display: inline-flex; align-items: center; gap: 6px; }
+  .budget-cat-input {
+    width: 88px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--surface); color: var(--fg);
+  }
+  .budget-expense-modal .form-row + .form-row,
+  .budget-expense-modal .budget-form-grid + .form-row { margin-top: 14px; }
 
   /* ========== RESPONSIVE ========== */
   @media (max-width: 900px) {
@@ -5407,6 +5418,10 @@
     budgetCategoriesLoaded: false,
     expenses: [],
     expensesLoaded: false,
+    editingExpenseId: null,
+    editingExpense: {},
+    expenseModalOpen: false,
+    editingCategoryId: null,
     milestoneDetail: null,            // §G dashboard polish — selected milestone key (or 'tpl:<id>')
     chapterDates: [],
     chapterDatesLoaded: false,
@@ -5584,7 +5599,7 @@
           '<div class="view ' + (state.currentView === 'brothers' ? 'active' : '') + '">' + renderBrothers() + '</div>' +
           '<div class="view ' + (state.currentView === 'nametags' ? 'active' : '') + '">' + renderNametagsView() + '</div>' +
           '<div class="view ' + (state.currentView === 'marketing' ? 'active' : '') + '">' + renderMarketingView() + renderMarketingPostModal() + '</div>' +
-          '<div class="view ' + (state.currentView === 'budget' ? 'active' : '') + '">' + renderBudgetView() + '</div>' +
+          '<div class="view ' + (state.currentView === 'budget' ? 'active' : '') + '">' + renderBudgetView() + renderBudgetExpenseModal() + '</div>' +
         '</main>' +
       '</div>';
 
@@ -6454,10 +6469,16 @@
       const hasApproved = approved > 0;
       const over = hasApproved && actual > approved;
       const pct = hasApproved ? Math.min(100, (actual / approved) * 100) : 0;
+      const editing = state.editingCategoryId === c.id;
+      const figs = editing
+        ? '<span class="budget-cat-edit">$<input type="number" step="0.01" min="0" id="catApproved-' + c.id + '" class="budget-cat-input" value="' + approved + '">' +
+            '<button class="btn small primary" onclick="saveCategoryBudget(\'' + c.id + '\')">Save</button>' +
+            '<button class="btn small" onclick="cancelCategoryBudget()">Cancel</button></span>'
+        : '<span class="budget-cat-figures" onclick="editCategoryBudget(\'' + c.id + '\')" title="Edit approved budget">' + fmtMoney(actual) + ' <span class="budget-of">/ ' + (hasApproved ? fmtMoney(approved) : '—') + '</span></span>';
       return '<div class="budget-cat-row">' +
         '<div class="budget-cat-head">' +
           '<span class="budget-cat-name">' + escapeHtml(c.name) + '</span>' +
-          '<span class="budget-cat-figures">' + fmtMoney(actual) + ' <span class="budget-of">/ ' + (hasApproved ? fmtMoney(approved) : '—') + '</span></span>' +
+          figs +
         '</div>' +
         '<div class="budget-cat-bar">' +
           '<div class="budget-cat-fill' + (over ? ' over' : '') + (hasApproved ? '' : ' none') + '" style="width:' + pct + '%"></div>' +
@@ -6478,6 +6499,139 @@
       rows.join('') +
     '</div>';
   }
+
+  function renderBudgetExpenseModal() {
+    if (!state.expenseModalOpen) return '';
+    const e = state.editingExpense || {};
+    const isEdit = !!state.editingExpenseId;
+    const cats = (state.budgetCategories || []).slice().sort(function(a, b) { return (a.sort_order || 0) - (b.sort_order || 0); });
+    return '<div class="modal-overlay active" id="expenseModal" onclick="if (event.target === this) closeExpenseModal()">' +
+      '<div class="modal budget-expense-modal">' +
+        '<button class="modal-close" onclick="closeExpenseModal()" aria-label="Close">×</button>' +
+        '<div class="modal-title">' + (isEdit ? 'Edit expense' : 'Add expense') + '</div>' +
+        '<div class="modal-sub">Log a budget line item</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label" for="expItem">Item</label>' +
+          '<input type="text" id="expItem" class="field-input" value="' + escapeHtml(e.item || '') + '" placeholder="e.g. Balloons">' +
+        '</div>' +
+        '<div class="budget-form-grid">' +
+          '<div><label class="field-label" for="expCategory">Category</label>' +
+            '<select id="expCategory" class="field-select"><option value="">Uncategorized</option>' +
+              cats.map(function(c) { return '<option value="' + c.id + '"' + (e.category_id === c.id ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>'; }).join('') +
+            '</select></div>' +
+          '<div><label class="field-label" for="expPriority">Priority</label>' +
+            '<select id="expPriority" class="field-select"><option value="">—</option>' +
+              ['want', 'need'].map(function(p) { return '<option value="' + p + '"' + (e.priority === p ? ' selected' : '') + '>' + p + '</option>'; }).join('') +
+            '</select></div>' +
+        '</div>' +
+        '<div class="budget-form-grid">' +
+          '<div><label class="field-label" for="expEst">Estimated ($)</label>' +
+            '<input type="number" step="0.01" min="0" id="expEst" class="field-input" value="' + (e.estimated_amount != null ? e.estimated_amount : '') + '"></div>' +
+          '<div><label class="field-label" for="expAct">Actual ($)</label>' +
+            '<input type="number" step="0.01" min="0" id="expAct" class="field-input" value="' + (e.actual_amount != null ? e.actual_amount : '') + '"></div>' +
+        '</div>' +
+        '<div class="budget-form-grid">' +
+          '<div><label class="field-label" for="expPaidBy">Paid by</label>' +
+            '<input type="text" id="expPaidBy" class="field-input" value="' + escapeHtml(e.paid_by || '') + '" placeholder="Who fronted it"></div>' +
+          '<div><label class="field-label" for="expDate">Date</label>' +
+            '<input type="date" id="expDate" class="field-input" value="' + escapeHtml(e.spent_on || '') + '"></div>' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label" for="expVendor">Vendor</label>' +
+          '<input type="text" id="expVendor" class="field-input" value="' + escapeHtml(e.vendor || '') + '" placeholder="Where bought (optional)">' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label" for="expReceipt">Receipt link</label>' +
+          '<input type="url" id="expReceipt" class="field-input" value="' + escapeHtml(e.receipt_url || '') + '" placeholder="https://... (optional)">' +
+        '</div>' +
+        '<div class="form-row">' +
+          '<label class="field-label" for="expNotes">Notes</label>' +
+          '<textarea id="expNotes" class="field-textarea" rows="2" placeholder="Optional">' + escapeHtml(e.notes || '') + '</textarea>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          (isEdit ? '<button class="btn small danger" onclick="deleteExpense()">Delete</button>' : '<span></span>') +
+          '<div class="right">' +
+            '<button class="btn" onclick="closeExpenseModal()">Cancel</button>' +
+            '<button class="btn primary" onclick="saveExpense()">' + (isEdit ? 'Save' : 'Add expense') + '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.openExpenseModal = function(id) {
+    if (id) {
+      const x = (state.expenses || []).find(function(e) { return e.id === id; });
+      if (!x) { toast('Expense not found.', 'error'); return; }
+      state.editingExpenseId = id;
+      state.editingExpense = Object.assign({}, x);
+    } else {
+      state.editingExpenseId = null;
+      state.editingExpense = { item: '', category_id: '', priority: '', spent_on: new Date().toISOString().slice(0, 10) };
+    }
+    state.expenseModalOpen = true;
+    render();
+    setTimeout(function() { const el = document.getElementById('expItem'); if (el) el.focus(); }, 50);
+  };
+
+  window.closeExpenseModal = function() {
+    state.expenseModalOpen = false;
+    state.editingExpenseId = null;
+    state.editingExpense = {};
+    render();
+  };
+
+  window.saveExpense = async function() {
+    function numOrNull(v) { return (v === '' || v == null) ? null : Number(v); }
+    const item = (document.getElementById('expItem').value || '').trim();
+    if (!item) { toast('Item is required.', 'error'); return; }
+    const est = numOrNull(document.getElementById('expEst').value);
+    const act = numOrNull(document.getElementById('expAct').value);
+    if (est == null && act == null) { toast('Enter an estimated or actual amount.', 'error'); return; }
+    const payload = {
+      item: item,
+      category_id: document.getElementById('expCategory').value || null,
+      priority: document.getElementById('expPriority').value || null,
+      estimated_amount: est, actual_amount: act,
+      paid_by: (document.getElementById('expPaidBy').value || '').trim() || null,
+      spent_on: document.getElementById('expDate').value || null,
+      vendor: (document.getElementById('expVendor').value || '').trim() || null,
+      receipt_url: (document.getElementById('expReceipt').value || '').trim() || null,
+      notes: (document.getElementById('expNotes').value || '').trim() || null,
+      updated_at: new Date().toISOString(), updated_by: state.currentUser
+    };
+    try {
+      if (state.editingExpenseId) {
+        const { error } = await sb.from('expenses').update(payload).eq('id', state.editingExpenseId);
+        if (error) throw error;
+      } else {
+        payload.created_by = state.currentUser;
+        const { error } = await sb.from('expenses').insert(payload);
+        if (error) throw error;
+      }
+      await loadExpenses();
+      toast(state.editingExpenseId ? 'Expense updated.' : 'Expense added.', 'success');
+      closeExpenseModal();
+    } catch (err) {
+      console.error('saveExpense failed', err);
+      toast('Save failed — check console.', 'error');
+    }
+  };
+
+  window.deleteExpense = async function() {
+    if (!state.editingExpenseId) return;
+    if (!confirm('Delete this expense?')) return;
+    try {
+      const { error } = await sb.from('expenses').delete().eq('id', state.editingExpenseId);
+      if (error) throw error;
+      await loadExpenses();
+      toast('Expense deleted.', 'success');
+      closeExpenseModal();
+    } catch (err) {
+      console.error('deleteExpense failed', err);
+      toast('Delete failed — check console.', 'error');
+    }
+  };
 
   function renderBudgetLineItems() {
     const exps = (state.expenses || []).slice();
@@ -6507,7 +6661,7 @@
       const chip = e.priority ? '<span class="budget-chip ' + e.priority + '">' + e.priority + '</span>' : '';
       let actClass = '';
       if (act != null && est != null) actClass = Number(act) > Number(est) ? ' over' : ' under';
-      return '<tr>' +
+      return '<tr onclick="openExpenseModal(\'' + e.id + '\')">' +
         '<td class="budget-item-name">' + escapeHtml(e.item || '') + '</td>' +
         '<td>' + escapeHtml(catName) + '</td>' +
         '<td>' + chip + '</td>' +
@@ -6525,11 +6679,40 @@
     '</div>';
   }
 
+  window.editCategoryBudget = function(id) {
+    state.editingCategoryId = id;
+    render();
+    setTimeout(function() { const el = document.getElementById('catApproved-' + id); if (el) { el.focus(); el.select(); } }, 50);
+  };
+
+  window.cancelCategoryBudget = function() {
+    state.editingCategoryId = null;
+    render();
+  };
+
+  window.saveCategoryBudget = async function(id) {
+    const el = document.getElementById('catApproved-' + id);
+    if (!el) return;
+    const val = el.value === '' ? 0 : Number(el.value);
+    if (isNaN(val) || val < 0) { toast('Enter a valid amount.', 'error'); return; }
+    try {
+      const { error } = await sb.from('budget_categories').update({ approved_amount: val, updated_at: new Date().toISOString(), updated_by: state.currentUser }).eq('id', id);
+      if (error) throw error;
+      state.editingCategoryId = null;
+      await loadBudgetCategories();
+      toast('Budget updated.', 'success');
+    } catch (e) {
+      console.error('saveCategoryBudget failed', e);
+      toast('Save failed — check console.', 'error');
+    }
+  };
+
   function renderBudgetView() {
     const t = computeBudgetTotals();
     const hasCap = t.cap > 0;
     return '' +
       '<div class="budget-view">' +
+        '<div class="budget-actions"><button class="btn primary small" onclick="openExpenseModal()">+ Add expense</button></div>' +
         '<div class="budget-summary-card">' +
           '<div class="budget-summary-head">' +
             '<span class="budget-summary-label">Actual spend vs approved budget</span>' +
