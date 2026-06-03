@@ -6707,6 +6707,34 @@
     }
   };
 
+  function renderBudgetReimbursements() {
+    const byPerson = {};
+    (state.expenses || []).forEach(function(e) {
+      if (e.actual_amount == null) return;
+      const who = (e.paid_by && e.paid_by.trim()) ? e.paid_by.trim() : 'Unassigned';
+      byPerson[who] = (byPerson[who] || 0) + Number(e.actual_amount || 0);
+    });
+    const people = Object.keys(byPerson).map(function(k) { return { name: k, total: byPerson[k] }; });
+    if (people.length === 0) return '';
+    people.sort(function(a, b) { return b.total - a.total; });
+    const max = people.reduce(function(m, p) { return Math.max(m, p.total); }, 0);
+    const rows = people.map(function(p) {
+      const pct = max > 0 ? Math.min(100, (p.total / max) * 100) : 0;
+      const unassigned = p.name === 'Unassigned';
+      return '<div class="budget-cat-row">' +
+        '<div class="budget-cat-head">' +
+          '<span class="budget-cat-name' + (unassigned ? ' budget-cat-uncat' : '') + '">' + escapeHtml(p.name) + '</span>' +
+          '<span class="budget-cat-figures">' + fmtMoney(p.total) + '</span>' +
+        '</div>' +
+        '<div class="budget-cat-bar"><div class="budget-cat-fill" style="width:' + pct + '%"></div></div>' +
+      '</div>';
+    }).join('');
+    return '<div class="budget-cat-section">' +
+      '<div class="budget-section-header">Reimbursements · who fronted what</div>' +
+      rows +
+    '</div>';
+  }
+
   function renderBudgetView() {
     const t = computeBudgetTotals();
     const hasCap = t.cap > 0;
@@ -6744,6 +6772,7 @@
         '</div>' +
         renderBudgetCategoryBars() +
         renderBudgetLineItems() +
+        renderBudgetReimbursements() +
       '</div>';
   }
 
