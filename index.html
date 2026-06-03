@@ -5331,6 +5331,7 @@
           '<div class="view ' + (state.currentView === 'brothers' ? 'active' : '') + '">' + renderBrothers() + '</div>' +
           '<div class="view ' + (state.currentView === 'nametags' ? 'active' : '') + '">' + renderNametagsView() + '</div>' +
           '<div class="view ' + (state.currentView === 'marketing' ? 'active' : '') + '">' + renderMarketingView() + renderMarketingPostModal() + '</div>' +
+          '<div class="view ' + (state.currentView === 'budget' ? 'active' : '') + '">' + renderBudgetView() + '</div>' +
         '</main>' +
       '</div>';
 
@@ -5414,6 +5415,7 @@
     brothers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8.5" cy="8" r="3"/><path d="M3.5 19c0-3 2.2-4.6 5-4.6s5 1.6 5 4.6"/><path d="M16 5.3a3 3 0 0 1 0 5.4"/><path d="M16.8 14.6c2 .5 3.4 1.9 3.4 4.4"/></svg>',
     nametags: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><circle cx="8.5" cy="11" r="1.8"/><path d="M13.5 10h4M13.5 13h4M6 16c.4-1.3 1.4-1.9 2.5-1.9s2.1.6 2.5 1.9"/></svg>',
     marketing: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10v4h3l9 4.5v-13L6 10H3Z"/><path d="M18 9.5a3 3 0 0 1 0 5"/></svg>',
+    budget: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg>',
   };
   const BRAND_HEX = '<svg viewBox="0 0 46 50" preserveAspectRatio="none"><polygon points="23,1.5 44.5,13 44.5,37 23,48.5 1.5,37 1.5,13" fill="#13213a" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 
@@ -5429,6 +5431,7 @@
       { id: 'brothers', label: 'Brothers', icon: '◍', count: state.brothers.length },
       { id: 'nametags', label: 'Nametags', icon: '◇', count: state.nametagSelected.size || undefined },
       { id: 'marketing', label: 'Marketing', icon: '◭', count: state.marketingPosts.length },
+      { id: 'budget', label: 'Budget', icon: '▤' },
     ];
 
     return '' +
@@ -5487,6 +5490,7 @@
       brothers: ['Brothers', '& chapter'],
       nametags: ['Nametags', '& print'],
       marketing: ['Marketing', '& calendar'],
+      budget: ['Budget', '& expenses'],
     };
     const parts = titles[state.currentView] || [state.currentView, ''];
     const main = parts[0], em = parts[1];
@@ -6126,6 +6130,16 @@
     if (!iso) return '';
     const d = new Date(iso + 'T00:00:00');
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function renderBudgetView() {
+    return '' +
+      '<div class="budget-view">' +
+        '<div class="empty-state-polished">' +
+          '<div class="empty-glyph">$</div>' +
+          '<div class="empty-text">Budget tracking is coming online here.</div>' +
+        '</div>' +
+      '</div>';
   }
 
   function renderMarketingView() {
