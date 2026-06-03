@@ -2212,6 +2212,58 @@
 
   [data-theme="dark"] .storage-banner { color: var(--gold); }
 
+  /* ========== BUDGET (Phase 0 #6) ========== */
+  .budget-view { display: flex; flex-direction: column; gap: 28px; }
+  .budget-summary-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 24px 26px;
+  }
+  .budget-summary-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 16px; margin-bottom: 16px;
+  }
+  .budget-summary-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.16em; color: var(--fg-muted);
+  }
+  .budget-summary-figures {
+    font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--fg);
+  }
+  .budget-of { color: var(--fg-muted); font-size: 18px; }
+  .budget-cap-bar {
+    height: 6px; background: var(--line); border-radius: 3px; overflow: hidden;
+  }
+  .budget-cap-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--navy), var(--gold-dark));
+    transition: width 0.4s ease;
+  }
+  .budget-cap-fill.over { background: var(--danger); }
+  .budget-summary-meta {
+    margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  }
+  .budget-under { color: var(--success); }
+  .budget-over { color: var(--danger); }
+  .budget-cap-pending { color: var(--fg-muted); font-style: italic; }
+  .budget-figure-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .budget-figure-tile {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .budget-figure-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    text-transform: uppercase; letter-spacing: 0.16em; color: var(--fg-muted);
+    margin-bottom: 8px;
+  }
+  .budget-figure-value {
+    font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--fg);
+  }
+  [data-theme="dark"] .budget-summary-card,
+  [data-theme="dark"] .budget-figure-tile {
+    background: rgba(212, 166, 74, 0.04); border-color: rgba(212, 166, 74, 0.14);
+  }
+  [data-theme="dark"] .budget-cap-bar { background: rgba(212, 166, 74, 0.12); }
+
   /* ========== RESPONSIVE ========== */
   @media (max-width: 900px) {
     .app { grid-template-columns: 1fr; }
@@ -2791,6 +2843,15 @@
   .nametag-overrides-panel .field-select {
     font-size: 13px; padding: 0 10px;
     height: 34px;
+  }
+  /* Reserve room for the native dropdown arrow so long option text (e.g. the
+     Avery dimensions or "Template default (...)") never spills under it. Clip
+     with an ellipsis at any length instead of overlapping. */
+  .nametag-overrides-panel .field-select {
+    padding-right: 30px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
   }
   .nametag-overrides-panel .nametag-color-swatch {
     position: relative;
@@ -5155,6 +5216,15 @@
         render();
       }, 250);
     });
+    // Phase 0 #6: budget realtime — isolated per-table loaders.
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'budget_categories' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => { await loadBudgetCategories(); render(); }, 250);
+    });
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => { await loadExpenses(); render(); }, 250);
+    });
     channel.subscribe();
   }
 
@@ -5297,6 +5367,11 @@
     marketingViewMode: 'calendar',     // 'calendar' | 'list'
     editingMarketingPostId: null,
     editingMarketingPost: {},
+    // Phase 0 #6 — Budget Tracking
+    budgetCategories: [],
+    budgetCategoriesLoaded: false,
+    expenses: [],
+    expensesLoaded: false,
     milestoneDetail: null,            // §G dashboard polish — selected milestone key (or 'tpl:<id>')
     chapterDates: [],
     chapterDatesLoaded: false,
@@ -5369,6 +5444,9 @@
       await loadChapterDates();
       // Phase 0 #5
       await loadMarketingPosts();
+      // Phase 0 #6
+      await loadBudgetCategories();
+      await loadExpenses();
       // Phase 0 #4 v2: silent boot-time sync. No toast, no banner — generation
       // is invisible to chairs at boot. Explicit saveChapterDate triggers
       // surface counts in their own toast.
@@ -6272,12 +6350,89 @@
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  // ============================================================
+  // BUDGET TRACKING (Phase 0 #6)
+  // Typed tables: budget_categories (approved per cat) + expenses
+  // (line items, est + actual). Cap derived = SUM(approved_amount).
+  // Isolated realtime; reuses dashboard segment-bar visual language.
+  // ============================================================
+  async function loadBudgetCategories() {
+    try {
+      const { data, error } = await sb.from('budget_categories').select('*').order('sort_order', { ascending: true });
+      if (error) throw error;
+      state.budgetCategories = data || [];
+      state.budgetCategoriesLoaded = true;
+    } catch (e) {
+      console.error('loadBudgetCategories failed', e);
+      state.budgetCategories = [];
+      state.budgetCategoriesLoaded = true;
+    }
+  }
+
+  async function loadExpenses() {
+    try {
+      const { data, error } = await sb.from('expenses').select('*').order('spent_on', { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      state.expenses = data || [];
+      state.expensesLoaded = true;
+    } catch (e) {
+      console.error('loadExpenses failed', e);
+      state.expenses = [];
+      state.expensesLoaded = true;
+    }
+  }
+
+  function computeBudgetTotals() {
+    const cats = state.budgetCategories || [];
+    const exps = state.expenses || [];
+    const cap       = cats.reduce(function(s, c) { return s + Number(c.approved_amount || 0); }, 0);
+    const estimated = exps.reduce(function(s, e) { return s + Number(e.estimated_amount || 0); }, 0);
+    const actual    = exps.reduce(function(s, e) { return s + Number(e.actual_amount || 0); }, 0);
+    return {
+      cap: cap, estimated: estimated, actual: actual,
+      remaining: cap - actual,
+      pctActual: cap > 0 ? Math.min(100, (actual / cap) * 100) : 0,
+      overCap: cap > 0 && actual > cap
+    };
+  }
+
+  function fmtMoney(n) {
+    return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   function renderBudgetView() {
+    const t = computeBudgetTotals();
+    const hasCap = t.cap > 0;
     return '' +
       '<div class="budget-view">' +
-        '<div class="empty-state-polished">' +
-          '<div class="empty-glyph">$</div>' +
-          '<div class="empty-text">Budget tracking is coming online here.</div>' +
+        '<div class="budget-summary-card">' +
+          '<div class="budget-summary-head">' +
+            '<span class="budget-summary-label">Actual spend vs approved budget</span>' +
+            '<span class="budget-summary-figures">' + fmtMoney(t.actual) + ' <span class="budget-of">/ ' + (hasCap ? fmtMoney(t.cap) : '—') + '</span></span>' +
+          '</div>' +
+          '<div class="budget-cap-bar">' +
+            '<div class="budget-cap-fill' + (t.overCap ? ' over' : '') + '" style="width:' + (hasCap ? t.pctActual : 0) + '%"></div>' +
+          '</div>' +
+          '<div class="budget-summary-meta">' +
+            (hasCap
+              ? '<span class="' + (t.overCap ? 'budget-over' : 'budget-under') + '">' +
+                  (t.overCap ? fmtMoney(t.actual - t.cap) + ' over budget' : fmtMoney(t.remaining) + ' remaining') + '</span>'
+              : '<span class="budget-cap-pending">No approved budget set yet</span>') +
+          '</div>' +
+        '</div>' +
+        '<div class="budget-figure-row">' +
+          '<div class="budget-figure-tile">' +
+            '<div class="budget-figure-label">Estimated</div>' +
+            '<div class="budget-figure-value">' + fmtMoney(t.estimated) + '</div>' +
+          '</div>' +
+          '<div class="budget-figure-tile">' +
+            '<div class="budget-figure-label">Actual</div>' +
+            '<div class="budget-figure-value">' + fmtMoney(t.actual) + '</div>' +
+          '</div>' +
+          '<div class="budget-figure-tile">' +
+            '<div class="budget-figure-label">Approved</div>' +
+            '<div class="budget-figure-value">' + (hasCap ? fmtMoney(t.cap) : '—') + '</div>' +
+          '</div>' +
         '</div>' +
       '</div>';
   }
@@ -8968,6 +9123,36 @@
       accentStyle: 'border-frame',
       showAkpsi: true, showPC: true,
     },
+    // Three additions to round the picker to an even 5×2 grid. Light grounds
+    // keep the (dark) name text legible; fonts stay within the allowed set.
+    'cocktail-hour': {
+      label: 'Cocktail Hour',
+      bg: '#F5ECDD', accent: '#7E2D40',
+      nameFont: "'Playfair Display', serif", nameWeight: 700,
+      nameStyle: 'first',
+      metaFont: "'JetBrains Mono', monospace",
+      accentStyle: 'double-rule',
+      showAkpsi: true, showPC: true,
+    },
+    'tailgate': {
+      label: 'Tailgate',
+      bg: '#EAF1F3', accent: '#1E6B73',
+      accentSecondary: '#D4A64A',
+      nameFont: "'Inter', sans-serif", nameWeight: 700,
+      nameStyle: 'first-last-initial',
+      metaFont: "'JetBrains Mono', monospace",
+      accentStyle: 'side-rails',
+      showAkpsi: true, showPC: true,
+    },
+    'formal-night': {
+      label: 'Formal',
+      bg: '#FFFFFF', accent: '#23262E',
+      nameFont: "'Playfair Display', serif", nameWeight: 700,
+      nameStyle: 'full-name',
+      metaFont: "'JetBrains Mono', monospace",
+      accentStyle: 'corner-ticks',
+      showAkpsi: true, showPC: true,
+    },
   };
 
   // ----- Data -----
@@ -9166,6 +9351,24 @@
     } else if (tmpl.accentStyle === 'border-frame') {
       accentEl = '<div style="position:absolute; inset:0.08in; border:0.02in double ' + accent + '; pointer-events:none;"></div>';
       padding = '0.4in 0.32in 0.36in';
+    } else if (tmpl.accentStyle === 'double-rule') {
+      // Editorial: two thin hairlines framing the name, top and bottom.
+      accentEl = '<div style="position:absolute; top:0.24in; left:0.5in; right:0.5in; height:0.015in; background:' + accent + ';"></div>' +
+                 '<div style="position:absolute; bottom:0.24in; left:0.5in; right:0.5in; height:0.015in; background:' + accent + ';"></div>';
+      padding = '0.42in 0.3in 0.42in';
+    } else if (tmpl.accentStyle === 'side-rails') {
+      // Two vertical rails (accent left, secondary right) hugging the edges.
+      accentEl = '<div style="position:absolute; top:0.18in; bottom:0.18in; left:0.17in; width:0.025in; background:' + accent + ';"></div>' +
+                 '<div style="position:absolute; top:0.18in; bottom:0.18in; right:0.17in; width:0.025in; background:' + accentSec + ';"></div>';
+      padding = '0.3in 0.44in';
+    } else if (tmpl.accentStyle === 'corner-ticks') {
+      // L-shaped brackets in two opposite corners — formal, framed feel.
+      var ct = '0.025in', cl = '0.3in', co = '0.13in';
+      accentEl = '<div style="position:absolute; top:' + co + '; left:' + co + '; width:' + cl + '; height:' + ct + '; background:' + accent + ';"></div>' +
+                 '<div style="position:absolute; top:' + co + '; left:' + co + '; width:' + ct + '; height:' + cl + '; background:' + accent + ';"></div>' +
+                 '<div style="position:absolute; bottom:' + co + '; right:' + co + '; width:' + cl + '; height:' + ct + '; background:' + accent + ';"></div>' +
+                 '<div style="position:absolute; bottom:' + co + '; right:' + co + '; width:' + ct + '; height:' + cl + '; background:' + accent + ';"></div>';
+      padding = '0.36in 0.36in';
     } else {  // 'bottom-line' (default / generic)
       accentEl = '<div style="position:absolute; bottom:0; left:0.4in; right:0.4in; height:0.04in; background:' + accent + ';"></div>';
     }
