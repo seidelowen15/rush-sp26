@@ -2644,59 +2644,122 @@
   }
   .nametag-picker-pane { flex: 1; min-width: 0; }
   .nametag-preview-pane {
-    width: 360px;
+    width: 380px;
     flex-shrink: 0;
     position: sticky;
     top: 20px;
   }
-  .nametag-template-strip {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    overflow-x: auto;
-    padding-bottom: 4px;
+  /* Redesign: sentence-case step heading. Intentional, page-scoped departure
+     from the global mono-uppercase section-header convention. */
+  .nametag-step-head {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--fg);
+    letter-spacing: -0.01em;
+    margin: 0 0 14px;
   }
-  .nametag-template-chip {
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    padding: 12px 18px;
+  .nametag-picker-pane > .nametag-step-head { margin-top: 4px; }
+  .nametag-preview-pane > .nametag-step-head:not(:first-child) { margin-top: 28px; }
+  /* Redesign: large visual template cards, each a miniature real nametag.
+     Replaces the old overflow chip strip. note-card chrome. */
+  .nametag-template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .nametag-template-card {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 14px;
     border: 1px solid var(--line);
     border-radius: 10px;
     background: var(--surface);
     cursor: pointer;
-    transition: all 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s;
     font: inherit;
     color: var(--fg);
+    text-align: center;
   }
-  .nametag-template-chip:hover { border-color: var(--gold); }
-  .nametag-template-chip.selected {
+  .nametag-template-card:hover { border-color: var(--gold); }
+  .nametag-template-card.selected {
     border-color: var(--navy);
     box-shadow: 0 0 0 2px var(--navy) inset;
   }
-  .nametag-template-chip .chip-swatch {
-    width: 56px; height: 32px;
-    border-radius: 4px;
-    background: var(--chip-bg);
+  [data-theme="dark"] .nametag-template-card.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px var(--gold) inset;
+  }
+  .nametag-template-thumb {
+    width: 100%;
+    height: 116px;
+    border-radius: 6px;
     border: 1px solid var(--line);
-    position: relative;
+    background: var(--parchment);
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
   }
-  .nametag-template-chip .chip-swatch::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 5px;
-    background: var(--chip-accent);
+  [data-theme="dark"] .nametag-template-thumb {
+    background: rgba(212, 166, 74, 0.06);
+    border-color: rgba(212, 166, 74, 0.18);
   }
-  .nametag-template-chip .chip-label {
-    font-size: 12px;
+  .nametag-template-thumb .nametag-thumb-box { position: relative; }
+  .nametag-template-thumb .nametag-thumb-scale {
+    position: absolute; top: 0; left: 0;
+    transform-origin: top left;
+  }
+  .nametag-template-card .template-card-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.04em;
+    color: var(--fg);
   }
-  .nametag-overrides-panel {
+  /* Redesign: Advanced Styling disclosure. note-card chrome on the bar; the
+     overrides body is gated open/closed. */
+  .nametag-advanced {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 10px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+  .nametag-advanced-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    width: 100%;
     padding: 14px 16px;
-    margin-bottom: 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    color: var(--fg);
+    text-align: left;
+  }
+  .nametag-advanced-head:hover { background: var(--parchment); }
+  [data-theme="dark"] .nametag-advanced-head:hover { background: rgba(212, 166, 74, 0.06); }
+  .nametag-advanced-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .nametag-advanced-chevron {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--fg-muted);
+  }
+  .nametag-advanced.open .nametag-advanced-chevron { color: var(--navy); }
+  [data-theme="dark"] .nametag-advanced.open .nametag-advanced-chevron { color: var(--gold); }
+  .nametag-advanced-body {
+    padding: 4px 16px 16px;
+    border-top: 1px solid var(--line);
+  }
+  /* Inner container loses its own card chrome — the disclosure bar supplies it. */
+  .nametag-overrides-panel {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
   }
   .nametag-overrides-panel .overrides-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -2762,18 +2825,23 @@
     width: auto;
     min-width: 120px;
   }
+  /* Redesign: actionable selection toolbar — count left, actions, primary CTA right. */
   .nametag-picker-actions {
     display: flex; gap: 10px; align-items: center;
-    margin: 0 0 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--line);
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
   }
   .nametag-picker-actions .selection-count {
-    margin-left: auto;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     color: var(--fg-muted);
   }
+  .nametag-picker-actions .nametag-generate-inline { margin-left: auto; }
+  /* Redesign: roomier rows for a cleaner, less noisy picker table. */
+  .nametag-picker-table tbody td { padding: 15px 12px; }
   .nametag-picker-table tbody tr.selected-row {
     background: rgba(212, 166, 74, 0.10);
   }
@@ -2826,17 +2894,53 @@
     text-transform: uppercase; letter-spacing: 0.08em;
     margin-bottom: 8px;
   }
+  /* Redesign: the preview is the hero of the right column — enlarge it. */
   .nametag-preview-card {
     border: 1px solid var(--line);
     border-radius: 10px;
-    padding: 18px;
+    padding: 28px 22px;
     background: var(--parchment);
     display: flex; justify-content: center; align-items: center;
-    margin-bottom: 10px;
-    min-height: 270px;
+    margin-bottom: 12px;
+    min-height: 340px;
   }
   [data-theme="dark"] .nametag-preview-card {
     background: rgba(212, 166, 74, 0.06);
+  }
+  /* Redesign: preview pager — cycle through the current selection/filter pool. */
+  .nametag-preview-pager {
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+  .nametag-pager-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--fg);
+    font: inherit; font-size: 16px; line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .nametag-pager-btn:hover:not([disabled]) { border-color: var(--navy); background: var(--parchment); }
+  [data-theme="dark"] .nametag-pager-btn:hover:not([disabled]) { border-color: var(--gold); background: rgba(212, 166, 74, 0.06); }
+  .nametag-pager-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .nametag-pager-pos {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--fg-muted);
+    min-width: 78px;
+    text-align: center;
+  }
+  .nametag-preview-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+    text-align: center;
+    margin-bottom: 12px;
   }
   .nametag-preview-empty {
     border: 1px dashed var(--line-strong);
@@ -2855,8 +2959,41 @@
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 10px;
-    padding: 14px 16px;
-    display: flex; flex-direction: column; gap: 10px;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  /* Redesign: print-job summary lines. */
+  .print-job-summary {
+    display: flex; flex-direction: column; gap: 0;
+    background: var(--parchment);
+    border-radius: 8px;
+    padding: 4px 12px;
+  }
+  [data-theme="dark"] .print-job-summary { background: rgba(212, 166, 74, 0.06); }
+  .print-job-summary .pj-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .print-job-summary .pj-row:last-child { border-bottom: none; }
+  .print-job-summary .pj-key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-muted);
+  }
+  .print-job-summary .pj-val {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+    text-align: right;
+  }
+  .nametag-job-note {
+    font-size: 11px;
+    color: var(--fg-muted);
+    font-style: italic;
+    line-height: 1.4;
   }
   .nametag-print-plan {
     display: flex; flex-direction: column; gap: 2px;
@@ -5141,6 +5278,9 @@
                         bgColor: null, accentColor: null, showEventOnCard: false },
     nametagEventLabel: '',
     nametagPreviewBrotherId: null,
+    // Redesign: Advanced Styling disclosure collapsed by default; preview pager index.
+    nametagOverridesOpen: false,
+    nametagPreviewIndex: 0,
     nametagGenerating: false,
     // v1.1: print history sub-view (read-only)
     nametagSubview: 'generate',
@@ -8968,9 +9108,25 @@
     return { toPrint, skipped };
   }
 
+  // Redesign: the preview pager cycles through selected brothers when any are
+  // selected, otherwise the filtered set. Single source of truth for both the
+  // preview pane and the prev/next handler.
+  function getNametagPreviewPool() {
+    var selectedIds = Array.from(state.nametagSelected);
+    if (selectedIds.length) {
+      return selectedIds
+        .map(function(id){ return state.brothers.find(function(b){ return b.id === id; }); })
+        .filter(Boolean);
+    }
+    return getNametagFilteredBrothers();
+  }
+
   // ----- Card renderer (single source of truth) -----
-  function renderNametagCardHTML(brother) {
-    const tmpl = NAMETAG_TEMPLATES[state.nametagTemplate] || NAMETAG_TEMPLATES['generic'];
+  function renderNametagCardHTML(brother, templateKey) {
+    // Redesign: templateKey defaults to the active template, so existing call
+    // sites (renderNametagCardHTML(b)) keep working. The template strip passes
+    // an explicit key to render each template's miniature.
+    const tmpl = NAMETAG_TEMPLATES[templateKey || state.nametagTemplate] || NAMETAG_TEMPLATES['generic'];
     const ov = state.nametagOverrides;
     const dims = getActiveDimensions();
     const bg = ov.bgColor || tmpl.bg;
@@ -9180,15 +9336,32 @@
   }
 
   function renderNametagTemplateStrip() {
-    return '<div class="nametag-template-strip">' +
+    // Redesign: large cards, each a miniature real nametag. A synthetic sample
+    // brother keeps every card identical regardless of data (matches mockup).
+    var sample = { preferred_name: 'Arnav', first_name: 'Arnav', last_name: 'A.', pledge_class_code: 'ZS', role: null };
+    // Cards render at real inch dimensions; downscale a fixed-size wrapper so the
+    // scaled card fits the thumbnail. Scale is computed from the active dims so
+    // custom dimensions still preview cleanly (dynamic sizing → inline, the same
+    // exception as the per-template card colors).
+    var dims = getActiveDimensions();
+    var realW = dims.cardW * 96, realH = dims.cardH * 96;
+    var scale = realH > 0 ? 100 / realH : 0.45;
+    var boxW = Math.round(realW * scale), boxH = Math.round(realH * scale);
+    return '<div class="nametag-step-head">1. Choose a template</div>' +
+      '<div class="nametag-template-grid">' +
       Object.entries(NAMETAG_TEMPLATES).map(function(entry) {
         var key = entry[0]; var tmpl = entry[1];
         var sel = state.nametagTemplate === key;
-        return '<button class="nametag-template-chip' + (sel ? ' selected' : '') + '" ' +
-          'onclick="setNametagTemplate(\'' + key + '\')" ' +
-          'style="--chip-accent:' + tmpl.accent + '; --chip-bg:' + tmpl.bg + ';">' +
-          '<div class="chip-swatch"></div>' +
-          '<div class="chip-label">' + escapeHtml(tmpl.label) + '</div>' +
+        return '<button class="nametag-template-card' + (sel ? ' selected' : '') + '" ' +
+          'onclick="setNametagTemplate(\'' + key + '\')">' +
+          '<div class="nametag-template-thumb">' +
+            '<div class="nametag-thumb-box" style="width:' + boxW + 'px; height:' + boxH + 'px;">' +
+              '<div class="nametag-thumb-scale" style="transform:scale(' + scale.toFixed(4) + ');">' +
+                renderNametagCardHTML(sample, key) +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="template-card-label">' + escapeHtml(tmpl.label) + '</div>' +
         '</button>';
       }).join('') +
     '</div>';
@@ -9236,9 +9409,13 @@
         return '<option value="' + escapeHtml(f[0]) + '"' + (ov.nameFont === f[0] ? ' selected' : '') + '>' + escapeHtml(f[1]) + '</option>';
       }).join('');
 
-    return '<div class="nametag-overrides-panel">' +
+    // Redesign: collapsed-by-default disclosure. Body is gated on
+    // state.nametagOverridesOpen; every field/handler below is unchanged.
+    var open = !!state.nametagOverridesOpen;
+    var body = '<div class="nametag-advanced-body">' +
+      '<div class="nametag-overrides-panel">' +
       '<div class="overrides-header">' +
-        '<div class="overrides-label">Overrides (this print job only)</div>' +
+        '<div class="overrides-label">Per print-job overrides</div>' +
         '<button class="btn small overrides-reset" onclick="resetNametagOverrides()">Reset overrides</button>' +
       '</div>' +
       '<div class="overrides-grid">' +
@@ -9313,6 +9490,15 @@
         '</label>' +
       '</div>' +
       customWarning +
+    '</div>' +   // close .nametag-overrides-panel
+    '</div>';    // close .nametag-advanced-body
+
+    return '<div class="nametag-advanced' + (open ? ' open' : '') + '">' +
+      '<button class="nametag-advanced-head" onclick="toggleNametagOverridesOpen()">' +
+        '<span class="nametag-advanced-title">Advanced styling (optional)</span>' +
+        '<span class="nametag-advanced-chevron">' + (open ? '▾' : '▸') + '</span>' +
+      '</button>' +
+      (open ? body : '') +
     '</div>';
   }
 
@@ -9323,6 +9509,7 @@
     var eventLabel = state.nametagEventLabel.trim();
 
     return '<div class="nametag-picker">' +
+      '<div class="nametag-step-head">2. Select brothers</div>' +
       '<div class="brothers-toolbar">' +
         '<input type="search" class="field-input search" placeholder="Search name, PSU ID, major..." ' +
           'value="' + escapeHtml(f.search) + '" oninput="setNametagFilter(\'search\', this.value)">' +
@@ -9341,9 +9528,10 @@
         '<span class="brothers-count">' + filtered.length + ' brothers</span>' +
       '</div>' +
       '<div class="nametag-picker-actions">' +
-        '<button class="btn small" onclick="selectAllVisibleForNametag()">Select all visible</button>' +
-        '<button class="btn small" onclick="clearNametagSelection()">Clear selection</button>' +
         '<span class="selection-count">' + state.nametagSelected.size + ' selected</span>' +
+        '<button class="btn small" onclick="clearNametagSelection()">Clear selection</button>' +
+        '<button class="btn small" onclick="selectAllVisibleForNametag()">Select all filtered</button>' +
+        '<button class="btn primary small nametag-generate-inline" onclick="generateNametagPDF()">Generate nametags →</button>' +
       '</div>' +
       '<table class="brothers-table nametag-picker-table">' +
         '<thead><tr>' +
@@ -9391,34 +9579,53 @@
 
   function renderNametagPreviewPane() {
     if (!state.brothersLoaded) {
-      return '<div class="nametag-preview-empty">Loading brothers…</div>';
+      return '<div class="nametag-step-head">Preview</div>' +
+        '<div class="nametag-preview-empty">Loading brothers…</div>';
     }
-    var filtered = getNametagFilteredBrothers();
-    var previewId = state.nametagPreviewBrotherId;
-    if (!previewId || !state.brothers.find(function(b){return b.id === previewId;})) {
-      var firstSelected = Array.from(state.nametagSelected)[0];
-      previewId = firstSelected || (filtered[0] && filtered[0].id);
+    // Redesign: pager cycles the preview through the selection/filter pool.
+    var pool = getNametagPreviewPool();
+    if (!pool.length) {
+      return '<div class="nametag-step-head">Preview</div>' +
+        '<div class="nametag-preview-empty">' +
+          '<div style="font-family:\'Playfair Display\',serif; font-style:italic;">Pick a brother to preview</div>' +
+          '<div style="font-size:11px; margin-top:6px;">Click any row in the picker.</div>' +
+        '</div>';
     }
-    var b = state.brothers.find(function(x){return x.id === previewId;});
-    if (!b) {
-      return '<div class="nametag-preview-empty">' +
-        '<div style="font-family:\'Playfair Display\',serif; font-style:italic;">Pick a brother to preview</div>' +
-        '<div style="font-size:11px; margin-top:6px;">Click any row in the picker.</div>' +
-      '</div>';
-    }
-    return '<div class="nametag-preview-label">Preview · ' + escapeHtml((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')) + '</div>' +
+    // Resolve the current index: honor the clicked brother if it's in the pool,
+    // otherwise fall back to the stored pager index (clamped).
+    var idx = pool.findIndex(function(b){ return b.id === state.nametagPreviewBrotherId; });
+    if (idx === -1) idx = Math.min(state.nametagPreviewIndex || 0, pool.length - 1);
+    if (idx < 0) idx = 0;
+    var b = pool[idx];
+    var fullName = ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim();
+    return '<div class="nametag-step-head">Preview</div>' +
       '<div class="nametag-preview-card">' +
         renderNametagCardHTML(b) +
       '</div>' +
-      '<div class="nametag-preview-help">Updates in real time as you change template/overrides. Click a row to preview that brother.</div>';
+      '<div class="nametag-preview-pager">' +
+        '<button class="nametag-pager-btn" ' + (idx <= 0 ? 'disabled ' : '') + 'onclick="nametagPreviewStep(-1)">‹</button>' +
+        '<span class="nametag-pager-pos">' + (idx + 1) + ' of ' + pool.length + '</span>' +
+        '<button class="nametag-pager-btn" ' + (idx >= pool.length - 1 ? 'disabled ' : '') + 'onclick="nametagPreviewStep(1)">›</button>' +
+      '</div>' +
+      '<div class="nametag-preview-name">' + escapeHtml(fullName) + '</div>';
   }
 
   function renderNametagGenerateBar() {
     var plan = getNametagPrintPlan();
     var label = state.nametagEventLabel.trim();
     var knownLabels = getKnownEventLabels();
+    var tmpl = NAMETAG_TEMPLATES[state.nametagTemplate] || NAMETAG_TEMPLATES['generic'];
+    var selectedCount = state.nametagSelected.size;
     var canGenerate = label.length > 0 && plan.toPrint.length > 0 && !state.nametagGenerating;
-    return '<div class="nametag-generate-bar">' +
+    // Redesign: clean "Print job" summary card. Same handlers, same canGenerate
+    // gate, same plan counts — just restructured presentation.
+    return '<div class="nametag-step-head">Print job</div>' +
+      '<div class="nametag-generate-bar">' +
+      '<div class="print-job-summary">' +
+        '<div class="pj-row"><span class="pj-key">Template</span><span class="pj-val">' + escapeHtml(tmpl.label) + '</span></div>' +
+        '<div class="pj-row"><span class="pj-key">Selected</span><span class="pj-val">' + selectedCount + ' brother' + (selectedCount === 1 ? '' : 's') + '</span></div>' +
+        '<div class="pj-row"><span class="pj-key">Event label</span><span class="pj-val">' + (label ? escapeHtml(label) : '—') + '</span></div>' +
+      '</div>' +
       '<label class="override-field">' +
         '<span class="field-label">Event label (required)</span>' +
         '<input type="text" class="field-input" list="nametag-event-labels" ' +
@@ -9435,6 +9642,7 @@
           ? '<div class="plan-line plan-skipped">' + plan.skipped.length + ' skipped (already printed)</div>'
           : '<div class="plan-line" style="color:var(--fg-muted)">0 skipped</div>') +
       '</div>' +
+      '<div class="nametag-job-note">Updates in real time as you change templates, overrides, or selections.</div>' +
       '<button class="btn primary nametag-generate-btn" ' +
         (canGenerate ? '' : 'disabled ') +
         'onclick="generateNametagPDF()">' +
@@ -9650,6 +9858,25 @@
 
   window.setNametagPreviewBrother = function(id) {
     state.nametagPreviewBrotherId = id;
+    render();
+  };
+
+  // Redesign: collapse/expand the Advanced Styling disclosure (overrides body).
+  window.toggleNametagOverridesOpen = function() {
+    state.nametagOverridesOpen = !state.nametagOverridesOpen;
+    render();
+  };
+
+  // Redesign: cycle the preview through the current pool (selected brothers, or
+  // the filtered set when nothing is selected). Clamped to range, no wrap.
+  window.nametagPreviewStep = function(delta) {
+    var pool = getNametagPreviewPool();
+    if (!pool.length) return;
+    var idx = pool.findIndex(function(b){ return b.id === state.nametagPreviewBrotherId; });
+    if (idx === -1) idx = Math.min(state.nametagPreviewIndex || 0, pool.length - 1);
+    idx = Math.max(0, Math.min(pool.length - 1, idx + delta));
+    state.nametagPreviewIndex = idx;
+    state.nametagPreviewBrotherId = pool[idx].id;
     render();
   };
 
