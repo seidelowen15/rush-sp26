@@ -2213,7 +2213,7 @@
   [data-theme="dark"] .storage-banner { color: var(--gold); }
 
   /* ========== BUDGET (Phase 0 #6) ========== */
-  .budget-view { display: flex; flex-direction: column; gap: 28px; }
+  .budget-view { display: flex; flex-direction: column; gap: 24px; }
   .budget-summary-card {
     background: var(--surface); border: 1px solid var(--line);
     border-radius: 10px; padding: 24px 26px;
@@ -2274,9 +2274,9 @@
   .budget-cat-name { font-size: 14px; color: var(--fg); font-weight: 500; }
   .budget-cat-uncat { color: var(--fg-muted); font-style: italic; font-weight: 400; }
   .budget-cat-figures { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--fg-soft); }
-  .budget-cat-bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .budget-cat-bar { height: 9px; background: var(--line); border-radius: 5px; overflow: hidden; }
   .budget-cat-fill {
-    height: 100%; border-radius: 3px;
+    height: 100%; border-radius: 5px;
     background: linear-gradient(90deg, var(--navy), var(--gold-dark));
     transition: width 0.4s ease;
   }
@@ -2307,6 +2307,115 @@
     padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px;
     background: var(--surface); color: var(--fg);
   }
+
+  /* ===== Budget dashboard redesign ===== */
+  .budget-actions-row { display: flex; justify-content: flex-end; }
+  .budget-hero-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .budget-content-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .budget-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  /* card chrome — matches .budget-summary-card */
+  .budget-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; }
+  [data-theme="dark"] .budget-card { background: rgba(212, 166, 74, 0.04); border-color: rgba(212, 166, 74, 0.14); }
+  .budget-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .budget-card-title { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; color: var(--fg); }
+
+  /* hero cards */
+  .budget-hero-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; gap: 14px; align-items: flex-start; }
+  [data-theme="dark"] .budget-hero-card { background: rgba(212, 166, 74, 0.04); border-color: rgba(212, 166, 74, 0.14); }
+  .budget-hero-body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .budget-hero-label { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--fg-muted); }
+  .budget-hero-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--fg); line-height: 1.15; margin-top: 2px; }
+  .budget-hero-sub { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--fg-muted); margin-top: 3px; }
+  .budget-hero-sub.pos { color: var(--success); }
+  .budget-hero-sub.neg { color: var(--danger); }
+  .budget-hero-link { display: inline-flex; align-items: center; gap: 3px; margin-top: 3px; padding: 0; background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: var(--navy); }
+  [data-theme="dark"] .budget-hero-link { color: var(--gold); }
+  .budget-hero-link svg { width: 13px; height: 13px; }
+  .budget-hero-bar { margin-top: 12px; }
+
+  /* circular icon badges — token tint via color-mix (token-only, no new hex) */
+  .budget-badge { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .budget-badge svg { width: 21px; height: 21px; }
+  .budget-badge-sm { width: 36px; height: 36px; }
+  .budget-badge-sm svg { width: 17px; height: 17px; }
+  .budget-badge.success { background: color-mix(in srgb, var(--success) 15%, var(--surface)); color: var(--success); }
+  .budget-badge.navy { background: color-mix(in srgb, var(--navy) 12%, var(--surface)); color: var(--navy); }
+  .budget-badge.gold { background: color-mix(in srgb, var(--gold) 22%, var(--surface)); color: var(--gold-dark); }
+  .budget-badge.danger { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); }
+  [data-theme="dark"] .budget-badge { background: rgba(212, 166, 74, 0.10); }
+  [data-theme="dark"] .budget-badge.navy, [data-theme="dark"] .budget-badge.gold { color: var(--gold); }
+
+  /* generic list rows (recent expenses, reimbursements, upcoming) */
+  .budget-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); cursor: pointer; }
+  .budget-row:first-of-type { border-top: none; }
+  [data-theme="dark"] .budget-row { border-color: rgba(212, 166, 74, 0.14); }
+  .budget-row.plain { cursor: default; }
+  .budget-row-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+  .budget-row-title { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: var(--fg); }
+  .budget-row-sub { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--fg-muted); }
+  .budget-row-amt { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; color: var(--fg); white-space: nowrap; }
+  .budget-row-amt.danger { color: var(--danger); }
+  .budget-row-date { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
+  .budget-row-chevron { display: flex; flex-shrink: 0; color: var(--fg-muted); }
+  .budget-row-chevron svg { width: 16px; height: 16px; }
+
+  /* status pills */
+  .budget-pill { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+  .budget-pill.owed { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); }
+  .budget-pill.paid { background: color-mix(in srgb, var(--success) 16%, var(--surface)); color: var(--success); }
+  .budget-pill.card { background: var(--surface-2); color: var(--fg-muted); }
+  [data-theme="dark"] .budget-pill.owed, [data-theme="dark"] .budget-pill.paid, [data-theme="dark"] .budget-pill.card { background: rgba(212, 166, 74, 0.10); }
+
+  /* monogram avatars (reimbursements) */
+  .budget-avatar { flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; }
+  .budget-avatar.t0 { background: color-mix(in srgb, var(--navy) 14%, var(--surface)); color: var(--navy); }
+  .budget-avatar.t1 { background: color-mix(in srgb, var(--gold) 24%, var(--surface)); color: var(--gold-dark); }
+  .budget-avatar.t2 { background: color-mix(in srgb, var(--success) 16%, var(--surface)); color: var(--success); }
+  .budget-avatar.t3 { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); }
+  [data-theme="dark"] .budget-avatar { background: rgba(212, 166, 74, 0.10); color: var(--gold); }
+
+  /* budget-by-event rows */
+  .budget-events-caps, .budget-event-row { display: grid; grid-template-columns: 36px minmax(84px, 140px) 1fr 78px 78px 46px; align-items: center; gap: 12px; }
+  .budget-events-caps { margin-bottom: 4px; }
+  .budget-events-caps .cap-spent { grid-column: 4; }
+  .budget-events-caps .cap-budget { grid-column: 5; }
+  .budget-events-caps span { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-muted); text-align: right; }
+  .budget-event-row { padding: 9px 0; }
+  .budget-event-name { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .budget-event-spent, .budget-event-budget, .budget-event-pct { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; font-size: 13px; text-align: right; white-space: nowrap; }
+  .budget-event-spent { color: var(--fg); }
+  .budget-event-budget { color: var(--fg-soft); cursor: pointer; }
+  .budget-event-pct { font-weight: 600; }
+  .budget-event-pct.under { color: var(--success); }
+  .budget-event-pct.mid { color: var(--gold-dark); }
+  .budget-event-pct.over { color: var(--danger); }
+  .budget-event-edit { grid-column: 4 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--fg-soft); }
+
+  /* view-all toggles */
+  .budget-viewall { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 0; background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: var(--navy); }
+  [data-theme="dark"] .budget-viewall { color: var(--gold); }
+  .budget-viewall svg { width: 14px; height: 14px; }
+  .budget-empty { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--fg-muted); font-style: italic; padding: 6px 0; }
+
+  /* status card — intentionally a dark navy accent card in both themes (per spec §6) */
+  .budget-status-card { position: relative; overflow: hidden; background: var(--navy-dark); border-radius: 10px; padding: 24px; display: flex; align-items: center; gap: 16px; }
+  .budget-status-card.over { background: var(--danger); }
+  .budget-status-badge { flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(212, 166, 74, 0.18); color: var(--gold); }
+  .budget-status-badge svg { width: 22px; height: 22px; }
+  .budget-status-card.over .budget-status-badge { background: color-mix(in srgb, var(--paper) 20%, transparent); color: var(--paper); }
+  .budget-status-body { min-width: 0; }
+  .budget-status-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--paper); line-height: 1.15; }
+  .budget-status-sub { font-family: 'Inter', sans-serif; font-size: 13px; color: color-mix(in srgb, var(--paper) 72%, var(--navy-dark)); margin-top: 3px; }
+  .budget-status-card.over .budget-status-sub { color: color-mix(in srgb, var(--paper) 80%, var(--danger)); }
+  .budget-status-wave { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; color: var(--gold); opacity: 0.5; pointer-events: none; }
+  .budget-status-card.over .budget-status-wave { color: var(--paper); opacity: 0.4; }
+  .budget-status-wave svg { width: 100%; height: 100%; display: block; }
+
+  @media (max-width: 1180px) { .budget-hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 900px) { .budget-content-grid { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 560px) { .budget-hero-grid { grid-template-columns: minmax(0, 1fr); } }
+
   .budget-expense-modal .form-row + .form-row,
   .budget-expense-modal .budget-form-grid + .form-row { margin-top: 14px; }
 
@@ -5683,7 +5792,7 @@
     brothers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8.5" cy="8" r="3"/><path d="M3.5 19c0-3 2.2-4.6 5-4.6s5 1.6 5 4.6"/><path d="M16 5.3a3 3 0 0 1 0 5.4"/><path d="M16.8 14.6c2 .5 3.4 1.9 3.4 4.4"/></svg>',
     nametags: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><circle cx="8.5" cy="11" r="1.8"/><path d="M13.5 10h4M13.5 13h4M6 16c.4-1.3 1.4-1.9 2.5-1.9s2.1.6 2.5 1.9"/></svg>',
     marketing: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10v4h3l9 4.5v-13L6 10H3Z"/><path d="M18 9.5a3 3 0 0 1 0 5"/></svg>',
-    budget: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg>',
+    budget: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4h10.5A1.5 1.5 0 0 1 18 5.5V20H7.5A1.5 1.5 0 0 1 6 18.5z"/><path d="M6 4v16"/><path d="M9.5 9h5M9.5 12.5h5"/></svg>',
   };
   const BRAND_HEX = '<svg viewBox="0 0 46 50" preserveAspectRatio="none"><polygon points="23,1.5 44.5,13 44.5,37 23,48.5 1.5,37 1.5,13" fill="#13213a" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 
@@ -5699,7 +5808,7 @@
       { id: 'brothers', label: 'Brothers', icon: '◍', count: state.brothers.length },
       { id: 'nametags', label: 'Nametags', icon: '◇', count: state.nametagSelected.size || undefined },
       { id: 'marketing', label: 'Marketing', icon: '◭', count: state.marketingPosts.length },
-      { id: 'budget', label: 'Budget', icon: '▤' },
+      { id: 'budget', label: 'Finances', icon: '▤' },
     ];
 
     return '' +
@@ -6456,6 +6565,70 @@
     }, 0);
   }
 
+  // ----- Budget dashboard helpers (redesign) -----
+  // Inline SVGs, stroke=currentColor, 24x24 — same style as NAV_ICONS.
+  const BUDGET_ICONS = {
+    wallet:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="13.5" r="1.3"/></svg>',
+    dollar:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M14.4 9.2c-.5-.9-1.4-1.3-2.4-1.3-1.3 0-2.3.8-2.3 1.9 0 2.7 4.8 1.4 4.8 4.1 0 1.2-1.1 2-2.5 2-1.1 0-2-.4-2.5-1.3"/></svg>',
+    shield:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 2.5v5.6c0 4.2-2.9 7.6-7 8.9-4.1-1.3-7-4.7-7-8.9V5.5L12 3Z"/><path d="M9 12l2 2 4-4.2"/></svg>',
+    receipt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3.5h12v17l-2.2-1.4-2 1.4-1.8-1.4-2 1.4L8 19.6l-2 1.4z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/></svg>',
+    event:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="3"/><path d="M3.5 19c0-3 2.4-4.8 5.5-4.8s5.5 1.8 5.5 4.8"/><path d="M16 6.4a3 3 0 0 1 0 5.2"/><path d="M17 14.4c1.9.5 3.2 1.8 3.2 4.1"/></svg>',
+    tag:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12.4V5.5A1.5 1.5 0 0 1 5.5 4h6.9l8 8-7.4 7.4-8-8Z"/><circle cx="8.4" cy="8.4" r="1.3"/></svg>',
+    calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>',
+    bookmark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3.5h12v17l-6-4-6 4z"/></svg>',
+    chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 6l6 6-6 6"/></svg>'
+  };
+  const BUDGET_STATUS_WAVE = '<svg viewBox="0 0 320 26" fill="none" stroke="currentColor" stroke-width="2" preserveAspectRatio="none"><path d="M0 17 C 36 7, 74 7, 112 15 S 188 25, 226 14 S 292 6, 320 13"/></svg>';
+
+  // Reimbursements: owed = sum(actual_amount) grouped by paid_by. Named people
+  // (non-empty paid_by) drive the hero count/total; "Unassigned" (empty paid_by)
+  // is kept as a card row but excluded from the pending count.
+  function computeReimbursements() {
+    const byPerson = {};
+    (state.expenses || []).forEach(function(e) {
+      if (e.actual_amount == null) return;
+      const who = (e.paid_by && e.paid_by.trim()) ? e.paid_by.trim() : 'Unassigned';
+      byPerson[who] = (byPerson[who] || 0) + Number(e.actual_amount || 0);
+    });
+    const people = Object.keys(byPerson).map(function(k) { return { name: k, total: byPerson[k] }; });
+    people.sort(function(a, b) { return b.total - a.total; });
+    const named = people.filter(function(p) { return p.name !== 'Unassigned'; });
+    const totalOwed = named.reduce(function(s, p) { return s + p.total; }, 0);
+    return { people: people, pendingCount: named.length, totalOwed: totalOwed };
+  }
+
+  // No reimbursed-tracking column exists, so a logged paid_by is treated as owed.
+  function budgetExpenseStatusPill(e) {
+    if (e.paid_by && e.paid_by.trim()) {
+      return '<span class="budget-pill owed">Owed to ' + escapeHtml(e.paid_by.trim()) + '</span>';
+    }
+    return '<span class="budget-pill card">Chapter card</span>';
+  }
+
+  function fmtDateShort(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+    catch (_) { return iso; }
+  }
+
+  function budgetInitials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  window.toggleBudgetExpand = function(key) {
+    if (!state.budgetExpand) state.budgetExpand = {};
+    state.budgetExpand[key] = !state.budgetExpand[key];
+    render();
+  };
+
+  window.scrollToReimbursements = function() {
+    var el = document.getElementById('budget-reimbursements');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   function renderBudgetCategoryBars() {
     const cats = (state.budgetCategories || []).slice().sort(function(a, b) {
       return (a.sort_order || 0) - (b.sort_order || 0);
@@ -6463,40 +6636,54 @@
     const uncatActual = (state.expenses || []).reduce(function(s, e) {
       return !e.category_id ? s + Number(e.actual_amount || 0) : s;
     }, 0);
-    const rows = cats.map(function(c) {
+    const items = cats.map(function(c) {
       const approved = Number(c.approved_amount || 0);
       const actual = budgetCategoryActual(c.id);
       const hasApproved = approved > 0;
-      const over = hasApproved && actual > approved;
-      const pct = hasApproved ? Math.min(100, (actual / approved) * 100) : 0;
-      const editing = state.editingCategoryId === c.id;
-      const figs = editing
-        ? '<span class="budget-cat-edit">$<input type="number" step="0.01" min="0" id="catApproved-' + c.id + '" class="budget-cat-input" value="' + approved + '">' +
-            '<button class="btn small primary" onclick="saveCategoryBudget(\'' + c.id + '\')">Save</button>' +
-            '<button class="btn small" onclick="cancelCategoryBudget()">Cancel</button></span>'
-        : '<span class="budget-cat-figures" onclick="editCategoryBudget(\'' + c.id + '\')" title="Edit approved budget">' + fmtMoney(actual) + ' <span class="budget-of">/ ' + (hasApproved ? fmtMoney(approved) : '—') + '</span></span>';
-      return '<div class="budget-cat-row">' +
-        '<div class="budget-cat-head">' +
-          '<span class="budget-cat-name">' + escapeHtml(c.name) + '</span>' +
-          figs +
-        '</div>' +
-        '<div class="budget-cat-bar">' +
-          '<div class="budget-cat-fill' + (over ? ' over' : '') + (hasApproved ? '' : ' none') + '" style="width:' + pct + '%"></div>' +
-        '</div>' +
-      '</div>';
+      return {
+        id: c.id, name: c.name, approved: approved, actual: actual,
+        hasApproved: hasApproved, over: hasApproved && actual > approved,
+        pct: hasApproved ? Math.min(100, (actual / approved) * 100) : 0, uncat: false
+      };
     });
     if (uncatActual > 0) {
-      rows.push('<div class="budget-cat-row">' +
-        '<div class="budget-cat-head">' +
-          '<span class="budget-cat-name budget-cat-uncat">Uncategorized</span>' +
-          '<span class="budget-cat-figures">' + fmtMoney(uncatActual) + ' <span class="budget-of">/ —</span></span>' +
-        '</div>' +
-        '<div class="budget-cat-bar"><div class="budget-cat-fill none" style="width:0%"></div></div>' +
-      '</div>');
+      items.push({ id: null, name: 'Uncategorized', approved: 0, actual: uncatActual, hasApproved: false, over: false, pct: 0, uncat: true });
     }
-    return '<div class="budget-cat-section">' +
-      '<div class="budget-section-header">By category</div>' +
-      rows.join('') +
+    const expanded = !!(state.budgetExpand && state.budgetExpand.events);
+    const shown = expanded ? items : items.slice(0, 6);
+    const tints = ['navy', 'gold'];
+    const rowsHtml = shown.map(function(it, i) {
+      const editing = it.id && state.editingCategoryId === it.id;
+      var right;
+      if (editing) {
+        right = '<div class="budget-event-edit">$<input type="number" step="0.01" min="0" id="catApproved-' + it.id + '" class="budget-cat-input" value="' + it.approved + '">' +
+          '<button class="btn small primary" onclick="event.stopPropagation(); saveCategoryBudget(\'' + it.id + '\')">Save</button>' +
+          '<button class="btn small" onclick="event.stopPropagation(); cancelCategoryBudget()">Cancel</button></div>';
+      } else {
+        const pctClass = !it.hasApproved ? 'under' : (it.over ? 'over' : (it.pct >= 80 ? 'mid' : 'under'));
+        const budgetCell = it.uncat
+          ? '<span class="budget-event-budget" style="cursor:default">—</span>'
+          : '<span class="budget-event-budget" onclick="editCategoryBudget(\'' + it.id + '\')" title="Edit approved budget">' + (it.hasApproved ? fmtMoney(it.approved) : '—') + '</span>';
+        right = '<span class="budget-event-spent">' + fmtMoney(it.actual) + '</span>' +
+          budgetCell +
+          '<span class="budget-event-pct ' + pctClass + '">' + (it.hasApproved ? Math.round(it.pct) : 0) + '%</span>';
+      }
+      return '<div class="budget-event-row">' +
+        '<div class="budget-badge ' + tints[i % tints.length] + ' budget-badge-sm">' + BUDGET_ICONS.event + '</div>' +
+        '<span class="budget-event-name' + (it.uncat ? ' budget-cat-uncat' : '') + '">' + escapeHtml(it.name) + '</span>' +
+        '<div class="budget-cat-bar"><div class="budget-cat-fill' + (it.over ? ' over' : '') + (it.hasApproved ? '' : ' none') + '" style="width:' + it.pct + '%"></div></div>' +
+        right +
+      '</div>';
+    }).join('');
+    const body = items.length === 0
+      ? '<div class="budget-empty">No events yet.</div>'
+      : '<div class="budget-events-caps"><span class="cap-spent">Spent</span><span class="cap-budget">Budget</span></div>' + rowsHtml;
+    const viewAll = items.length > 6
+      ? '<button class="budget-viewall" onclick="toggleBudgetExpand(\'events\')">' + (expanded ? 'Show less' : 'View all events') + ' ' + BUDGET_ICONS.chevron + '</button>'
+      : '';
+    return '<div class="budget-card">' +
+      '<div class="budget-card-head"><span class="budget-card-title">Budget by event</span></div>' +
+      body + viewAll +
     '</div>';
   }
 
@@ -6636,8 +6823,8 @@
   function renderBudgetLineItems() {
     const exps = (state.expenses || []).slice();
     if (exps.length === 0) {
-      return '<div class="budget-items-section">' +
-        '<div class="budget-section-header">Line items</div>' +
+      return '<div class="budget-card">' +
+        '<div class="budget-card-head"><span class="budget-card-title">Recent expenses</span></div>' +
         '<div class="empty-state-polished">' +
           '<div class="empty-glyph">$</div>' +
           '<div class="empty-text">No expenses logged yet.</div>' +
@@ -6646,36 +6833,36 @@
     }
     const catById = {};
     (state.budgetCategories || []).forEach(function(c) { catById[c.id] = c; });
-    const sortOf = function(e) {
-      const c = e.category_id ? catById[e.category_id] : null;
-      return c ? (c.sort_order || 0) : 999;
-    };
+    // Most recent first by spent_on (nulls last), id as tiebreaker.
     exps.sort(function(a, b) {
-      const d = sortOf(a) - sortOf(b);
-      return d !== 0 ? d : (a.item || '').localeCompare(b.item || '');
+      const da = a.spent_on || '', db = b.spent_on || '';
+      if (da !== db) return db.localeCompare(da);
+      return String(b.id || '').localeCompare(String(a.id || ''));
     });
-    const rows = exps.map(function(e) {
+    const expanded = !!(state.budgetExpand && state.budgetExpand.expenses);
+    const shown = expanded ? exps : exps.slice(0, 3);
+    const rows = shown.map(function(e) {
       const cat = e.category_id ? catById[e.category_id] : null;
       const catName = cat ? cat.name : 'Uncategorized';
-      const est = e.estimated_amount, act = e.actual_amount;
-      const chip = e.priority ? '<span class="budget-chip ' + e.priority + '">' + e.priority + '</span>' : '';
-      let actClass = '';
-      if (act != null && est != null) actClass = Number(act) > Number(est) ? ' over' : ' under';
-      return '<tr onclick="openExpenseModal(\'' + e.id + '\')">' +
-        '<td class="budget-item-name">' + escapeHtml(e.item || '') + '</td>' +
-        '<td>' + escapeHtml(catName) + '</td>' +
-        '<td>' + chip + '</td>' +
-        '<td class="budget-num">' + (est != null ? fmtMoney(est) : '—') + '</td>' +
-        '<td class="budget-num' + actClass + '">' + (act != null ? fmtMoney(act) : '—') + '</td>' +
-        '<td>' + (e.paid_by ? escapeHtml(e.paid_by) : '—') + '</td>' +
-      '</tr>';
+      const cost = (e.actual_amount != null) ? e.actual_amount : e.estimated_amount;
+      return '<div class="budget-row" onclick="openExpenseModal(\'' + e.id + '\')">' +
+        '<div class="budget-badge gold budget-badge-sm">' + BUDGET_ICONS.tag + '</div>' +
+        '<div class="budget-row-main">' +
+          '<span class="budget-row-title">' + escapeHtml(e.item || 'Untitled') + '</span>' +
+          '<span class="budget-row-sub">' + escapeHtml(catName) + '</span>' +
+        '</div>' +
+        '<span class="budget-row-amt">' + (cost != null ? fmtMoney(cost) : '—') + '</span>' +
+        budgetExpenseStatusPill(e) +
+        '<span class="budget-row-date">' + fmtDateShort(e.spent_on) + '</span>' +
+        '<span class="budget-row-chevron">' + BUDGET_ICONS.chevron + '</span>' +
+      '</div>';
     }).join('');
-    return '<div class="budget-items-section">' +
-      '<div class="budget-section-header">Line items</div>' +
-      '<table class="brothers-table budget-items-table">' +
-        '<thead><tr><th>Item</th><th>Category</th><th>Priority</th><th>Estimated</th><th>Actual</th><th>Paid by</th></tr></thead>' +
-        '<tbody>' + rows + '</tbody>' +
-      '</table>' +
+    const viewAll = exps.length > 3
+      ? '<button class="budget-viewall" onclick="toggleBudgetExpand(\'expenses\')">' + (expanded ? 'Show less' : 'View all expenses') + ' ' + BUDGET_ICONS.chevron + '</button>'
+      : '';
+    return '<div class="budget-card">' +
+      '<div class="budget-card-head"><span class="budget-card-title">Recent expenses</span></div>' +
+      rows + viewAll +
     '</div>';
   }
 
@@ -6708,71 +6895,150 @@
   };
 
   function renderBudgetReimbursements() {
-    const byPerson = {};
-    (state.expenses || []).forEach(function(e) {
-      if (e.actual_amount == null) return;
-      const who = (e.paid_by && e.paid_by.trim()) ? e.paid_by.trim() : 'Unassigned';
-      byPerson[who] = (byPerson[who] || 0) + Number(e.actual_amount || 0);
-    });
-    const people = Object.keys(byPerson).map(function(k) { return { name: k, total: byPerson[k] }; });
-    if (people.length === 0) return '';
-    people.sort(function(a, b) { return b.total - a.total; });
-    const max = people.reduce(function(m, p) { return Math.max(m, p.total); }, 0);
-    const rows = people.map(function(p) {
-      const pct = max > 0 ? Math.min(100, (p.total / max) * 100) : 0;
+    const data = computeReimbursements();
+    if (data.people.length === 0) return '';
+    const expanded = !!(state.budgetExpand && state.budgetExpand.reimb);
+    const shown = expanded ? data.people : data.people.slice(0, 3);
+    const rows = shown.map(function(p, i) {
       const unassigned = p.name === 'Unassigned';
-      return '<div class="budget-cat-row">' +
-        '<div class="budget-cat-head">' +
-          '<span class="budget-cat-name' + (unassigned ? ' budget-cat-uncat' : '') + '">' + escapeHtml(p.name) + '</span>' +
-          '<span class="budget-cat-figures">' + fmtMoney(p.total) + '</span>' +
-        '</div>' +
-        '<div class="budget-cat-bar"><div class="budget-cat-fill" style="width:' + pct + '%"></div></div>' +
+      return '<div class="budget-row plain">' +
+        '<div class="budget-avatar t' + (i % 4) + '">' + escapeHtml(budgetInitials(p.name)) + '</div>' +
+        '<div class="budget-row-main"><span class="budget-row-title' + (unassigned ? ' budget-cat-uncat' : '') + '">' + escapeHtml(p.name) + '</span></div>' +
+        '<span class="budget-row-amt danger">' + fmtMoney(p.total) + '</span>' +
+        '<span class="budget-row-chevron">' + BUDGET_ICONS.chevron + '</span>' +
       '</div>';
     }).join('');
-    return '<div class="budget-cat-section">' +
-      '<div class="budget-section-header">Reimbursements · who fronted what</div>' +
-      rows +
+    const viewAll = data.people.length > 3
+      ? '<button class="budget-viewall" onclick="toggleBudgetExpand(\'reimb\')">' + (expanded ? 'Show less' : 'View all') + ' ' + BUDGET_ICONS.chevron + '</button>'
+      : '';
+    return '<div class="budget-card" id="budget-reimbursements">' +
+      '<div class="budget-card-head"><span class="budget-card-title">Reimbursements</span></div>' +
+      rows + viewAll +
+    '</div>';
+  }
+
+  function renderBudgetUpcomingCosts() {
+    const catById = {};
+    (state.budgetCategories || []).forEach(function(c) { catById[c.id] = c; });
+    const byCat = {};
+    (state.expenses || []).forEach(function(e) {
+      if (e.actual_amount != null) return;        // already purchased
+      if (e.estimated_amount == null) return;     // no estimate -> not "upcoming"
+      const key = e.category_id || '__uncat__';
+      byCat[key] = (byCat[key] || 0) + Number(e.estimated_amount || 0);
+    });
+    const items = Object.keys(byCat).map(function(k) {
+      const name = k === '__uncat__' ? 'Uncategorized' : (catById[k] ? catById[k].name : 'Uncategorized');
+      return { name: name, est: byCat[k] };
+    });
+    items.sort(function(a, b) { return b.est - a.est; });
+    const head = '<div class="budget-card-head"><span class="budget-card-title">Upcoming costs</span></div>';
+    if (items.length === 0) {
+      return '<div class="budget-card">' + head + '<div class="budget-empty">No upcoming costs logged</div></div>';
+    }
+    const expanded = !!(state.budgetExpand && state.budgetExpand.upcoming);
+    const shown = expanded ? items : items.slice(0, 3);
+    const rows = shown.map(function(it) {
+      return '<div class="budget-row plain">' +
+        '<div class="budget-badge navy budget-badge-sm">' + BUDGET_ICONS.calendar + '</div>' +
+        '<div class="budget-row-main"><span class="budget-row-title">' + escapeHtml(it.name) + '</span></div>' +
+        '<span class="budget-row-amt">Est. ' + fmtMoney(it.est) + '</span>' +
+      '</div>';
+    }).join('');
+    const viewAll = items.length > 3
+      ? '<button class="budget-viewall" onclick="toggleBudgetExpand(\'upcoming\')">' + (expanded ? 'Show less' : 'View all') + ' ' + BUDGET_ICONS.chevron + '</button>'
+      : '';
+    return '<div class="budget-card">' + head + rows + viewAll + '</div>';
+  }
+
+  function renderBudgetStatusCard() {
+    const t = computeBudgetTotals();
+    var title, sub, over = false;
+    if (t.cap > 0 && !t.overCap) {
+      title = "You're under budget"; sub = "Great job staying on track.";
+    } else if (t.overCap) {
+      title = "Over budget"; sub = fmtMoney(t.actual - t.cap) + " over — review expenses."; over = true;
+    } else {
+      title = "No budget set"; sub = "Set approved budgets to track spending.";
+    }
+    return '<div class="budget-status-card' + (over ? ' over' : '') + '">' +
+      '<div class="budget-status-badge">' + BUDGET_ICONS.bookmark + '</div>' +
+      '<div class="budget-status-body">' +
+        '<div class="budget-status-title">' + title + '</div>' +
+        '<div class="budget-status-sub">' + sub + '</div>' +
+      '</div>' +
+      '<div class="budget-status-wave">' + BUDGET_STATUS_WAVE + '</div>' +
     '</div>';
   }
 
   function renderBudgetView() {
     const t = computeBudgetTotals();
     const hasCap = t.cap > 0;
+    const reimb = computeReimbursements();
+    const pctRemaining = hasCap ? Math.max(0, Math.round((t.remaining / t.cap) * 100)) : 0;
+    const reimbCard = renderBudgetReimbursements();
+
+    const heroRemaining =
+      '<div class="budget-hero-card">' +
+        '<div class="budget-badge success">' + BUDGET_ICONS.wallet + '</div>' +
+        '<div class="budget-hero-body">' +
+          '<div class="budget-hero-label">Remaining</div>' +
+          '<div class="budget-hero-value">' + fmtMoney(t.remaining) + '</div>' +
+          (hasCap
+            ? (t.overCap
+                ? '<div class="budget-hero-sub neg">' + fmtMoney(t.actual - t.cap) + ' over budget</div>'
+                : '<div class="budget-hero-sub pos">' + pctRemaining + '% of budget</div>')
+            : '<div class="budget-hero-sub">No budget set</div>') +
+          '<div class="budget-hero-bar"><div class="budget-cap-bar"><div class="budget-cap-fill' + (t.overCap ? ' over' : '') + '" style="width:' + (hasCap ? t.pctActual : 0) + '%"></div></div></div>' +
+        '</div>' +
+      '</div>';
+
+    const heroSpent =
+      '<div class="budget-hero-card">' +
+        '<div class="budget-badge navy">' + BUDGET_ICONS.dollar + '</div>' +
+        '<div class="budget-hero-body">' +
+          '<div class="budget-hero-label">Spent</div>' +
+          '<div class="budget-hero-value">' + fmtMoney(t.actual) + '</div>' +
+          '<div class="budget-hero-sub">' + Math.round(t.pctActual) + '% of budget</div>' +
+        '</div>' +
+      '</div>';
+
+    const heroApproved =
+      '<div class="budget-hero-card">' +
+        '<div class="budget-badge gold">' + BUDGET_ICONS.shield + '</div>' +
+        '<div class="budget-hero-body">' +
+          '<div class="budget-hero-label">Approved budget</div>' +
+          '<div class="budget-hero-value">' + (hasCap ? fmtMoney(t.cap) : '—') + '</div>' +
+        '</div>' +
+      '</div>';
+
+    const heroReimb =
+      '<div class="budget-hero-card">' +
+        '<div class="budget-badge ' + (reimb.pendingCount > 0 ? 'danger' : 'navy') + '">' + BUDGET_ICONS.receipt + '</div>' +
+        '<div class="budget-hero-body">' +
+          '<div class="budget-hero-label">Pending reimbursements</div>' +
+          '<div class="budget-hero-value">' + reimb.pendingCount + '</div>' +
+          (reimb.totalOwed > 0
+            ? '<button class="budget-hero-link" onclick="scrollToReimbursements()">' + fmtMoney(reimb.totalOwed) + ' owed ' + BUDGET_ICONS.chevron + '</button>'
+            : '<div class="budget-hero-sub">Nothing owed</div>') +
+        '</div>' +
+      '</div>';
+
     return '' +
       '<div class="budget-view">' +
-        '<div class="budget-actions"><button class="btn primary small" onclick="openExpenseModal()">+ Add expense</button></div>' +
-        '<div class="budget-summary-card">' +
-          '<div class="budget-summary-head">' +
-            '<span class="budget-summary-label">Actual spend vs approved budget</span>' +
-            '<span class="budget-summary-figures">' + fmtMoney(t.actual) + ' <span class="budget-of">/ ' + (hasCap ? fmtMoney(t.cap) : '—') + '</span></span>' +
+        '<div class="budget-actions-row"><button class="btn primary small" onclick="openExpenseModal()">+ Add expense</button></div>' +
+        '<div class="budget-hero-grid">' + heroRemaining + heroSpent + heroApproved + heroReimb + '</div>' +
+        '<div class="budget-content-grid">' +
+          '<div class="budget-col">' +
+            renderBudgetCategoryBars() +
+            renderBudgetLineItems() +
           '</div>' +
-          '<div class="budget-cap-bar">' +
-            '<div class="budget-cap-fill' + (t.overCap ? ' over' : '') + '" style="width:' + (hasCap ? t.pctActual : 0) + '%"></div>' +
-          '</div>' +
-          '<div class="budget-summary-meta">' +
-            (hasCap
-              ? '<span class="' + (t.overCap ? 'budget-over' : 'budget-under') + '">' +
-                  (t.overCap ? fmtMoney(t.actual - t.cap) + ' over budget' : fmtMoney(t.remaining) + ' remaining') + '</span>'
-              : '<span class="budget-cap-pending">No approved budget set yet</span>') +
+          '<div class="budget-col">' +
+            reimbCard +
+            renderBudgetUpcomingCosts() +
+            renderBudgetStatusCard() +
           '</div>' +
         '</div>' +
-        '<div class="budget-figure-row">' +
-          '<div class="budget-figure-tile">' +
-            '<div class="budget-figure-label">Estimated</div>' +
-            '<div class="budget-figure-value">' + fmtMoney(t.estimated) + '</div>' +
-          '</div>' +
-          '<div class="budget-figure-tile">' +
-            '<div class="budget-figure-label">Actual</div>' +
-            '<div class="budget-figure-value">' + fmtMoney(t.actual) + '</div>' +
-          '</div>' +
-          '<div class="budget-figure-tile">' +
-            '<div class="budget-figure-label">Approved</div>' +
-            '<div class="budget-figure-value">' + (hasCap ? fmtMoney(t.cap) : '—') + '</div>' +
-          '</div>' +
-        '</div>' +
-        renderBudgetCategoryBars() +
-        renderBudgetLineItems() +
-        renderBudgetReimbursements() +
       '</div>';
   }
 
