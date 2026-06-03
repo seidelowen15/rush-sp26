@@ -2281,6 +2281,8 @@
     transition: width 0.4s ease;
   }
   .budget-cat-fill.over { background: var(--danger); }
+  .budget-cat-fill.soft { background: color-mix(in srgb, var(--navy) 42%, var(--surface-2)); }
+  [data-theme="dark"] .budget-cat-fill.soft { background: color-mix(in srgb, var(--gold) 38%, var(--surface-2)); }
   .budget-cat-fill.none { background: transparent; }
   [data-theme="dark"] .budget-cat-bar { background: rgba(212, 166, 74, 0.12); }
   .budget-items-section { display: flex; flex-direction: column; gap: 14px; }
@@ -2336,9 +2338,9 @@
 
   /* circular icon badges — token tint via color-mix (token-only, no new hex) */
   .budget-badge { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-  .budget-badge svg { width: 21px; height: 21px; }
+  .budget-badge svg { width: 24px; height: 24px; }
   .budget-badge-sm { width: 36px; height: 36px; }
-  .budget-badge-sm svg { width: 17px; height: 17px; }
+  .budget-badge-sm svg { width: 20px; height: 20px; }
   .budget-badge.success { background: color-mix(in srgb, var(--success) 15%, var(--surface)); color: var(--success); }
   .budget-badge.navy { background: color-mix(in srgb, var(--navy) 12%, var(--surface)); color: var(--navy); }
   .budget-badge.gold { background: color-mix(in srgb, var(--gold) 22%, var(--surface)); color: var(--gold-dark); }
@@ -6649,6 +6651,7 @@
     if (uncatActual > 0) {
       items.push({ id: null, name: 'Uncategorized', approved: 0, actual: uncatActual, hasApproved: false, over: false, pct: 0, uncat: true });
     }
+    const maxActual = items.reduce(function(m, it) { return Math.max(m, it.actual); }, 0);
     const expanded = !!(state.budgetExpand && state.budgetExpand.events);
     const shown = expanded ? items : items.slice(0, 6);
     const tints = ['navy', 'gold'];
@@ -6668,10 +6671,18 @@
           budgetCell +
           '<span class="budget-event-pct ' + pctClass + '">' + (it.hasApproved ? Math.round(it.pct) : 0) + '%</span>';
       }
+      var barW, barCls;
+      if (it.hasApproved) {
+        barW = it.pct; barCls = it.over ? ' over' : '';
+      } else if (it.actual > 0 && maxActual > 0) {
+        barW = Math.max(8, (it.actual / maxActual) * 100); barCls = ' soft';
+      } else {
+        barW = 0; barCls = ' none';
+      }
       return '<div class="budget-event-row">' +
         '<div class="budget-badge ' + tints[i % tints.length] + ' budget-badge-sm">' + BUDGET_ICONS.event + '</div>' +
         '<span class="budget-event-name' + (it.uncat ? ' budget-cat-uncat' : '') + '">' + escapeHtml(it.name) + '</span>' +
-        '<div class="budget-cat-bar"><div class="budget-cat-fill' + (it.over ? ' over' : '') + (it.hasApproved ? '' : ' none') + '" style="width:' + it.pct + '%"></div></div>' +
+        '<div class="budget-cat-bar"><div class="budget-cat-fill' + barCls + '" style="width:' + barW + '%"></div></div>' +
         right +
       '</div>';
     }).join('');
