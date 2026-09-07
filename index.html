@@ -5751,7 +5751,11 @@
       return;
     }
 
-    if (AUTH_LINK_TYPE === 'invite' || AUTH_LINK_TYPE === 'recovery') {
+    const mustChange = !!(session.user &&
+                          session.user.user_metadata &&
+                          session.user.user_metadata.must_change_password);
+
+    if (mustChange || AUTH_LINK_TYPE === 'invite' || AUTH_LINK_TYPE === 'recovery') {
       state.loading = false;
       state.setPasswordMode = true;
       render();
@@ -5947,11 +5951,18 @@
       state.setPasswordError = 'Passwords do not match.';
       render(); return;
     }
+    if (p1 === 'temp_password') {   // <-- match your actual TEMP_PASSWORD
+      state.setPasswordError = 'Choose a different password than the temporary one.';
+      render(); return;
+    }
 
     if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
     try {
-      const { error } = await sb.auth.updateUser({ password: p1 });
+      const { error } = await sb.auth.updateUser({
+        password: p1,
+        data: { must_change_password: false }
+      });
       if (error) throw error;
 
       history.replaceState(null, '', location.pathname);
@@ -5995,6 +6006,15 @@
     try {
       const { data, error } = await sb.auth.signInWithPassword({ email: email, password: password });
       if (error) throw error;
+
+      const u = data.session.user;
+      if (u && u.user_metadata && u.user_metadata.must_change_password) {
+        state.loginError = null;
+        state.loginEmail = null;
+        state.setPasswordMode = true;
+        render();
+        return;
+      }
 
       const ok = await resolveMember(data.session);
       if (!ok) {
