@@ -449,6 +449,7 @@
   }
 
   .search-input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(10,36,99,0.08); }
+  [data-theme="dark"] .search-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 166, 74, 0.12); }
 
   .view-switcher {
     display: flex;
@@ -3385,12 +3386,26 @@
     .history-print.history-print-head { display: none; }
   }
 
-  /* ========== PHASE 0 #4 — Tasks sub-nav + Templates view ========== */
-  .tasks-subnav {
+  /* ========== PHASE 0 #4 — Templates view (Direction B: single page) ========== */
+  .tasks-planning-divider {
     display: flex;
-    gap: 4px;
-    margin-bottom: 18px;
-    border-bottom: 1px solid var(--line);
+    align-items: center;
+    gap: 12px;
+    margin: 34px 0 18px;
+  }
+  .tasks-planning-divider::before,
+  .tasks-planning-divider::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--line);
+  }
+  .tasks-planning-divider span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--fg-muted);
+    white-space: nowrap;
   }
 
   .templates-view { display: flex; flex-direction: column; gap: 20px; }
@@ -3448,29 +3463,6 @@
     font-family: 'JetBrains Mono', monospace;
     letter-spacing: 0.02em;
   }
-
-  /* Generate bar */
-  .templates-generate-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 12px 14px;
-    margin: 12px 0 18px;
-    background: var(--parchment);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-  }
-  [data-theme="dark"] .templates-generate-bar { background: rgba(212, 166, 74, 0.06); }
-  .generate-plan {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: var(--fg);
-    letter-spacing: 0.02em;
-  }
-  .generate-plan strong { font-size: 14px; color: var(--navy); }
-  [data-theme="dark"] .generate-plan strong { color: var(--gold); }
-  .generate-plan .plan-aside { color: var(--fg-muted); }
 
   /* Phase groups */
   .phase-group {
@@ -3601,10 +3593,6 @@
     .chapter-date-row {
       grid-template-columns: 1fr;
       gap: 6px;
-    }
-    .templates-generate-bar {
-      flex-direction: column;
-      align-items: stretch;
     }
   }
 
@@ -3958,6 +3946,7 @@
   /* Chip row: equal-width grid cells, one chip per milestone, centered */
   .rush-chip-row {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 4px;
     padding: 0 4px;
     margin-top: 2px;
@@ -4016,7 +4005,7 @@
 
   @media (max-width: 900px) {
     .rush-segments { grid-template-columns: 1fr 1fr; gap: 20px 14px; }
-    .rush-chip-row { grid-template-columns: repeat(2, 1fr) !important; gap: 6px; }
+    .rush-chip-row { grid-template-columns: repeat(2, 1fr); gap: 6px; }
     .rush-connectors { display: none; } /* connectors don't map sensibly across wrapped rows */
   }
 
@@ -4565,6 +4554,23 @@
     margin-right: 6px;
   }
   [data-theme="dark"] .marketing-view .post-channel { background: rgba(232, 196, 208, 0.30); }
+
+  /* Phase 0 #5 — draft vs published status */
+  .mc-status-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 1px 8px;
+    border-radius: 20px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+  .mc-status-tag.published { color: var(--success); border-color: var(--line-strong); }
+  .cal-post-chip.mc-draft { opacity: 0.62; }
+  .cal-post-chip.mc-draft .post-title { font-style: italic; }
   @media (max-width: 900px) {
     .marketing-view .marketing-header-row { flex-direction: column; align-items: stretch; }
     .marketing-view .marketing-header-actions { justify-content: flex-end; }
@@ -4874,7 +4880,7 @@
   .dash-grid > .section-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .activity-grid { background: transparent; border: none; gap: 24px; overflow: visible; }
   .activity-grid.two-col { grid-template-columns: 1fr 1fr; }
-  .activity-column { background: var(--surface); border: 1px solid var(--line) !important; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: 20px 22px; }
+  .activity-column { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: 20px 22px; }
 
   /* ---- section titles + buttons ---- */
   .section-title, .view-dashboard .section-title { color: var(--navy); }
@@ -4904,6 +4910,21 @@
   [data-theme="dark"] .kpi-value, [data-theme="dark"] .phase-name,
   [data-theme="dark"] .section-title, [data-theme="dark"] .view-dashboard .section-title { color: var(--gold); }
   [data-theme="dark"] .kpi-icon { color: var(--gold); }
+  /* ========== RSVP (Phase 0 #7) ========== */
+  .rsvp-card { max-width: 420px; }
+  .rsvp-event-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--fg); margin: 18px 0 4px; }
+  .rsvp-event-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 18px; }
+  .rsvp-field { text-align: left; margin: 14px 0; }
+  .rsvp-actions { display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+  .rsvp-confirm { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--fg); margin-top: 16px; }
+  .rsvp-block { margin-top: 4px; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
+  .rsvp-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin-bottom: 8px; }
+  .rsvp-counts { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  .rsvp-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 8px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); color: var(--fg-soft); }
+  .rsvp-count.yes { color: var(--success); border-color: var(--line-strong); }
+  .rsvp-count.no { color: var(--danger); }
+  .rsvp-note { font-size: 12px; color: var(--fg-muted); line-height: 1.5; }
+  .rsvp-note code { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -5064,6 +5085,7 @@
         <label class="field-label">Notes</label>
         <textarea class="field-textarea" id="eventNotes" placeholder="Details, links, who's bringing what…"></textarea>
       </div>
+      <div id="eventRsvpArea"></div>
     </div>
     <div class="modal-footer">
       <button class="btn danger" id="deleteEventBtn" onclick="deleteCurrentEvent()" style="display:none">Delete</button>
@@ -5213,7 +5235,12 @@
   let sb = null;
   if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      realtime: { params: { eventsPerSecond: 10 } }
+      realtime: { params: { eventsPerSecond: 10 } },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
     });
   } else {
     console.error('Supabase client failed to load');
@@ -5229,7 +5256,13 @@
         '</div></div>';
     });
   }
-
+  // Captured before supabase-js consumes and clears the URL fragment.
+  const AUTH_LINK_TYPE = (function () {
+    try {
+      const h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+      return h.get('type') || null;
+    } catch (e) { return null; }
+  })();
   // Map frontend "key" to Supabase table name. Changing keys here
   // would break existing data — keep them synced with schema.sql.
   const TABLE_MAP = {
@@ -5382,6 +5415,15 @@
       clearTimeout(realtimeDebounce);
       realtimeDebounce = setTimeout(async () => { await loadExpenses(); render(); }, 250);
     });
+    // Phase 0 #7: RSVP responses — refresh the open event modal's RSVP block live.
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'event_rsvps' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => {
+        await loadEventRsvps();
+        if (state.rsvpMode) { render(); return; }
+        renderEventRsvpArea();
+      }, 250);
+    });
     channel.subscribe();
   }
 
@@ -5398,10 +5440,23 @@
   // ============================================================
   // CONSTANTS
   // ============================================================
+  // ids must match app_users.member_id exactly (see 0010d_member_map.sql).
+  // owen / olivia_v / olivia_c are FIXED — existing notes, tasks, and votes
+  // are keyed to them. Do not rename.
   const MEMBERS = [
-    { id: 'owen', name: 'Owen', color: '#0A2463' },
-    { id: 'olivia_v', name: 'Olivia V', color: '#A67C2E' },
-    { id: 'olivia_c', name: 'Olivia C', color: '#3F8A5C' },
+    { id: 'owen',     name: 'Owen',       color: '#0A2463' },
+    { id: 'olivia_v', name: 'Olivia V',   color: '#A67C2E' },
+    { id: 'olivia_c', name: 'Olivia C',   color: '#3F8A5C' },
+    { id: 'fernanda', name: 'Fernanda',   color: '#B82832' },
+    { id: 'caleb',    name: 'Caleb',      color: '#2E6F8E' },
+    { id: 'reese',    name: 'Reese',      color: '#7A4E9C' },
+    { id: 'nolan',    name: 'Nolan',      color: '#1F7A6B' },
+    { id: 'daniel',   name: 'Daniel',     color: '#8E5A2E' },
+    { id: 'lexie',    name: 'Lexie',      color: '#C4478B' },
+    { id: 'mikayla',  name: 'Mikayla',    color: '#4A6FA5' },
+    { id: 'matthew',  name: 'Matthew',    color: '#5B7A2E' },
+    { id: 'baxter',   name: 'Baxter',     color: '#8E7A2E' },
+    { id: 'lila',     name: 'Lila',       color: '#9C4E4E' },
   ];
 
   const DEFAULT_EVENT_CATS = [
@@ -5433,6 +5488,12 @@
   // ============================================================
   let state = {
     currentUser: null,
+    currentTier: null,
+    setPasswordMode: false,
+    setPasswordError: null,
+    isExec: false,
+    loginEmail: null,
+    loginError: null,
     notes: [],
     tasks: [],
     events: [],
@@ -5470,8 +5531,6 @@
       recurrence: 'once',             // 'once' | 'weekly'
     },
 
-    taskFilterAssignee: 'all',
-    taskFilterCategory: 'all',
     calendarFilterCategory: 'all',
     notesViewMode: 'grid',
     notesArchiveCollapsed: true,
@@ -5522,6 +5581,12 @@
     marketingPosts: [],
     marketingPostsLoaded: false,
     marketingViewMode: 'calendar',     // 'calendar' | 'list'
+    marketingStatusFilter: 'all',      // 'all' | 'draft' | 'published'
+    // Phase 0 #7 — RSVP
+    eventRsvps: [],
+    eventRsvpsLoaded: false,
+    rsvpMode: null,                    // { eventId, key, event, valid, submitted } when ?rsvp= is present
+    rsvpBrothers: [],
     editingMarketingPostId: null,
     editingMarketingPost: {},
     // Phase 0 #6 — Budget Tracking
@@ -5536,9 +5601,7 @@
     milestoneDetail: null,            // §G dashboard polish — selected milestone key (or 'tpl:<id>')
     chapterDates: [],
     chapterDatesLoaded: false,
-    tasksSubview: 'active',
     taskTemplateFilter: { search: '', phase: 'all', category: 'all' },
-    taskTemplatesExcluded: new Set(),
     taskTemplatesExpanded: null,         // initialized on first Templates render based on current phase
     chapterDatesEditingKey: null,
     // ============================================================
@@ -5608,6 +5671,8 @@
       // Phase 0 #6
       await loadBudgetCategories();
       await loadExpenses();
+      // Phase 0 #7 — RSVP responses (soft-fails until migration 0005 lands)
+      await loadEventRsvps();
       // Phase 0 #4 v2: silent boot-time sync. No toast, no banner — generation
       // is invisible to chairs at boot. Explicit saveChapterDate triggers
       // surface counts in their own toast.
@@ -5670,16 +5735,70 @@
   async function init() {
     applyTheme();
     render(); // loading screen
-    await loadAll();
-    const saved = sessionStorage.getItem('rush26_user');
-    if (saved && MEMBERS.find(m => m.id === saved)) {
-      state.currentUser = saved;
+
+    let session = null;
+    try {
+      const { data } = await sb.auth.getSession();
+      session = data ? data.session : null;
+    } catch (e) {
+      console.error('getSession failed', e);
     }
+
+    if (!session) {
+      state.loading = false;
+      state.currentUser = null;
+      render(); // login screen
+      return;
+    }
+
+    if (AUTH_LINK_TYPE === 'invite' || AUTH_LINK_TYPE === 'recovery') {
+      state.loading = false;
+      state.setPasswordMode = true;
+      render();
+      return;
+    }
+
+    const ok = await resolveMember(session);
+    if (!ok) {
+      await sb.auth.signOut();
+      state.loading = false;
+      state.currentUser = null;
+      state.loginError = 'This account is not provisioned for the app. Contact Owen.';
+      render();
+      return;
+    }
+
+    await loadAll();
     render();
-    // Subscribe to realtime changes from teammates
     try { setupRealtime(); } catch (e) { console.error('Realtime setup failed', e); }
     if (!connectionOK) {
       toast('Cloud connection failed. Check your internet.', 'error');
+    }
+  }
+
+  // Maps the signed-in Supabase user to a MEMBERS id via app_users.
+  // Returns false if the account has no row, no member_id, or a member_id
+  // with no matching MEMBERS entry.
+  async function resolveMember(session) {
+    try {
+      const { data, error } = await sb
+        .from('app_users')
+        .select('member_id, tier, is_exec, display_name')
+        .eq('user_id', session.user.id)
+        .single();
+      if (error) throw error;
+      if (!data || !data.member_id) return false;
+      if (!MEMBERS.find(m => m.id === data.member_id)) {
+        console.error('app_users.member_id has no MEMBERS entry:', data.member_id);
+        return false;
+      }
+      state.currentUser = data.member_id;
+      state.currentTier = data.tier;
+      state.isExec = !!data.is_exec;
+      return true;
+    } catch (e) {
+      console.error('resolveMember failed', e);
+      return false;
     }
   }
 
@@ -5690,6 +5809,14 @@
     const root = document.getElementById('root');
     if (state.loading) {
       root.innerHTML = renderLoadingScreen();
+      return;
+    }
+    if (state.rsvpMode) {
+      root.innerHTML = renderRsvpPage();
+      return;
+    }
+    if (state.setPasswordMode) {
+      root.innerHTML = renderSetPassword();
       return;
     }
     if (!state.currentUser) {
@@ -5746,25 +5873,30 @@
   // ============================================================
   // LOGIN
   // ============================================================
-  function renderLogin() {
+    function renderLogin() {
+    const inputStyle = 'padding:11px 13px; border:1px solid var(--line-strong); ' +
+      'border-radius:8px; background:var(--surface); color:var(--fg); ' +
+      'font-family:Inter,sans-serif; font-size:14px; width:100%;';
     return '' +
       '<div class="login-screen">' +
         '<div class="login-card">' +
           '<div class="big-shield">ΑΚΨ</div>' +
           '<div class="brand-text">Rush <em>SP\'26</em></div>' +
           '<div class="brand-sub-big">Alpha Kappa Psi · Penn State</div>' +
-          '<div class="login-subtitle">Welcome back. Who are you?</div>' +
-          '<div class="member-pick">' +
-            MEMBERS.map(m =>
-              '<button class="member-pick-btn" onclick="loginAs(\'' + m.id + '\')">' +
-                '<div class="mini-avatar" style="background:' + m.color + '; width: 30px; height: 30px; font-size: 13px;">' + m.name[0] + '</div>' +
-                '<div>' +
-                  '<div style="font-weight:500">' + escapeHtml(m.name) + '</div>' +
-                  '<div style="font-size:11px; color:var(--fg-muted); font-family:\'JetBrains Mono\',monospace; text-transform:uppercase; letter-spacing:0.08em;">Continue</div>' +
-                '</div>' +
-              '</button>'
-            ).join('') +
+          '<div class="login-subtitle">Sign in to continue</div>' +
+          (state.loginError
+            ? '<div style="color:var(--danger); font-size:13px; margin:12px 0 0; line-height:1.5;">' +
+                escapeHtml(state.loginError) + '</div>'
+            : '') +
+          '<div style="display:flex; flex-direction:column; gap:10px; margin:18px 0;">' +
+            '<input id="login-email" type="email" autocomplete="username" placeholder="Email" ' +
+              'value="' + escapeHtml(state.loginEmail || '') + '" style="' + inputStyle + '" ' +
+              'onkeydown="if(event.key===\'Enter\'){document.getElementById(\'login-password\').focus();}" />' +
+            '<input id="login-password" type="password" autocomplete="current-password" ' +
+              'placeholder="Password" style="' + inputStyle + '" ' +
+              'onkeydown="if(event.key===\'Enter\'){doLogin();}" />' +
           '</div>' +
+          '<button class="btn primary" id="login-btn" onclick="doLogin()" style="width:100%;">Sign In</button>' +
           '<div class="login-footer">' +
             '<span class="greek">ΑΚΨ</span>' +
             '<span>·</span>' +
@@ -5774,10 +5906,114 @@
       '</div>';
   }
 
-  window.loginAs = function(id) {
-    state.currentUser = id;
-    sessionStorage.setItem('rush26_user', id);
-    render();
+    function renderSetPassword() {
+    const inputStyle = 'padding:11px 13px; border:1px solid var(--line-strong); ' +
+      'border-radius:8px; background:var(--surface); color:var(--fg); ' +
+      'font-family:Inter,sans-serif; font-size:14px; width:100%;';
+    return '' +
+      '<div class="login-screen">' +
+        '<div class="login-card">' +
+          '<div class="big-shield">ΑΚΨ</div>' +
+          '<div class="brand-text">Rush <em>SP\'26</em></div>' +
+          '<div class="login-subtitle">Choose a password</div>' +
+          (state.setPasswordError
+            ? '<div style="color:var(--danger); font-size:13px; margin:12px 0 0; line-height:1.5;">' +
+                escapeHtml(state.setPasswordError) + '</div>'
+            : '') +
+          '<div style="display:flex; flex-direction:column; gap:10px; margin:18px 0;">' +
+            '<input id="pw1" type="password" autocomplete="new-password" placeholder="New password" ' +
+              'style="' + inputStyle + '" />' +
+            '<input id="pw2" type="password" autocomplete="new-password" placeholder="Confirm password" ' +
+              'style="' + inputStyle + '" ' +
+              'onkeydown="if(event.key===\'Enter\'){savePassword();}" />' +
+          '</div>' +
+          '<button class="btn primary" id="pw-btn" onclick="savePassword()" style="width:100%;">Save Password</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  window.savePassword = async function() {
+    const a = document.getElementById('pw1');
+    const b = document.getElementById('pw2');
+    const btn = document.getElementById('pw-btn');
+    const p1 = a ? a.value : '';
+    const p2 = b ? b.value : '';
+
+    if (p1.length < 8) {
+      state.setPasswordError = 'Password must be at least 8 characters.';
+      render(); return;
+    }
+    if (p1 !== p2) {
+      state.setPasswordError = 'Passwords do not match.';
+      render(); return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+    try {
+      const { error } = await sb.auth.updateUser({ password: p1 });
+      if (error) throw error;
+
+      history.replaceState(null, '', location.pathname);
+      state.setPasswordMode = false;
+      state.setPasswordError = null;
+
+      const { data } = await sb.auth.getSession();
+      const ok = await resolveMember(data.session);
+      if (!ok) {
+        await sb.auth.signOut();
+        state.loginError = 'Password saved, but this account is not provisioned. Contact Owen.';
+        render(); return;
+      }
+      await loadAll();
+      render();
+      try { setupRealtime(); } catch (e) { console.error('Realtime setup failed', e); }
+    } catch (e) {
+      console.error('updateUser failed', e);
+      state.setPasswordError = (e && e.message) ? e.message : 'Could not save password.';
+      render();
+    }
+  };
+
+  window.doLogin = async function() {
+    const emailEl = document.getElementById('login-email');
+    const passEl  = document.getElementById('login-password');
+    const btn     = document.getElementById('login-btn');
+    const email    = emailEl ? emailEl.value.trim() : '';
+    const password = passEl  ? passEl.value : '';
+
+    state.loginEmail = email;
+
+    if (!email || !password) {
+      state.loginError = 'Enter your email and password.';
+      render();
+      return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email: email, password: password });
+      if (error) throw error;
+
+      const ok = await resolveMember(data.session);
+      if (!ok) {
+        await sb.auth.signOut();
+        state.loginError = 'Signed in, but this account is not provisioned for the app. Contact Owen.';
+        render();
+        return;
+      }
+
+      state.loginError = null;
+      state.loginEmail = null;
+      await loadAll();
+      render();
+      try { setupRealtime(); } catch (e) { console.error('Realtime setup failed', e); }
+    } catch (e) {
+      console.error('Sign-in failed', e);
+      state.loginError = (e && e.message) ? e.message : 'Sign-in failed.';
+      render();
+    }
   };
 
   // ============================================================
@@ -5849,8 +6085,13 @@
 
   window.switchView = function(v) { state.currentView = v; render(); };
 
-  window.logout = function() {
+  window.logout = async function() {
+    try { await sb.auth.signOut(); } catch (e) { console.error('signOut failed', e); }
     state.currentUser = null;
+    state.currentTier = null;
+    state.isExec = false;
+    state.loginEmail = null;
+    state.loginError = null;
     sessionStorage.removeItem('rush26_user');
     render();
   };
@@ -6226,7 +6467,7 @@
       '<div class="rush-bar-stack" onmouseover="handleMilestoneHover(event, true)" onmouseout="handleMilestoneHover(event, false)">' +
         '<div class="rush-segments">' + segmentsHtml + '</div>' +
         connectorsHtml +
-        '<div class="rush-chip-row" style="grid-template-columns: repeat(' + Math.max(1, N) + ', 1fr);">' + chipsHtml + '</div>' +
+        '<div class="rush-chip-row">' + chipsHtml + '</div>' +
       '</div>' +
     '</div>';
   }
@@ -6786,6 +7027,7 @@
     const est = numOrNull(document.getElementById('expEst').value);
     const act = numOrNull(document.getElementById('expAct').value);
     if (est == null && act == null) { toast('Enter an estimated or actual amount.', 'error'); return; }
+    if ((est != null && !(est >= 0)) || (act != null && !(act >= 0))) { toast('Amounts must be non-negative numbers.', 'error'); return; }
     const payload = {
       item: item,
       category_id: document.getElementById('expCategory').value || null,
@@ -7070,6 +7312,10 @@
     '</div>';
   }
 
+  // Phase 0 #5 — status helper. Rows written before migration 0004 have no
+  // status column; treat them as published so nothing regresses to draft.
+  function mcPostStatus(p) { return (p && p.status === 'draft') ? 'draft' : 'published'; }
+
   function renderMarketingCalendarSubview() {
     const posts = state.marketingPosts || [];
     if (posts.length === 0) {
@@ -7117,7 +7363,7 @@
           return '<div class="cal-cell ' + (c.otherMonth ? 'other-month' : '') + ' ' + (isToday ? 'today' : '') + '">' +
             '<div class="cal-date">' + c.date.getDate() + '</div>' +
             visiblePosts.map(function(p) {
-              return '<div class="cal-post-chip" onclick="event.stopPropagation(); openMarketingPostModal(\'' + p.id + '\')" title="' + escapeHtml(p.title + ' · ' + getChannelFullLabel(p.channel)) + '">' +
+              return '<div class="cal-post-chip' + (mcPostStatus(p) === 'draft' ? ' mc-draft' : '') + '" onclick="event.stopPropagation(); openMarketingPostModal(\'' + p.id + '\')" title="' + escapeHtml(p.title + ' · ' + getChannelFullLabel(p.channel) + (mcPostStatus(p) === 'draft' ? ' · draft' : '')) + '">' +
                 '<span class="post-channel">' + escapeHtml(getChannelLabel(p.channel)) + '</span>' +
                 '<span class="post-title">' + escapeHtml(p.title) + '</span>' +
               '</div>';
@@ -7128,21 +7374,34 @@
       '</div>';
   }
 
+  window.setMarketingStatusFilter = function(v) { state.marketingStatusFilter = v; render(); };
+
   function renderMarketingListSubview() {
-    const posts = (state.marketingPosts || []).slice().sort(function(a,b){
+    const sf = state.marketingStatusFilter || 'all';
+    const posts = (state.marketingPosts || []).filter(function(p) {
+      return sf === 'all' || mcPostStatus(p) === sf;
+    }).slice().sort(function(a,b){
       const ad = (a.post_date || '') + ' ' + (a.post_time || '99:99');
       const bd = (b.post_date || '') + ' ' + (b.post_time || '99:99');
       return ad < bd ? -1 : ad > bd ? 1 : 0;
     });
+    const filterBar = '<div class="brothers-toolbar" style="margin-top:18px;">' +
+      '<select class="field-select" onchange="setMarketingStatusFilter(this.value)">' +
+        '<option value="all"' + (sf === 'all' ? ' selected' : '') + '>All posts</option>' +
+        '<option value="draft"' + (sf === 'draft' ? ' selected' : '') + '>Drafts</option>' +
+        '<option value="published"' + (sf === 'published' ? ' selected' : '') + '>Published</option>' +
+      '</select>' +
+      '<span class="brothers-count">' + posts.length + ' post' + (posts.length === 1 ? '' : 's') + '</span>' +
+    '</div>';
     if (posts.length === 0) {
-      return '<div class="empty-state-polished" style="margin-top:32px;">' +
+      return filterBar + '<div class="empty-state-polished" style="margin-top:32px;">' +
         '<div class="empty-glyph">◭</div>' +
-        '<div class="empty-text" style="font-family:\'Playfair Display\',serif; font-style:italic;">No posts on the calendar yet. Tap + Add post.</div>' +
+        '<div class="empty-text" style="font-family:\'Playfair Display\',serif; font-style:italic;">' + (sf === 'all' ? 'No posts on the calendar yet. Tap + Add post.' : 'No ' + sf + ' posts.') + '</div>' +
       '</div>';
     }
-    return '<table class="brothers-table" style="margin-top:18px;">' +
+    return filterBar + '<table class="brothers-table" style="margin-top:12px;">' +
       '<thead><tr>' +
-        '<th>Title</th><th>Date</th><th>Time</th><th>Channel</th><th>Asset</th><th>Notes</th>' +
+        '<th>Title</th><th>Status</th><th>Date</th><th>Time</th><th>Channel</th><th>Asset</th><th>Notes</th>' +
       '</tr></thead><tbody>' +
       posts.map(function(p) {
         const dateStr = formatMcDate(p.post_date);
@@ -7153,6 +7412,7 @@
         const notesCell = p.notes ? escapeHtml(p.notes.length > 60 ? p.notes.slice(0,57) + '…' : p.notes) : '<span style="color:var(--fg-muted);">—</span>';
         return '<tr style="cursor:pointer;" onclick="openMarketingPostModal(\'' + p.id + '\')">' +
           '<td><strong>' + escapeHtml(p.title) + '</strong></td>' +
+          '<td><span class="mc-status-tag ' + mcPostStatus(p) + '">' + mcPostStatus(p) + '</span></td>' +
           '<td>' + escapeHtml(dateStr) + '</td>' +
           '<td>' + escapeHtml(timeStr) + '</td>' +
           '<td><span class="post-channel">' + escapeHtml(getChannelLabel(p.channel)) + '</span> ' + escapeHtml(getChannelFullLabel(p.channel)) + '</td>' +
@@ -7178,7 +7438,8 @@
       state.editingMarketingPostId = null;
       state.editingMarketingPost = {
         title: '', post_date: new Date().toISOString().slice(0,10),
-        post_time: '', channel: 'instagram_post', asset_link: '', notes: ''
+        post_time: '', channel: 'instagram_post', asset_link: '', notes: '',
+        status: 'draft'
       };
     }
     render();
@@ -7186,6 +7447,13 @@
       const el = document.getElementById('mcModalTitle');
       if (el) el.focus();
     }, 50);
+  };
+
+  window.pickMcStatus = function(sId) {
+    if (state.editingMarketingPost) state.editingMarketingPost.status = sId;
+    document.querySelectorAll('#mcStatusChips .chip').forEach(function(b) {
+      b.classList.toggle('selected', b.getAttribute('data-status') === sId);
+    });
   };
 
   window.closeMarketingPostModal = function() {
@@ -7245,17 +7513,27 @@
     const payload = {
       title: title, post_date: post_date, post_time: post_time, channel: channel,
       asset_link: asset_link, notes: notes,
+      status: mcPostStatus(state.editingMarketingPost),
       updated_at: new Date().toISOString(), updated_by: state.currentUser
     };
-    try {
+    // Until migration 0004_marketing_post_status.sql is applied, the status
+    // column doesn't exist — retry once without it rather than failing the save.
+    async function mcWrite(pl) {
       if (state.editingMarketingPostId) {
-        const { error } = await sb.from('marketing_posts').update(payload).eq('id', state.editingMarketingPostId);
-        if (error) throw error;
-      } else {
-        payload.created_by = state.currentUser;
-        const { error } = await sb.from('marketing_posts').insert(payload);
-        if (error) throw error;
+        return (await sb.from('marketing_posts').update(pl).eq('id', state.editingMarketingPostId)).error;
       }
+      pl.created_by = state.currentUser;
+      return (await sb.from('marketing_posts').insert(pl)).error;
+    }
+    try {
+      let error = await mcWrite(payload);
+      if (error && /status/i.test(error.message || '')) {
+        const fallback = Object.assign({}, payload);
+        delete fallback.status;
+        error = await mcWrite(fallback);
+        if (!error) toast('Saved without status — apply migration 0004_marketing_post_status.sql', 'error');
+      }
+      if (error) throw error;
       await loadMarketingPosts();
       toast(state.editingMarketingPostId ? 'Post updated.' : 'Post added.', 'success');
       closeMarketingPostModal();
@@ -7322,6 +7600,14 @@
                 return '<option value="' + c + '"' + (p.channel === c ? ' selected' : '') + '>' + escapeHtml(getChannelFullLabel(c)) + '</option>';
               }).join('') +
             '</select>' +
+          '</div>' +
+          '<div class="form-row">' +
+            '<label class="field-label">Status</label>' +
+            '<div class="chip-row" id="mcStatusChips">' +
+              [{ id: 'draft', label: 'Draft' }, { id: 'published', label: 'Published' }].map(function(st) {
+                return '<button type="button" class="chip' + (mcPostStatus(p) === st.id ? ' selected' : '') + '" data-status="' + st.id + '" onclick="pickMcStatus(\'' + st.id + '\')">' + st.label + '</button>';
+              }).join('') +
+            '</div>' +
           '</div>' +
         '</div>' +
 
@@ -8147,17 +8433,19 @@
     const t = state.tasks.find(function(x) { return x.id === taskId; });
     if (!t) return;
     const wasDone = t.status === 'done';
-    t.status = wasDone ? 'open' : 'done';
+    const prevStatus = t.status;
+    t.status = wasDone ? 'todo' : 'done';
     t.completedAt = wasDone ? null : new Date().toISOString();
+    t.updatedAt = Date.now();
     render();
-    try {
-      await sb.from('entities').update({ blob: t }).eq('id', taskId);
-    } catch (err) {
-      t.status = wasDone ? 'done' : 'open';
+    // Persist through the same blob-store path as every other task write.
+    // (Previously wrote to a nonexistent 'entities' table — silent no-op.)
+    const ok = await persist('tasks', state.tasks);
+    if (!ok) {
+      t.status = prevStatus;
       t.completedAt = wasDone ? new Date().toISOString() : null;
       render();
-      console.error('[diff4] toggleTaskDoneFromChip failed', err);
-      if (typeof toast === 'function') toast('Could not update task - reverted', 'error');
+      console.error('[diff4] toggleTaskDoneFromChip persist failed');
     }
   };
 
@@ -8197,6 +8485,7 @@
     document.getElementById('newEventCatName').value = '';
     renderConflictsArea();
     attachConflictListeners();
+    renderEventRsvpArea();
 
     document.getElementById('eventModal').classList.add('active');
     setTimeout(() => document.getElementById('eventTitle').focus(), 50);
@@ -9398,6 +9687,22 @@
       state.editingCandId = null;
       state.editingSchedId = null;
       state.editingSchedInstanceDate = null;
+      // Render-driven modals/overlays: clear their state flags too, otherwise
+      // the next render() re-shows them (realtime tick, theme toggle, etc.).
+      const hadRenderModal = state.expenseModalOpen ||
+        state.editingMarketingPostId !== null || (state.editingMarketingPost && state.editingMarketingPost.post_date !== undefined) ||
+        state.milestoneDetail !== null || state.calendarDayDetail !== null;
+      if (hadRenderModal) {
+        state.expenseModalOpen = false;
+        state.editingExpenseId = null;
+        state.editingExpense = {};
+        state.editingMarketingPostId = null;
+        state.editingMarketingPost = {};
+        state.milestoneDetail = null;
+        state.calendarDayDetail = null;
+        document.body.style.overflow = '';
+        render();
+      }
     }
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
       if (document.getElementById('noteModal').classList.contains('active')) { e.preventDefault(); saveNote(); }
@@ -10860,12 +11165,11 @@
   // RENDER — Tasks sub-nav + Templates view + Chapter Dates editor
   // ============================================================
   function renderTasks() {
-    const sub = state.tasksSubview || 'active';
-    return '<div class="tasks-subnav">' +
-      '<button class="subnav-tab' + (sub === 'active'    ? ' active' : '') + '" onclick="setTasksSubview(\'active\')">Active Tasks</button>' +
-      '<button class="subnav-tab' + (sub === 'templates' ? ' active' : '') + '" onclick="setTasksSubview(\'templates\')">Templates</button>' +
-    '</div>' +
-    (sub === 'templates' ? renderTemplatesView() : renderActiveTasksView());
+    // Direction B: single scrolling page — Active Tasks first, then the
+    // planning section (quick-add, chapter dates, templates). Sub-nav removed.
+    return renderActiveTasksView() +
+      '<div class="tasks-planning-divider" id="tasksPlanningSection"><span>Planning — templates &amp; chapter dates</span></div>' +
+      renderTemplatesView();
   }
 
 
@@ -10985,17 +11289,6 @@
     const grouped = {};
     phaseOrder.forEach(function(p) { grouped[p] = []; });
     filtered.forEach(function(t) { if (grouped[t.phase]) grouped[t.phase].push(t); });
-
-    // Generate plan: count non-excluded, anchored templates that aren't already generated
-    let plan = { canGenerate: 0, skipExisting: 0, skipAnchorless: 0, skipExcluded: 0 };
-    templates.forEach(function(t) {
-      if (state.taskTemplatesExcluded.has(t.id)) { plan.skipExcluded++; return; }
-      const calc = getTemplateCalculatedDue(t, byKey);
-      if (!calc) { plan.skipAnchorless++; return; }
-      if (findTaskForTemplate(t.id)) { plan.skipExisting++; return; }
-      plan.canGenerate++;
-    });
-    const generateDisabled = plan.canGenerate === 0;
 
     return '<div class="templates-view">' +
       renderQuickAddTaskBar() +
@@ -11147,76 +11440,8 @@
   }
 
   // ============================================================
-  // GENERATE FLOW
-  // ============================================================
-  async function generateTasksFromTemplates() {
-    if (!sb) return;
-    const templates = state.taskTemplates || [];
-    const byKey = getChapterDatesByKey();
-    const newTasks = [];
-    let skipExisting = 0, skipAnchorless = 0, skipExcluded = 0;
-
-    templates.forEach(function(t) {
-      if (state.taskTemplatesExcluded.has(t.id)) { skipExcluded++; return; }
-      const calc = getTemplateCalculatedDue(t, byKey);
-      if (!calc) { skipAnchorless++; return; }
-      if (findTaskForTemplate(t.id)) { skipExisting++; return; }
-      // Category match: case-insensitive name match against existing task_cats
-      let categoryId = null;
-      if (t.category) {
-        const match = (state.taskCategories || []).find(function(c) {
-          return c.name && c.name.toLowerCase() === t.category.toLowerCase();
-        });
-        if (match) categoryId = match.id;
-      }
-      newTasks.push({
-        id:        't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        templateId: t.id,
-        text:      t.title,
-        notes:     t.description || '',
-        assigneeId: t.default_assignee || null,
-        categoryId: categoryId,
-        status:    'todo',
-        priority:  t.priority || 'med',
-        dueISO:    calc.toISOString(),
-        authorId:  state.currentUser,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-    });
-
-    if (newTasks.length === 0) {
-      toast('Nothing to generate. ' +
-            (skipExisting ? skipExisting + ' already exist. ' : '') +
-            (skipAnchorless ? skipAnchorless + ' missing anchor.' : ''), 'error');
-      return;
-    }
-
-    const confirmed = confirm('Generate ' + newTasks.length + ' task' + (newTasks.length === 1 ? '' : 's') + ' from templates?\\n\\n' +
-      (skipExisting   ? skipExisting + ' already generated will be skipped.\\n' : '') +
-      (skipAnchorless ? skipAnchorless + ' have no anchor date set.\\n' : '') +
-      (skipExcluded   ? skipExcluded + ' are excluded.\\n' : ''));
-    if (!confirmed) return;
-
-    state.tasks = state.tasks.concat(newTasks);
-    const ok = await Storage.set('tasks', state.tasks);
-    if (!ok) {
-      toast('Failed to save generated tasks — check console.', 'error');
-      state.tasks = state.tasks.slice(0, state.tasks.length - newTasks.length);
-      return;
-    }
-    toast('Generated ' + newTasks.length + ' task' + (newTasks.length === 1 ? '' : 's') + '.', 'success');
-    render();
-  }
-
-  // ============================================================
   // WINDOW HANDLERS
   // ============================================================
-  window.setTasksSubview = function(key) {
-    state.tasksSubview = key;
-    render();
-  };
-
   window.setTaskTemplateFilter = function(key, value) {
     state.taskTemplateFilter = Object.assign({}, state.taskTemplateFilter, { [key]: value });
     render();
@@ -11224,13 +11449,6 @@
       const el = document.querySelector('.templates-view .brothers-toolbar .search');
       if (el) { try { el.focus(); el.setSelectionRange(value.length, value.length); } catch(_) {} }
     }
-  };
-
-  window.toggleTemplateExcluded = function(id) {
-    if (!state.taskTemplatesExcluded) state.taskTemplatesExcluded = new Set();
-    if (state.taskTemplatesExcluded.has(id)) state.taskTemplatesExcluded.delete(id);
-    else state.taskTemplatesExcluded.add(id);
-    render();
   };
 
   window.togglePhaseExpanded = function(phase) {
@@ -11282,8 +11500,6 @@
       toast('Failed to save date — check console.', 'error');
     }
   };
-
-  window.generateTasksFromTemplates = generateTasksFromTemplates;
 
   // ============================================================
   // PHASE 0 #4 v2 — TASK SYSTEM REDESIGN
@@ -12016,8 +12232,228 @@
   };
 
 
+
+  // ============================================================
+  // RSVP (Phase 0 #7) — brother attendance for rush events
+  //
+  // Data: public.event_rsvps (typed table, migration 0005). One row per
+  // (event_id, brother_id); status yes/no/maybe. Brother-facing page is
+  // reached via ?rsvp=<eventId>&k=<token> — token lives on the event blob
+  // (ev.rsvpToken), generated when a chair first creates the link. No
+  // brother auth (per spec): responders pick their name from the roster.
+  //
+  // Guardrail (plan review §2): this table is the per-event attendance
+  // primitive. PNM sign-in in Phase 1+ should extend this shape (attendee
+  // keyed by psu_id), not invent a parallel one.
+  //
+  // The RSVP page queries brothers with a NAME-ONLY select — demographics
+  // never leave the chair-facing loaders.
+  // ============================================================
+
+  async function loadEventRsvps() {
+    if (!sb) return;
+    try {
+      let q = sb.from('event_rsvps').select('*');
+      if (state.rsvpMode) q = q.eq('event_id', state.rsvpMode.eventId);
+      const { data, error } = await q;
+      if (error) throw error;
+      state.eventRsvps = data || [];
+      state.eventRsvpsLoaded = true;
+    } catch (e) {
+      // Most likely: migration 0005_event_rsvps.sql not applied yet.
+      console.error('loadEventRsvps failed (is migration 0005 applied?)', e);
+      state.eventRsvps = [];
+      state.eventRsvpsLoaded = false;
+    }
+  }
+
+  function rsvpDisplayName(b) {
+    if (!b) return 'Unknown';
+    return ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim() || 'Unknown';
+  }
+
+  // Chair-facing block inside the event modal (existing events only)
+  function renderEventRsvpArea() {
+    const area = document.getElementById('eventRsvpArea');
+    if (!area) return;
+    const ev = state.editingEventId ? state.events.find(function(e) { return e.id === state.editingEventId; }) : null;
+    if (!ev) { area.innerHTML = ''; return; }
+    if (!state.eventRsvpsLoaded) {
+      area.innerHTML = '<div class="rsvp-block"><div class="rsvp-block-head">RSVPs</div>' +
+        '<div class="rsvp-note">Not enabled yet — apply <code>0005_event_rsvps.sql</code> in Supabase.</div></div>';
+      return;
+    }
+    const rows = (state.eventRsvps || []).filter(function(r) { return r.event_id === ev.id; });
+    const byId = {};
+    (state.brothers || []).forEach(function(b) { byId[b.id] = b; });
+    function names(st) {
+      return rows.filter(function(r) { return r.status === st; })
+                 .map(function(r) { return rsvpDisplayName(byId[r.brother_id]); });
+    }
+    const yes = names('yes'), maybe = names('maybe'), no = names('no');
+    area.innerHTML = '<div class="rsvp-block">' +
+      '<div class="rsvp-block-head"><span>RSVPs</span>' +
+        '<button type="button" class="btn small" onclick="copyEventRsvpLink()">' + (ev.rsvpToken ? 'Copy RSVP link' : 'Create RSVP link') + '</button>' +
+      '</div>' +
+      '<div class="rsvp-counts">' +
+        '<span class="rsvp-count yes">' + yes.length + ' yes</span>' +
+        '<span class="rsvp-count">' + maybe.length + ' maybe</span>' +
+        '<span class="rsvp-count no">' + no.length + ' no</span>' +
+      '</div>' +
+      (yes.length
+        ? '<div class="rsvp-note">Going: ' + escapeHtml(yes.join(', ')) + (maybe.length ? ' · Maybe: ' + escapeHtml(maybe.join(', ')) : '') + '</div>'
+        : '<div class="rsvp-note">No responses yet' + (ev.rsvpToken ? '' : ' — create a link and drop it in the group chat') + '.</div>') +
+    '</div>';
+  }
+
+  window.copyEventRsvpLink = async function() {
+    const ev = state.editingEventId ? state.events.find(function(e) { return e.id === state.editingEventId; }) : null;
+    if (!ev) return;
+    if (!ev.rsvpToken) {
+      ev.rsvpToken = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+      const ok = await persist('events', state.events);
+      if (!ok) { delete ev.rsvpToken; return; }
+    }
+    const link = location.origin + location.pathname + '?rsvp=' + encodeURIComponent(ev.id) + '&k=' + ev.rsvpToken;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast('RSVP link copied.', 'success');
+    } catch (_) {
+      prompt('Copy the RSVP link:', link);
+    }
+    renderEventRsvpArea();
+  };
+
+  // Brother-facing boot path (?rsvp=<eventId>&k=<token>)
+  async function initRsvpMode() {
+    const m = state.rsvpMode;
+    try {
+      const events = await Storage.get('events');
+      const ev = (events || []).find(function(e) { return e.id === m.eventId; });
+      m.event = ev || null;
+      m.valid = !!(ev && ev.rsvpToken && m.key && ev.rsvpToken === m.key);
+      if (m.valid) {
+        // Name-only select — never pull demographics onto a shared-link page.
+        const { data, error } = await sb.from('brothers')
+          .select('id, first_name, last_name, preferred_name')
+          .eq('status', 'active')
+          .order('first_name', { ascending: true });
+        if (error) throw error;
+        state.rsvpBrothers = data || [];
+        await loadEventRsvps();
+      }
+    } catch (e) {
+      console.error('RSVP init failed', e);
+      m.error = true;
+    }
+    state.loading = false;
+    render();
+  }
+
+  function renderRsvpPage() {
+    const m = state.rsvpMode || {};
+    const ev = m.event;
+    let body;
+    if (m.error) {
+      body = '<div class="rsvp-note">Something went wrong loading this invite. Try again in a minute.</div>';
+    } else if (!ev || !m.valid) {
+      body = '<div class="rsvp-note">This RSVP link isn&#39;t valid. Ask your rush chair for a fresh one.</div>';
+    } else if (m.submitted) {
+      const label = m.submitted === 'yes' ? 'going' : (m.submitted === 'no' ? 'not going' : 'a maybe');
+      body = '<div class="rsvp-confirm">Got it — you&#39;re marked <strong>' + label + '</strong>.</div>' +
+        '<div class="rsvp-actions">' +
+          '<button class="btn primary" onclick="downloadEventIcs()">Add to calendar (.ics)</button>' +
+          '<button class="btn" onclick="state.rsvpMode.submitted = null; render();">Change response</button>' +
+        '</div>';
+    } else {
+      const opts = (state.rsvpBrothers || []).map(function(b) {
+        const sel = m.lastBrotherId === b.id ? ' selected' : '';
+        return '<option value="' + escapeHtml(b.id) + '"' + sel + '>' + escapeHtml(rsvpDisplayName(b)) + '</option>';
+      }).join('');
+      body =
+        '<div class="rsvp-field">' +
+          '<label class="field-label" for="rsvpBrotherSelect">Who are you?</label>' +
+          '<select id="rsvpBrotherSelect" class="field-select"><option value="">Select your name…</option>' + opts + '</select>' +
+        '</div>' +
+        '<div class="rsvp-actions">' +
+          '<button class="btn primary" onclick="submitRsvp(&#39;yes&#39;)">I&#39;m in</button>' +
+          '<button class="btn" onclick="submitRsvp(&#39;maybe&#39;)">Maybe</button>' +
+          '<button class="btn" onclick="submitRsvp(&#39;no&#39;)">Can&#39;t make it</button>' +
+        '</div>' +
+        '<div class="rsvp-actions"><button class="btn small" onclick="downloadEventIcs()">Add to calendar (.ics)</button></div>';
+    }
+    return '<div class="login-screen"><div class="login-card rsvp-card">' +
+      '<div class="big-shield">ΑΚΨ</div>' +
+      '<div class="brand-text">Rush <em>SP&#39;26</em></div>' +
+      (ev && m.valid
+        ? '<div class="rsvp-event-title">' + escapeHtml(ev.title) + '</div>' +
+          '<div class="rsvp-event-meta">' + escapeHtml(formatEventTime(ev)) + (ev.location ? ' · ' + escapeHtml(ev.location) : '') + '</div>'
+        : '') +
+      body +
+      '<div class="login-footer"><span class="greek">ΑΚΨ</span><span>·</span><span>Rush committee RSVP</span></div>' +
+    '</div></div>';
+  }
+
+  window.submitRsvp = async function(status) {
+    const sel = document.getElementById('rsvpBrotherSelect');
+    const bid = sel ? sel.value : '';
+    if (!bid) { toast('Pick your name first.', 'error'); return; }
+    const m = state.rsvpMode;
+    try {
+      const { error } = await sb.from('event_rsvps').upsert({
+        event_id: m.eventId,
+        brother_id: bid,
+        status: status,
+        responded_at: new Date().toISOString()
+      }, { onConflict: 'event_id,brother_id' });
+      if (error) throw error;
+      m.submitted = status;
+      m.lastBrotherId = bid;
+      render();
+    } catch (e) {
+      console.error('submitRsvp failed', e);
+      toast('Could not save your RSVP — try again, or text the chairs.', 'error');
+    }
+  };
+
+  window.downloadEventIcs = function() {
+    const ev = (state.rsvpMode && state.rsvpMode.event) ||
+      (state.editingEventId ? state.events.find(function(e) { return e.id === state.editingEventId; }) : null);
+    if (!ev) return;
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function stampUTC(iso) {
+      const d = new Date(iso);
+      return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) +
+        'T' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + '00Z';
+    }
+    function icsEscape(t) {
+      return String(t || '').replace(/\\/g, '\\\\').replace(/[,;]/g, function(c) { return '\\' + c; }).replace(/\r?\n/g, '\\n');
+    }
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AKPsi Rush SP26//EN', 'BEGIN:VEVENT',
+      'UID:' + ev.id + '@rush-sp26', 'DTSTAMP:' + stampUTC(new Date().toISOString())];
+    if (ev.hasTime) {
+      lines.push('DTSTART:' + stampUTC(ev.startISO));
+      lines.push('DTEND:' + stampUTC(ev.endISO || new Date(new Date(ev.startISO).getTime() + 3600000).toISOString()));
+    } else {
+      const d = new Date(ev.startISO);
+      lines.push('DTSTART;VALUE=DATE:' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()));
+    }
+    lines.push('SUMMARY:' + icsEscape(ev.title));
+    if (ev.location) lines.push('LOCATION:' + icsEscape(ev.location));
+    if (ev.notes) lines.push('DESCRIPTION:' + icsEscape(ev.notes));
+    lines.push('END:VEVENT', 'END:VCALENDAR');
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (ev.title || 'event').replace(/[^a-z0-9]+/gi, '_').toLowerCase() + '.ics';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  };
+
+
   if (sb) init();
 </script>
 </body>
 </html>
-     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
