@@ -5501,6 +5501,9 @@
     eventCategories: [],
     taskCategories: [],
     scheduleEvents: [],
+    idReviews: [],
+    idReviewsLoaded: false,
+    rushEventLabels: {},
     currentView: 'dashboard',
     calendarDate: new Date(),
     weekDate: new Date(),       // anchor date for the week view (any day inside the week)
@@ -5673,6 +5676,8 @@
       await loadExpenses();
       // Phase 0 #7 — RSVP responses (soft-fails until migration 0005 lands)
       await loadEventRsvps();
+      // Open PSU ID reviews filed by the kiosk. Rush chair and above only.
+      await loadIdReviews();
       // Phase 0 #4 v2: silent boot-time sync. No toast, no banner — generation
       // is invisible to chairs at boot. Explicit saveChapterDate triggers
       // surface counts in their own toast.
@@ -5832,6 +5837,7 @@
         renderSidebar() +
         '<main class="main">' +
           renderHeader() +
+           '<div class="view ' + (state.currentView === 'reviews' ? 'active' : '') + '">' + renderIdReviews() + '</div>' +
           '<div class="view ' + (state.currentView === 'dashboard' ? 'active' : '') + '">' + renderDashboard() + '</div>' +
           '<div class="view ' + (state.currentView === 'notes' ? 'active' : '') + '">' + renderNotesView() + '</div>' +
           '<div class="view ' + (state.currentView === 'calendar' ? 'active' : '') + '">' + renderCalendar() + '</div>' +
@@ -6068,6 +6074,10 @@
       { id: 'marketing', label: 'Marketing', icon: '◭', count: state.marketingPosts.length },
       { id: 'budget', label: 'Finances', icon: '▤' },
     ];
+    if (tierRank(state.currentTier) >= 2) {
+      nav.push({ id: 'reviews', label: 'ID Review', icon: '⚑',
+                 count: state.idReviews.length || undefined });
+    }
 
     return '' +
       '<aside class="sidebar">' +
@@ -9772,6 +9782,126 @@
   // other non-null role; Rush Chair also appears here per locked decision.
   // Brothers = role IS NULL.
   // ============================================================
+  // Mirrors public.app_tier_rank(). Presentation only — the database enforces
+  // the real gate on resolve_pnm_id(). Hiding the nav item is a courtesy, not
+  // a security boundary.
+
+    function renderIdReviews() {
+    if (tierRank(state.currentTier) < 2) {
+      return '<div style="padding:24px; color:var(--muted);">Rush chair access required.</div>';
+    }
+    if (!state.idReviewsLoaded) {
+      return '<div style="padding:24px; color:var(--muted);">Loading…</div>';
+    }
+    if (!state.idReviews.length) {
+      return '<div style="padding:24px; color:var(--muted);">' +
+        'No open ID reviews. Flagged check-ins from the kiosk appear here.</div>';
+    }
+
+    const inputStyle = 'padding:8px 10px; border:1px solid var(--line-strong); ' +
+      'border-radius:6px; background:var(--surface); color:var(--fg); ' +
+      'font-family:Inter,sans-serif; font-size:13px; width:180px;';
+
+    return '' +
+      '<div style="padding:20px 24px;">' +
+        '<div style="color:var(--muted); font-size:13px; margin-bottom:16px; line-height:1.6;">' +
+          'These PNMs checked in with an ID the system could not parse. They are ' +
+          'fully checked in — this is cleanup. Correcting an ID that already ' +
+          'belongs to another record merges the two.' +
+        '</div>' +
+        state.idReviews.map(function(r) {
+          const p = r.pnms || {};
+          const name = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || 'Unknown';
+          const ev = state.rushEventLabels[r.event_id] || '—';
+          const when = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+          return '' +
+            '<div style="border:1px solid var(--line-strong); border-radius:10px; ' +
+                 'padding:14px 16px; margin-bottom:10px; background:var(--surface); ' +
+                 'display:flex; align-items:center; gap:16px; flex-wrap:wrap;">' +
+              '<div style="flex:1; min-width:220px;">' +
+                '<div style="font-weight:600; font-size:15px;">' + escapeHtml(name) + '</div>' +
+                '<div style="color:var(--muted); font-size:12.5px; margin-top:3px;">' +
+                  'Typed: <code style="color:var(--danger);">' + escapeHtml(r.raw_input || '') + '</code>' +
+                  ' · ' + escapeHtml(ev) + ' · ' + escapeHtml(when) +
+                '</div>' +
+              '</div>' +
+              '<input id="idreview-' + escapeHtml(r.id) + '" class="field-input" ' +
+                'placeholder="Corrected PSU ID" style="' + inputStyle + '" ' +
+                'onkeydown="if(event.key===\'Enter\'){resolveIdReview(\'' + escapeHtml(r.id) + '\');}" />' +
+              '<button class="btn" onclick="resolveIdReview(\'' + escapeHtml(r.id) + '\')">Resolve</button>' +
+            '</div>';
+        }).join('') +
+      '</div>';
+  }
+
+  window.resolveIdReview = async function(reviewId) {
+    const input = document.getElementById('idreview-' + reviewId);
+    const val = input ? input.value.trim() : '';
+    if (!val) { toast('Enter the corrected PSU ID', 'error'); return; }
+
+    const r = state.idReviews.find(function(x) { return x.id === reviewId; });
+    const who = (r && r.pnms)
+      ? ((r.pnms.first_name || '') + ' ' + (r.pnms.last_name || '')).trim()
+      : 'this PNM';
+
+    if (!confirm('Set ' + who + ' to "' + val + '"?\n\n' +
+                 'If that ID already belongs to another record, the two are merged ' +
+                 'and the newer one is deleted. This cannot be undone.')) return;
+
+    try {
+      const { data, error } = await sb.rpc('resolve_pnm_id', {
+        p_review_id: reviewId,
+        p_correct_psu_id: val,
+        p_note: null
+      });
+      if (error) throw error;
+      toast(data === 'merged' ? 'Merged into the existing record' : 'ID corrected');
+      await loadIdReviews();
+      render();
+    } catch (e) {
+      console.error('resolve_pnm_id failed', e);
+      toast('Could not resolve: ' + (e.message || 'unknown error'), 'error');
+    }
+  };
+  
+  function tierRank(t) {
+    if (t === 'database')   return 3;
+    if (t === 'rush_chair') return 2;
+    if (t === 'pm')         return 1;
+    return 0;
+  }
+
+  async function loadIdReviews() {
+    if (!sb) return;
+    if (tierRank(state.currentTier) < 2) {
+      state.idReviews = [];
+      state.idReviewsLoaded = true;
+      return;
+    }
+    try {
+      const { data, error } = await sb
+        .from('pnm_id_reviews')
+        .select('id, raw_input, created_at, event_id, pnms:pnm_id (id, first_name, last_name, psu_id, psu_id_unverified)')
+        .is('resolved_at', null)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      state.idReviews = data || [];
+    } catch (e) {
+      console.error('loadIdReviews failed', e);
+      state.idReviews = [];
+    }
+    state.idReviewsLoaded = true;
+
+    try {
+      const { data } = await sb.from('rush_events').select('id, label');
+      const map = {};
+      (data || []).forEach(function(e) { map[e.id] = e.label; });
+      state.rushEventLabels = map;
+    } catch (e) {
+      state.rushEventLabels = {};
+    }
+  }
+
   const ROLE_CATEGORIES = {
     exec:   ['President', 'VPF', 'VPO', 'VPP', 'VPCC', 'VPM', 'Secretary'],
     rush:   ['Rush Chair', 'PM'],
@@ -12360,7 +12490,6 @@
           .order('first_name', { ascending: true });
         if (error) throw error;
         state.rsvpBrothers = data || [];
-        await loadEventRsvps();
       }
     } catch (e) {
       console.error('RSVP init failed', e);
