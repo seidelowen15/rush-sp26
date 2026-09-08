@@ -6141,6 +6141,7 @@
       nametags: ['Nametags', '& print'],
       marketing: ['Marketing', '& calendar'],
       budget: ['Budget', '& expenses'],
+      reviews: ['ID Review', '& corrections'],
     };
     const parts = titles[state.currentView] || [state.currentView, ''];
     const main = parts[0], em = parts[1];
@@ -9813,7 +9814,10 @@
           const p = r.pnms || {};
           const name = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || 'Unknown';
           const ev = state.rushEventLabels[r.event_id] || '—';
-          const when = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+          const when = r.created_at
+            ? new Date(r.created_at).toLocaleString('en-US',
+                { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+            : '';
           return '' +
             '<div style="border:1px solid var(--line-strong); border-radius:10px; ' +
                  'padding:14px 16px; margin-bottom:10px; background:var(--surface); ' +
@@ -9863,7 +9867,7 @@
       toast('Could not resolve: ' + (e.message || 'unknown error'), 'error');
     }
   };
-  
+
   function tierRank(t) {
     if (t === 'database')   return 3;
     if (t === 'rush_chair') return 2;
