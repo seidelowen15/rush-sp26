@@ -1853,6 +1853,135 @@
   .vote-btn.picked-maybe { background: var(--gold); color: var(--navy-darker); border-color: var(--gold); }
   .vote-btn.picked-no { background: var(--danger); color: var(--paper); border-color: var(--danger); }
 
+  /* ========== PNM DETAIL PANE ========== */
+  .pnm-pane { display: flex; flex-direction: column; min-height: 100%; }
+  .pnm-pane-bar {
+    display: flex; align-items: center; gap: 16px;
+    padding-bottom: 14px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .pnm-pane-title {
+    flex: 1; font-family: 'Playfair Display', serif;
+    font-size: 26px; font-style: italic;
+  }
+  .pnm-pane-body {
+    display: grid;
+    grid-template-columns: minmax(320px, 460px) 1fr;
+    grid-template-areas: 'hero rate' 'info rate';
+    gap: 20px 28px;
+    align-content: start;
+  }
+  .pnm-hero { grid-area: hero; }
+  .pnm-info { grid-area: info; }
+  .pnm-rate { grid-area: rate; }
+  .pnm-hero-img {
+    width: 100%; aspect-ratio: 4 / 5;
+    object-fit: cover; border-radius: 10px;
+    border: 1px solid var(--line-strong); background: var(--surface);
+    display: block;
+  }
+  .pnm-hero-empty {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--fg-muted); font-size: 13px;
+  }
+  .pnm-rate-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted);
+  }
+  .pnm-event-pick {
+    padding: 6px 8px; border: 1px solid var(--line-strong);
+    border-radius: 6px; background: var(--surface);
+    color: var(--fg); font-size: 12px;
+  }
+  .rate-met { display: flex; gap: 8px; margin-bottom: 16px; }
+  .rate-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; padding: 7px 0;
+  }
+  .rate-label { font-size: 14px; color: var(--fg-soft); }
+  .rate-scale { display: flex; gap: 6px; }
+  .rate-dot {
+    width: 34px; height: 34px; border-radius: 6px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface); color: var(--fg-soft);
+    font-size: 13px; cursor: pointer;
+  }
+  .rate-dot.on {
+    background: var(--navy); border-color: var(--navy); color: var(--gold-light);
+  }
+  .rate-dot:disabled { opacity: 0.35; cursor: not-allowed; }
+  .rate-comments {
+    width: 100%; min-height: 90px; margin-top: 14px;
+    padding: 10px; border: 1px solid var(--line-strong);
+    border-radius: 6px; background: var(--surface);
+    color: var(--fg); font-family: Inter, sans-serif; font-size: 13px;
+    resize: vertical;
+  }
+  .pnm-rate-note {
+    margin-top: 10px; font-size: 12px; color: var(--fg-muted); line-height: 1.5;
+  }
+  @media (max-width: 900px) {
+    .pnm-pane-body {
+      grid-template-columns: 1fr;
+      grid-template-areas: 'hero' 'info' 'rate';
+    }
+  }
+
+  /* ========== PNM CARDS ========== */
+  .pnm-photo {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--line-strong);
+    background: var(--surface);
+  }
+  .pnm-photo-fallback {
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--navy), var(--navy-dark));
+    color: var(--gold-light);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px; font-weight: 600;
+  }
+  .pnm-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-top: 4px;
+  }
+  .pnm-flag {
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 9px;
+  }
+  .candidate-card.pnm-open {
+    box-shadow: 0 8px 20px rgba(10, 36, 99, 0.10);
+    border-color: var(--line-strong);
+  }
+  .pnm-detail {
+    border-top: 1px solid var(--line);
+    margin: 10px 0 4px;
+    padding-top: 10px;
+    cursor: default;
+  }
+  .pnm-field {
+    display: flex; gap: 10px;
+    font-size: 12.5px; line-height: 1.7;
+    color: var(--fg-soft);
+  }
+  .pnm-field-label {
+    min-width: 62px;
+    color: var(--fg-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding-top: 4px;
+  }
+
   /* ========== DASHBOARD ========== */
   .dash-grid {
     display: grid;
@@ -5269,7 +5398,7 @@
     'notes': 'notes',
     'tasks': 'tasks',
     'events': 'events',
-    'candidates': 'candidates',
+
     'event_cats': 'event_cats',
     'task_cats': 'task_cats',
     'schedule_events': 'schedule_events',
@@ -5378,7 +5507,7 @@
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'nametag_prints' }, () => {
       clearTimeout(realtimeDebounce);
       realtimeDebounce = setTimeout(async () => {
-        await loadNametagPrints();
+  
         render();
       }, 250);
     });
@@ -5422,6 +5551,30 @@
         await loadEventRsvps();
         if (state.rsvpMode) { render(); return; }
         renderEventRsvpArea();
+      }, 250);
+    });
+    // Candidates page. pnms + attendance reload the roster; pnm_votes is
+    // the hot path during deliberations so it reloads votes only.
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'pnms' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => { await loadPnms(); render(); }, 250);
+    });
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => { await loadPnms(); render(); }, 250);
+    });
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'pnm_ratings' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => {
+        await loadPnmRatings();
+        if (state.currentView === 'candidates') render();
+      }, 250);
+    });
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'pnm_votes' }, () => {
+      clearTimeout(realtimeDebounce);
+      realtimeDebounce = setTimeout(async () => {
+        await loadPnmVotes();
+        if (state.currentView === 'candidates') render();
       }, 250);
     });
     channel.subscribe();
@@ -5498,6 +5651,18 @@
     tasks: [],
     events: [],
     candidates: [],
+    pnms: [],
+    pnmsLoaded: false,
+    pnmAttendance: {},
+    pnmVotes: [],
+    pnmPhotoUrls: {},
+    authUid: null,
+    pnmSort: 'recent',
+    pnmSearch: '',
+    expandedPnmId: null,
+    pnmRatings: [],
+    rushEvents: [],
+    ratingEventId: null,
     eventCategories: [],
     taskCategories: [],
     scheduleEvents: [],
@@ -5650,11 +5815,10 @@
   // ============================================================
   async function loadAll() {
     try {
-      const [notes, tasks, events, candidates, eventCats, taskCats, scheduleEvents] = await Promise.all([
+      const [notes, tasks, events, eventCats, taskCats, scheduleEvents] = await Promise.all([
         Storage.get('notes'),
         Storage.get('tasks'),
         Storage.get('events'),
-        Storage.get('candidates'),
         Storage.get('event_cats'),
         Storage.get('task_cats'),
         Storage.get('schedule_events'),
@@ -5672,21 +5836,21 @@
       // Phase 0 #5
       await loadMarketingPosts();
       // Phase 0 #6
-      await loadBudgetCategories();
-      await loadExpenses();
+
       // Phase 0 #7 — RSVP responses (soft-fails until migration 0005 lands)
       await loadEventRsvps();
       // Open PSU ID reviews filed by the kiosk. Rush chair and above only.
       await loadIdReviews();
+      // Candidates is now a view over pnms + attendance + pnm_votes.
+      await loadPnms();
       // Phase 0 #4 v2: silent boot-time sync. No toast, no banner — generation
       // is invisible to chairs at boot. Explicit saveChapterDate triggers
       // surface counts in their own toast.
-      migrateExistingTasksToV2();
-      await autoSyncTasksToTemplates({ boot: true });
+
       state.notes = notes || [];
       state.tasks = tasks || [];
       state.events = events || [];
-      state.candidates = candidates || [];
+      state.candidates = [];
       state.scheduleEvents = scheduleEvents || [];
 
       // First-run seeding: if the workspace has no categories yet, create defaults
@@ -5842,12 +6006,12 @@
           '<div class="view ' + (state.currentView === 'notes' ? 'active' : '') + '">' + renderNotesView() + '</div>' +
           '<div class="view ' + (state.currentView === 'calendar' ? 'active' : '') + '">' + renderCalendar() + '</div>' +
           '<div class="view ' + (state.currentView === 'schedule' ? 'active' : '') + '">' + renderSchedule() + '</div>' +
-          '<div class="view ' + (state.currentView === 'tasks' ? 'active' : '') + '">' + renderTasks() + '</div>' +
+
           '<div class="view ' + (state.currentView === 'candidates' ? 'active' : '') + '">' + renderCandidates() + '</div>' +
           '<div class="view ' + (state.currentView === 'brothers' ? 'active' : '') + '">' + renderBrothers() + '</div>' +
-          '<div class="view ' + (state.currentView === 'nametags' ? 'active' : '') + '">' + renderNametagsView() + '</div>' +
+
           '<div class="view ' + (state.currentView === 'marketing' ? 'active' : '') + '">' + renderMarketingView() + renderMarketingPostModal() + '</div>' +
-          '<div class="view ' + (state.currentView === 'budget' ? 'active' : '') + '">' + renderBudgetView() + renderBudgetExpenseModal() + '</div>' +
+
         '</main>' +
       '</div>';
 
@@ -6061,18 +6225,16 @@
   const BRAND_HEX = '<svg viewBox="0 0 46 50" preserveAspectRatio="none"><polygon points="23,1.5 44.5,13 44.5,37 23,48.5 1.5,37 1.5,13" fill="#13213a" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 
   function renderSidebar() {
-    const openTasks = state.tasks.filter(t => t.status !== 'done').length;
+    const openTasks = state.tasks.filter(t => !t.templateId && t.status !== 'done').length;
     const nav = [
       { id: 'dashboard', label: 'Dashboard', icon: '◐' },
       { id: 'notes', label: 'Notes', icon: '✎', count: state.notes.length },
       { id: 'calendar', label: 'Calendar', icon: '▦', count: state.events.length },
       { id: 'schedule', label: 'Schedule', icon: '◷', count: state.scheduleEvents.length },
-      { id: 'tasks', label: 'Tasks', icon: '◈', count: openTasks },
-      { id: 'candidates', label: 'Candidates', icon: '★', count: state.candidates.length },
+
+      { id: 'candidates', label: 'Candidates', icon: '★', count: state.pnms.length },
       { id: 'brothers', label: 'Brothers', icon: '◍', count: state.brothers.length },
-      { id: 'nametags', label: 'Nametags', icon: '◇', count: state.nametagSelected.size || undefined },
       { id: 'marketing', label: 'Marketing', icon: '◭', count: state.marketingPosts.length },
-      { id: 'budget', label: 'Finances', icon: '▤' },
     ];
     if (tierRank(state.currentTier) >= 2) {
       nav.push({ id: 'reviews', label: 'ID Review', icon: '⚑',
@@ -6572,7 +6734,7 @@
 
     // ----- KPI row (4 cards, relabeled, 7-day window) -----
     const activeBrothers = state.brothers.filter(b => (b.status || 'active') === 'active').length;
-    const activeCands = state.candidates.filter(c => c.status !== 'rejected').length;
+    const activeCands = state.pnms.length;
     const openTasks = state.tasks.filter(t => t.status !== 'done').length;
     const upcomingEventsCount = state.events.filter(e => {
       const s = new Date(e.startISO).getTime();
@@ -6616,15 +6778,7 @@
           '<div class="kpi-meta">candidates tracked</div>' +
         '</div>' +
       '</div>' +
-      // §H: Needs Attention card sets tasksView=all before switching (surface all open tasks).
-      '<div class="kpi-card" onclick="state.tasksView = \'all\'; switchView(\'tasks\')">' +
-        '<div class="kpi-icon">' + KPI_ICONS.attention + '</div>' +
-        '<div class="kpi-body">' +
-          '<div class="kpi-label">Needs attention</div>' +
-          '<div class="kpi-value">' + openTasksDisplay + '</div>' +
-          '<div class="kpi-meta">open tasks</div>' +
-        '</div>' +
-      '</div>' +
+
       '<div class="kpi-card" onclick="switchView(\'calendar\')">' +
         '<div class="kpi-icon">' + KPI_ICONS.calendar + '</div>' +
         '<div class="kpi-body">' +
@@ -6679,10 +6833,6 @@
         '</div>';
 
     const attentionGrid = '<div class="dash-grid">' +
-      '<div class="section-card">' +
-        '<div class="section-title">Needs attention <button class="btn small" onclick="switchView(\'tasks\')">view tasks →</button></div>' +
-        attentionTasks +
-      '</div>' +
       '<div class="section-card">' +
         '<div class="section-title">Events this week <button class="btn small" onclick="switchView(\'calendar\')">view calendar →</button></div>' +
         attentionEvents +
@@ -8237,7 +8387,7 @@
                              .sort((a, b) => new Date(a.startISO) - new Date(b.startISO));
           // v2 (Diff 4): task chips on day cells; open tasks only.
           const dayTasks = state.tasks
-            .filter(t => t.dueISO && t.status !== 'done' && new Date(t.dueISO).toDateString() === dateKey)
+            .filter(t => !t.templateId && t.dueISO && t.status !== 'done' && new Date(t.dueISO).toDateString() === dateKey)
             .sort((a, b) => (a.priority === 'high' ? -1 : 1) - (b.priority === 'high' ? -1 : 1));
           // Phase 0 #5: marketing posts on day cells (pink chips).
           const dayPosts = (state.marketingPosts || [])
@@ -8307,7 +8457,7 @@
       .filter(function(e) { return new Date(e.startISO).toDateString() === dateKey; })
       .sort(function(a, b) { return new Date(a.startISO) - new Date(b.startISO); });
     const dayTasks = state.tasks
-      .filter(function(t) { return t.dueISO && new Date(t.dueISO).toDateString() === dateKey; })
+      .filter(function(t) { return !t.templateId && t.dueISO && new Date(t.dueISO).toDateString() === dateKey; })
       .sort(function(a, b) { return (a.status === 'done' ? 1 : 0) - (b.status === 'done' ? 1 : 0); });
     return '<div class="cal-day-detail-overlay" onclick="if (event.target === this) closeCalDayDetail()">' +
       '<div class="cal-day-detail">' +
@@ -8817,83 +8967,348 @@
   // ============================================================
   // CANDIDATES
   // ============================================================
-  function renderCandidates() {
-    const statusCounts = {};
-    CANDIDATE_STATUSES.forEach(s => { statusCounts[s.id] = state.candidates.filter(c => c.status === s.id).length; });
-    const filtered = state.candidateFilter === 'all'
-      ? state.candidates
-      : state.candidates.filter(c => c.status === state.candidateFilter);
+   const PNM_SORTS = [
+    { id: 'recent',   label: 'Recent check-in' },
+    { id: 'name',     label: 'Name' },
+    { id: 'events',   label: 'Events attended' },
+    { id: 'votes',    label: 'Yes votes' }
+  ];
 
-    return '' +
-      '<div class="toolbar">' +
-        '<button class="btn primary" onclick="openCandidateModal()">+ Add candidate</button>' +
-      '</div>' +
-      '<div class="legend">' +
-        '<span>Status:</span>' +
-        '<button class="chip ' + (state.candidateFilter === 'all' ? 'selected' : '') + '" onclick="setCandFilter(\'all\')">All · ' + state.candidates.length + '</button>' +
-        CANDIDATE_STATUSES.map(s =>
-          '<button class="chip ' + (state.candidateFilter === s.id ? 'selected' : '') + '" onclick="setCandFilter(\'' + s.id + '\')" style="' + (state.candidateFilter === s.id ? 'background:' + s.color + '; border-color:' + s.color + '; color:var(--paper)' : '') + '">' +
-            '<span class="chip-dot" style="background:' + (state.candidateFilter === s.id ? 'var(--paper)' : s.color) + '"></span>' + s.label + ' · ' + statusCounts[s.id] +
-          '</button>'
-        ).join('') +
-      '</div>' +
-      (filtered.length === 0
-        ? '<div class="empty-state">' +
-            '<div class="ornament">★</div>' +
-            '<div style="font-family:\'Playfair Display\',serif; font-size:22px; font-style:italic; margin-bottom:8px;">No candidates yet</div>' +
-            '<div style="font-size:13px;">Start tracking the PNMs you meet this rush.</div>' +
-          '</div>'
-        : '<div class="candidates-grid">' + filtered.map(renderCandidateCard).join('') + '</div>');
+  function sortedPnms() {
+    const q = state.pnmSearch.trim().toLowerCase();
+    let rows = state.pnms.slice();
+    if (q) {
+      rows = rows.filter(function (p) {
+        return (pnmDisplayName(p) + ' ' + (p.psu_id || '') + ' ' +
+                (p.major || '')).toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    const cmp = {
+      name:   function (a, b) { return pnmDisplayName(a).localeCompare(pnmDisplayName(b)); },
+      recent: function (a, b) { return (pnmFirstSeen(b) || 0) - (pnmFirstSeen(a) || 0); },
+      events: function (a, b) {
+        return (state.pnmAttendance[b.id] || []).length -
+               (state.pnmAttendance[a.id] || []).length;
+      },
+      votes:  function (a, b) { return pnmVoteTally(b.id).yes - pnmVoteTally(a.id).yes; }
+    }[state.pnmSort] || cmp_noop;
+    return rows.sort(cmp);
+  }
+  function cmp_noop() { return 0; }
+
+  function renderCandidates() {
+    if (!state.pnmsLoaded) {
+      return '<div style="padding:24px; color:var(--muted);">Loading…</div>';
+    }
+    if (state.expandedPnmId) {
+      const target = state.pnms.find(function (p) { return p.id === state.expandedPnmId; });
+      if (target) return renderPnmDetail(target);
+      state.expandedPnmId = null;
+    }
+    const rows = sortedPnms();
+
+    const bar =
+      '<div class="toolbar" style="gap:10px; flex-wrap:wrap;">' +
+        '<input id="pnmSearch" class="field-input" placeholder="Search name, PSU ID, major" ' +
+          'value="' + escapeHtml(state.pnmSearch) + '" ' +
+          'oninput="setPnmSearch(this.value)" ' +
+          'style="width:260px; padding:8px 10px; border:1px solid var(--line-strong); ' +
+          'border-radius:6px; background:var(--surface); color:var(--fg); font-size:13px;" />' +
+        '<span style="color:var(--muted); font-size:12px;">Sort</span>' +
+        PNM_SORTS.map(function (s) {
+          return '<button class="chip ' + (state.pnmSort === s.id ? 'selected' : '') + '" ' +
+                 'onclick="setPnmSort(\'' + s.id + '\')">' + s.label + '</button>';
+        }).join('') +
+        '<span style="margin-left:auto; color:var(--muted); font-size:12px;">' +
+          rows.length + ' of ' + state.pnms.length + '</span>' +
+      '</div>';
+
+    if (!state.pnms.length) {
+      return bar +
+        '<div class="empty-state">' +
+          '<div class="ornament">★</div>' +
+          '<div style="font-family:\'Playfair Display\',serif; font-size:22px; ' +
+               'font-style:italic; margin-bottom:8px;">Nobody has checked in yet</div>' +
+          '<div style="font-size:13px;">PNMs appear here the moment they sign in at the kiosk.</div>' +
+        '</div>';
+    }
+
+    return bar + '<div class="candidates-grid">' + rows.map(renderPnmCard).join('') + '</div>';
   }
 
-  function renderCandidateCard(c) {
-    const initials = ((c.firstName || '?')[0] + (c.lastName || '?')[0]).toUpperCase();
-    const status = CANDIDATE_STATUSES.find(s => s.id === c.status) || CANDIDATE_STATUSES[0];
-    const votes = c.votes || {};
-    const yesCount = Object.values(votes).filter(v => v === 'yes').length;
-    const maybeCount = Object.values(votes).filter(v => v === 'maybe').length;
-    const noCount = Object.values(votes).filter(v => v === 'no').length;
-    const myVote = votes[state.currentUser];
+  function renderPnmCard(p) {
+    const name     = pnmDisplayName(p);
+    const initials = ((p.first_name || '?')[0] + (p.last_name || '?')[0]).toUpperCase();
+    const photo    = p.photo_path ? state.pnmPhotoUrls[p.photo_path] : null;
+    const events   = (state.pnmAttendance[p.id] || []).length;
+    const tally    = pnmVoteTally(p.id);
+    const open     = state.expandedPnmId === p.id;
+    const seen     = pnmFirstSeen(p);
 
-    return '<div class="candidate-card" onclick="openCandidateModal(\'' + c.id + '\')">' +
-      '<div class="candidate-status-bar" style="background:' + status.color + '"></div>' +
-      '<div class="candidate-head">' +
-        '<div class="candidate-avatar">' + escapeHtml(initials) + '</div>' +
-        '<div style="flex:1; min-width:0;">' +
-          '<div class="candidate-name">' + escapeHtml(c.firstName || '') + ' ' + escapeHtml(c.lastName || '') + '</div>' +
-          '<div class="candidate-major">' + escapeHtml(c.year || '') + (c.major ? ' · ' + escapeHtml(c.major) : '') + '</div>' +
+    const avatar = photo
+      ? '<img class="pnm-photo" src="' + escapeHtml(photo) + '" alt="" />'
+      : '<div class="pnm-photo pnm-photo-fallback">' + escapeHtml(initials) + '</div>';
+
+    const voteBtn = function (v, glyph, label) {
+      return '<button class="vote-btn ' + (tally.mine === v ? 'picked-' + v : '') + '" ' +
+             'onclick="event.stopPropagation(); votePnm(\'' + p.id + '\',\'' + v + '\')">' +
+             glyph + ' ' + label + '</button>';
+    };
+
+    const detail = !open ? '' :
+      '<div class="pnm-detail" onclick="event.stopPropagation()">' +
+        renderPnmField('PSU ID', (p.psu_id || '—') +
+          (p.psu_id_unverified ? ' <span class="pnm-flag">unverified</span>' : ''), true) +
+        renderPnmField('Year', p.year) +
+        renderPnmField('Major', p.major) +
+        renderPnmField('Email', p.psu_email) +
+        renderPnmField('Phone', p.phone) +
+        renderPnmField('Events', events + ' of 4') +
+        '<div class="vote-buttons" style="margin-top:12px;">' +
+          voteBtn('yes', '✓', 'Yes') + voteBtn('maybe', '?', 'Maybe') + voteBtn('no', '✕', 'No') +
         '</div>' +
-        '<span class="status-pill ' + status.cls + '">' + status.label + '</span>' +
+      '</div>';
+
+    return '<div class="candidate-card' + (open ? ' pnm-open' : '') + '" ' +
+             'onclick="togglePnm(\'' + p.id + '\')">' +
+      '<div class="candidate-head">' +
+        avatar +
+        '<div style="flex:1; min-width:0;">' +
+          '<div class="candidate-name">' + escapeHtml(name) + '</div>' +
+          '<div class="candidate-major">' +
+            escapeHtml(p.year || '') + (p.major ? ' · ' + escapeHtml(p.major) : '') +
+          '</div>' +
+          '<div class="pnm-sub">' + escapeHtml(p.psu_id || 'no ID') +
+            (p.psu_id_unverified ? ' <span class="pnm-flag">unverified</span>' : '') +
+          '</div>' +
+        '</div>' +
       '</div>' +
-      (c.referrer ? '<div style="font-size:11px; color:var(--fg-muted); margin-bottom:8px; font-family:\'JetBrains Mono\',monospace; text-transform:uppercase; letter-spacing:0.08em;">ref: ' + escapeHtml(c.referrer) + '</div>' : '') +
-      (c.notes ? '<div style="font-size:12px; color:var(--fg-soft); line-height:1.4; margin-bottom:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">' + escapeHtml(c.notes) + '</div>' : '') +
-      '<div class="vote-buttons" onclick="event.stopPropagation()">' +
-        '<button class="vote-btn ' + (myVote === 'yes' ? 'picked-yes' : '') + '" onclick="voteCandidate(\'' + c.id + '\', \'yes\')">✓ Yes</button>' +
-        '<button class="vote-btn ' + (myVote === 'maybe' ? 'picked-maybe' : '') + '" onclick="voteCandidate(\'' + c.id + '\', \'maybe\')">? Maybe</button>' +
-        '<button class="vote-btn ' + (myVote === 'no' ? 'picked-no' : '') + '" onclick="voteCandidate(\'' + c.id + '\', \'no\')">✕ No</button>' +
-      '</div>' +
+      detail +
       '<div class="candidate-meta">' +
         '<div class="vote-display">' +
-          '<span class="vote-count vote-yes">✓ ' + yesCount + '</span>' +
-          '<span class="vote-count vote-maybe">? ' + maybeCount + '</span>' +
-          '<span class="vote-count vote-no">✕ ' + noCount + '</span>' +
+          '<span class="vote-count vote-yes">✓ ' + tally.yes + '</span>' +
+          '<span class="vote-count vote-maybe">? ' + tally.maybe + '</span>' +
+          '<span class="vote-count vote-no">✕ ' + tally.no + '</span>' +
         '</div>' +
-        '<div style="font-family:\'JetBrains Mono\',monospace; font-size:9px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.08em;">' + timeAgo(c.updatedAt) + '</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace; font-size:9px; ' +
+             'color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.08em;">' +
+          events + ' event' + (events === 1 ? '' : 's') +
+          (seen ? ' · ' + timeAgo(seen) : '') +
+        '</div>' +
       '</div>' +
     '</div>';
   }
 
-  window.setCandFilter = function(id) { state.candidateFilter = id; render(); };
+  function renderPnmField(label, value, isHtml) {
+    if (!value) return '';
+    return '<div class="pnm-field">' +
+      '<span class="pnm-field-label">' + escapeHtml(label) + '</span>' +
+      '<span>' + (isHtml ? value : escapeHtml(String(value))) + '</span>' +
+    '</div>';
+  }
 
-  window.voteCandidate = async function(candId, vote) {
-    const c = state.candidates.find(x => x.id === candId);
-    if (!c) return;
-    c.votes = c.votes || {};
-    if (c.votes[state.currentUser] === vote) delete c.votes[state.currentUser];
-    else c.votes[state.currentUser] = vote;
-    c.updatedAt = Date.now();
-    await persist('candidates', state.candidates);
+  const RATING_QS = [
+    { id: 'passion',         label: 'Passion' },
+    { id: 'personality',     label: 'Personality' },
+    { id: 'professionalism', label: 'Professionalism' },
+    { id: 'potential',       label: 'Potential' }
+  ];
+
+  function myRating(pnmId, eventId) {
+    return state.pnmRatings.find(function (r) {
+      return r.pnm_id === pnmId && r.event_id === eventId && r.rater_id === state.authUid;
+    }) || null;
+  }
+
+  function eventRatingSummary(pnmId, eventId) {
+    const rows = state.pnmRatings.filter(function (r) {
+      return r.pnm_id === pnmId && r.event_id === eventId;
+    });
+    const metRows = rows.filter(function (r) { return r.met; });
+    if (!metRows.length) return { raters: rows.length, met: 0, avg: null };
+    const sum = metRows.reduce(function (a, r) { return a + Number(r.raw_score || 0); }, 0);
+    return { raters: rows.length, met: metRows.length, avg: sum / metRows.length };
+  }
+
+  function renderPnmDetail(p) {
+    const name  = pnmDisplayName(p);
+    const photo = p.photo_path ? state.pnmPhotoUrls[p.photo_path] : null;
+    const tally = pnmVoteTally(p.id);
+    const evId  = state.ratingEventId;
+    const mine  = evId ? myRating(p.id, evId) : null;
+    const sum   = evId ? eventRatingSummary(p.id, evId) : null;
+    const att   = state.pnmAttendance[p.id] || [];
+    const attended = {};
+    att.forEach(function (a) { attended[a.event_id] = true; });
+
+    const voteBtn = function (v, glyph, label) {
+      return '<button class="vote-btn ' + (tally.mine === v ? 'picked-' + v : '') + '" ' +
+        'onclick="votePnm(\'' + p.id + '\',\'' + v + '\')">' + glyph + ' ' + label + '</button>';
+    };
+
+    const scale = function (q) {
+      const cur = mine ? mine[q.id] : null;
+      return '<div class="rate-row">' +
+        '<span class="rate-label">' + q.label + '</span>' +
+        '<div class="rate-scale">' +
+          [1,2,3,4,5].map(function (n) {
+            return '<button class="rate-dot' + (cur === n ? ' on' : '') + '" ' +
+              (mine && mine.met === false ? 'disabled ' : '') +
+              'onclick="setRating(\'' + p.id + '\',\'' + q.id + '\',' + n + ')">' + n + '</button>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+    };
+
+    return '' +
+      '<div class="pnm-pane">' +
+        '<div class="pnm-pane-bar">' +
+          '<button class="btn" onclick="togglePnm(null)">‹ All candidates</button>' +
+          '<div class="pnm-pane-title">' + escapeHtml(name) + '</div>' +
+          '<div class="vote-buttons" style="margin:0;">' +
+            voteBtn('yes','✓','Yes') + voteBtn('maybe','?','Maybe') + voteBtn('no','✕','No') +
+          '</div>' +
+        '</div>' +
+
+        '<div class="pnm-pane-body">' +
+          '<div class="pnm-hero">' +
+            (photo
+              ? '<img class="pnm-hero-img" src="' + escapeHtml(photo) + '" alt="" />'
+              : '<div class="pnm-hero-img pnm-hero-empty">No photo on file</div>') +
+          '</div>' +
+
+          '<div class="pnm-info">' +
+            renderPnmField('PSU ID', (p.psu_id || '—') +
+              (p.psu_id_unverified ? ' <span class="pnm-flag">unverified</span>' : ''), true) +
+            renderPnmField('Year', p.year) +
+            renderPnmField('Major', p.major) +
+            renderPnmField('Email', p.psu_email) +
+            renderPnmField('Phone', p.phone) +
+            renderPnmField('Attended', att.length + ' of ' + (state.rushEvents.length || 4)) +
+            renderPnmField('Votes', '✓ ' + tally.yes + '  ? ' + tally.maybe + '  ✕ ' + tally.no) +
+          '</div>' +
+
+          '<div class="pnm-rate">' +
+            '<div class="pnm-rate-head">' +
+              '<span>Rating</span>' +
+              '<select class="pnm-event-pick" onchange="setRatingEvent(this.value)">' +
+                state.rushEvents.map(function (e) {
+                  return '<option value="' + e.id + '"' +
+                    (e.id === evId ? ' selected' : '') + '>' +
+                    escapeHtml(e.label) + (attended[e.id] ? '' : ' — did not attend') +
+                  '</option>';
+                }).join('') +
+              '</select>' +
+            '</div>' +
+
+            (!evId ? '<div class="pnm-rate-note">No events loaded.</div>' :
+              '<div class="rate-met">' +
+                '<button class="btn small' + (mine && mine.met === true  ? ' primary' : '') + '" ' +
+                  'onclick="setMet(\'' + p.id + '\', true)">I met them</button>' +
+                '<button class="btn small' + (mine && mine.met === false ? ' primary' : '') + '" ' +
+                  'onclick="setMet(\'' + p.id + '\', false)">Did not meet</button>' +
+              '</div>' +
+              (mine && mine.met === false
+                ? '<div class="pnm-rate-note">Marked as not met — no scores are stored.</div>'
+                : RATING_QS.map(scale).join('')) +
+              '<textarea class="rate-comments" placeholder="Misc comments (chairs only)" ' +
+                (mine ? '' : 'disabled ') +
+                'onblur="saveComments(\'' + p.id + '\', this.value)">' +
+                escapeHtml((mine && mine.comments) || '') + '</textarea>' +
+              (mine ? '' : '<div class="pnm-rate-note">Answer “I met them” or ' +
+                           '“Did not meet” first.</div>') +
+              (sum ? '<div class="pnm-rate-note">' + sum.raters + ' rater' +
+                     (sum.raters === 1 ? '' : 's') + ' · ' + sum.met + ' met' +
+                     (sum.avg !== null ? ' · avg ' + sum.avg.toFixed(1) + ' / 20' : '') +
+                     '</div>' : '')
+            ) +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  async function writeRating(pnmId, patch) {
+    if (!state.authUid || !state.ratingEventId) return;
+    const cur = myRating(pnmId, state.ratingEventId);
+    const row = Object.assign({
+      pnm_id: pnmId, event_id: state.ratingEventId, rater_id: state.authUid,
+      met: cur ? cur.met : true,
+      passion: cur ? cur.passion : null,
+      personality: cur ? cur.personality : null,
+      professionalism: cur ? cur.professionalism : null,
+      potential: cur ? cur.potential : null,
+      comments: cur ? cur.comments : null
+    }, patch);
+
+    // met = false must carry no scores, or the CHECK rejects the row.
+    if (row.met === false) {
+      row.passion = row.personality = row.professionalism = row.potential = null;
+    }
+    // All four or none. A partial row is rejected too, so hold it back
+    // locally until the fourth answer lands.
+    if (row.met === true) {
+      const vals = RATING_QS.map(function (q) { return row[q.id]; });
+      if (vals.some(function (v) { return v == null; })) {
+        state.pnmRatings = state.pnmRatings.filter(function (r) {
+          return !(r.pnm_id === pnmId && r.event_id === state.ratingEventId &&
+                   r.rater_id === state.authUid);
+        }).concat([Object.assign({ id: 'draft_' + pnmId }, row)]);
+        render();
+        return;
+      }
+    }
+    try {
+      const { error } = await sb.from('pnm_ratings')
+        .upsert(row, { onConflict: 'pnm_id,event_id,rater_id' });
+      if (error) throw error;
+      await loadPnmRatings();
+      render();
+    } catch (e) {
+      console.error('writeRating failed', e);
+      toast('Rating failed: ' + (e.message || 'unknown error'), 'error');
+    }
+  }
+
+  window.setRating      = function (pnmId, q, n) { const pt = {}; pt[q] = n; writeRating(pnmId, pt); };
+  window.setMet         = function (pnmId, met)  { writeRating(pnmId, { met: met }); };
+  window.saveComments   = function (pnmId, v)    { writeRating(pnmId, { comments: v || null }); };
+  window.setRatingEvent = function (id) { state.ratingEventId = id; render(); };
+
+  window.setPnmSort   = function (id) { state.pnmSort = id; render(); };
+  window.togglePnm    = function (id) {
+    state.expandedPnmId = (state.expandedPnmId === id) ? null : id;
     render();
+  };
+  window.setPnmSearch = function (v) {
+    state.pnmSearch = v;
+    render();
+    const el = document.getElementById('pnmSearch');
+    if (el) { el.focus(); el.setSelectionRange(v.length, v.length); }
+  };
+
+  // One row per (pnm, voter). Never touches anyone else's row, so any
+  // number of laptops can vote at once without clobbering.
+  window.votePnm = async function (pnmId, vote) {
+    if (!state.authUid) { toast('Not signed in', 'error'); return; }
+    const mine = state.pnmVotes.find(function (v) {
+      return v.pnm_id === pnmId && v.voter_id === state.authUid;
+    });
+    try {
+      if (mine && mine.vote === vote) {
+        const { error } = await sb.from('pnm_votes').delete().eq('id', mine.id);
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from('pnm_votes').upsert(
+          { pnm_id: pnmId, voter_id: state.authUid, vote: vote },
+          { onConflict: 'pnm_id,voter_id' });
+        if (error) throw error;
+      }
+      await loadPnmVotes();
+      render();
+    } catch (e) {
+      console.error('votePnm failed', e);
+      toast('Vote failed: ' + (e.message || 'unknown error'), 'error');
+    }
   };
 
   window.openCandidateModal = function(candId) {
@@ -9758,6 +10173,139 @@
   // demographic flyer ship, they will query a brothers_public view
   // that excludes demographics at the SELECT layer.
   // ============================================================
+  // ============================================================
+  // PNMs — the Candidates page. Typed tables, bypassing Storage,
+  // same pattern as brothers / nametag_prints / marketing_posts.
+  // ============================================================
+  async function loadPnms() {
+    if (!sb) return;
+    try {
+      const [pnmRes, attRes] = await Promise.all([
+        sb.from('pnms').select(
+          'id, psu_id, psu_id_unverified, first_name, last_name, ' +
+          'psu_email, phone, major, year, photo_path, created_at'),
+        sb.from('attendance').select('pnm_id, event_id, signed_in_at')
+      ]);
+      if (pnmRes.error) throw pnmRes.error;
+      state.pnms = pnmRes.data || [];
+
+      const att = {};
+      (attRes.data || []).forEach(function (a) {
+        (att[a.pnm_id] = att[a.pnm_id] || []).push(a);
+      });
+      state.pnmAttendance = att;
+    } catch (e) {
+      console.error('loadPnms failed', e);
+      state.pnms = [];
+      state.pnmAttendance = {};
+    }
+    state.pnmsLoaded = true;
+    try {
+      const { data, error } = await sb.from('rush_events').select('*');
+      if (error) throw error;
+      const dateKey = ['event_date','starts_at','start_date','event_at','date']
+        .find(function (k) { return (data || []).some(function (r) { return r[k]; }); });
+      state.rushEvents = (data || []).slice().sort(function (a, b) {
+        if (dateKey) return String(a[dateKey] || '').localeCompare(String(b[dateKey] || ''));
+        return String(a.label || '').localeCompare(String(b.label || ''));
+      });
+      if (!state.ratingEventId && state.rushEvents.length) {
+        state.ratingEventId = state.rushEvents[state.rushEvents.length - 1].id;
+      }
+    } catch (e) { console.error('loadPnms: rush_events failed', e); state.rushEvents = []; }
+    await loadPnmRatings();
+    await loadPnmVotes();
+    await mintPnmPhotoUrls();
+  }
+
+  // Own rows come from the table (so you can see your own comments).
+  // Everyone else's scores come from the comment-free view.
+  async function loadPnmRatings() {
+    if (!sb) return;
+    try {
+      const [mine, all] = await Promise.all([
+        sb.from('pnm_ratings').select('*'),
+        sb.from('pnm_rating_scores').select('*')
+      ]);
+      const byId = {};
+      (all.data || []).forEach(function (r) { byId[r.id] = r; });
+      (mine.data || []).forEach(function (r) { byId[r.id] = r; });
+      state.pnmRatings = Object.keys(byId).map(function (k) { return byId[k]; });
+    } catch (e) {
+      console.error('loadPnmRatings failed', e);
+      state.pnmRatings = [];
+    }
+  }
+
+  async function loadPnmVotes() {
+    if (!sb) return;
+    try {
+      if (!state.authUid) {
+        const { data } = await sb.auth.getUser();
+        state.authUid = (data && data.user) ? data.user.id : null;
+      }
+      const { data, error } = await sb
+        .from('pnm_votes').select('id, pnm_id, voter_id, vote');
+      if (error) throw error;
+      state.pnmVotes = data || [];
+    } catch (e) {
+      console.error('loadPnmVotes failed', e);
+      state.pnmVotes = [];
+    }
+  }
+
+  // Bucket is private. One batch call for every photo, re-minted on a
+  // timer because the TTL is an hour and deliberations run longer.
+  async function mintPnmPhotoUrls() {
+    if (!sb) return;
+    const paths = state.pnms.filter(function (p) { return p.photo_path; })
+                            .map(function (p) { return p.photo_path; });
+    if (!paths.length) { state.pnmPhotoUrls = {}; return; }
+    try {
+      const { data, error } = await sb.storage
+        .from('pnm-photos').createSignedUrls(paths, 3600);
+      if (error) throw error;
+      const map = {};
+      (data || []).forEach(function (r) {
+        if (r.signedUrl && !r.error) map[r.path] = r.signedUrl;
+      });
+      state.pnmPhotoUrls = map;
+    } catch (e) {
+      console.error('mintPnmPhotoUrls failed', e);
+      state.pnmPhotoUrls = {};
+    }
+  }
+
+  setInterval(function () {
+    if (!state.pnmsLoaded) return;
+    mintPnmPhotoUrls().then(function () {
+      if (state.currentView === 'candidates') render();
+    });
+  }, 45 * 60 * 1000);
+
+  function pnmDisplayName(p) {
+    return ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || '(no name)';
+  }
+
+  function pnmFirstSeen(p) {
+    const rows = state.pnmAttendance[p.id] || [];
+    if (!rows.length) return null;
+    return rows.reduce(function (min, r) {
+      const t = new Date(r.signed_in_at).getTime();
+      return (min === null || t < min) ? t : min;
+    }, null);
+  }
+
+  function pnmVoteTally(pnmId) {
+    const t = { yes: 0, maybe: 0, no: 0, mine: null };
+    state.pnmVotes.forEach(function (v) {
+      if (v.pnm_id !== pnmId) return;
+      if (t[v.vote] !== undefined) t[v.vote]++;
+      if (v.voter_id === state.authUid) t.mine = v.vote;
+    });
+    return t;
+  }
+
   async function loadBrothers() {
     if (!sb) return;
     try {
