@@ -2000,6 +2000,7 @@
     border-right: 1px solid var(--line);
   }
   .dash-grid > .section-card:last-child { border-right: none; }
+  .dash-grid.one-col { grid-template-columns: 1fr; }
 
   .stat-row {
     display: grid;
@@ -5006,6 +5007,7 @@
 
   /* ---- lower grids -> separate white cards ---- */
   .dash-grid { background: transparent; border: none; gap: 24px; grid-template-columns: 1fr 1fr; overflow: visible; margin-bottom: 24px; }
+  .dash-grid.one-col { grid-template-columns: 1fr; }
   .dash-grid > .section-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .activity-grid { background: transparent; border: none; gap: 24px; overflow: visible; }
   .activity-grid.two-col { grid-template-columns: 1fr 1fr; }
@@ -6237,8 +6239,8 @@
       { id: 'marketing', label: 'Marketing', icon: '◭', count: state.marketingPosts.length },
     ];
     if (tierRank(state.currentTier) >= 2) {
-      nav.push({ id: 'reviews', label: 'ID Review', icon: '⚑',
-                 count: state.idReviews.length || undefined });
+      nav.push({ id: 'reviews', label: 'ID Review', icon: '⚠︎',
+                 count: state.idReviews.length || '0' });
     }
 
     return '' +
@@ -6832,7 +6834,7 @@
           }).join('') +
         '</div>';
 
-    const attentionGrid = '<div class="dash-grid">' +
+    const attentionGrid = '<div class="dash-grid one-col">' +
       '<div class="section-card">' +
         '<div class="section-title">Events this week <button class="btn small" onclick="switchView(\'calendar\')">view calendar →</button></div>' +
         attentionEvents +
@@ -6864,20 +6866,7 @@
           }).join('')) +
     '</div>';
 
-    const completedTasksCol = '<div class="activity-column">' +
-      '<div class="section-title">Recently completed</div>' +
-      (completedTasks.length === 0
-        ? renderEmptyInline('Nothing completed yet.')
-        : completedTasks.map(t => {
-            const assignee = MEMBERS.find(m => m.id === t.assigneeId);
-            return '<div class="activity-item" onclick="openTaskModal(\'' + t.id + '\')">' +
-              '<div class="activity-item-title">' + escapeHtml(t.text || '(untitled)') + '</div>' +
-              '<div class="activity-item-meta">' + (assignee ? escapeHtml(assignee.name) : '—') + ' · ' + timeAgo(t.updatedAt || t.createdAt) + '</div>' +
-            '</div>';
-          }).join('')) +
-    '</div>';
-
-    const activityGrid = '<div class="activity-grid two-col">' + recentNotesCol + completedTasksCol + '</div>';
+    const activityGrid = '';
 
     return '<div class="view-dashboard">' +
       pinnedBanner +
