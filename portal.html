@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Rush Scoring — Alpha Kappa Psi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --navy: #0A2463;
+    --navy-dark: #061742;
+    --gold: #D4A64A;
+    --gold-soft: #F3E6C8;
+    --paper: #F6F7FA;
+    --ink: #14213D;
+    --muted: #5B6478;
+    --line: #D5D9E3;
+    --error: #B42318;
+    --error-bg: #FDECEA;
+    --ok: #1C7A4A;
+    --ok-bg: #E7F4ED;
+    --warn: #8A6100;
+    --warn-line: #E3A72F;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Archivo', system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+  }
+
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 32px 20px 28px;
+    border-bottom: 6px solid var(--gold);
+  }
+  .wrap { max-width: 620px; margin: 0 auto; }
+  .chapter { margin: 0 0 6px; color: var(--gold); font-weight: 600; font-size: 15px; }
+  h1 {
+    margin: 0;
+    font-size: clamp(38px, 11vw, 58px);
+    line-height: 0.95;
+    font-weight: 800;
+    font-stretch: 72%;
+    letter-spacing: -0.01em;
+  }
+  .lede { margin: 14px 0 0; color: #D9DEEA; max-width: 42ch; }
+  .whoami {
+    margin: 16px 0 0; display: flex; align-items: baseline;
+    justify-content: space-between; gap: 12px;
+    color: #D9DEEA; font-size: 15px;
+  }
+  .whoami button {
+    width: auto; min-height: 0; padding: 4px 0; font-size: 15px; font-weight: 600;
+    background: none; color: var(--gold); text-decoration: underline;
+  }
+  .whoami button:hover { background: none; color: #fff; }
+
+  main { padding: 24px 20px 72px; }
+
+  h2 {
+    font-size: 25px; font-stretch: 88%; font-weight: 700;
+    color: var(--navy); margin: 0 0 4px; line-height: 1.1;
+  }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+
+  label, .label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  .hint { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+
+  input[type=text], input[type=password], textarea {
+    width: 100%; font: inherit; font-size: 17px; color: var(--ink);
+    background: #fff; border: 1.5px solid var(--line);
+    border-radius: 8px; padding: 11px 12px;
+  }
+  textarea { min-height: 70px; resize: vertical; font-size: 16px; }
+  input:focus, textarea:focus {
+    outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px var(--gold-soft);
+  }
+  .field { margin-bottom: 18px; }
+
+  button {
+    font: inherit; font-weight: 700; font-size: 18px;
+    width: 100%; min-height: 56px; border: 0; border-radius: 8px;
+    background: var(--navy); color: #fff; cursor: pointer;
+  }
+  button:hover { background: var(--navy-dark); }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+  button[disabled] { opacity: 0.6; cursor: wait; }
+  button.secondary {
+    background: transparent; color: var(--navy);
+    border: 1.5px solid var(--navy); margin-top: 12px;
+  }
+  button.secondary:hover { background: var(--gold-soft); }
+
+  .alert {
+    background: var(--error-bg); color: var(--error);
+    border-left: 4px solid var(--error);
+    padding: 12px 14px; border-radius: 4px; margin-bottom: 20px; font-weight: 600;
+  }
+  .alert[hidden] { display: none; }
+
+  /* Pickers: events and letter blocks */
+  .pick { width: 100%; text-align: left; background: #fff; color: var(--ink);
+    border: 1.5px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; margin-bottom: 10px; min-height: 0;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .pick:hover { background: var(--gold-soft); border-color: var(--navy); }
+  .pick-name { font-weight: 700; font-size: 18px; }
+  .pick-meta { color: var(--muted); font-size: 14px; font-weight: 400; }
+  .pick-count { color: var(--muted); font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .pick-count.complete { color: var(--ok); }
+  .pick-count.partial { color: var(--warn); }
+  .pick-note { display: block; color: var(--warn); font-size: 13px; font-weight: 600; margin-top: 4px; }
+
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .bar > i { display: block; height: 100%; background: var(--gold); }
+  .bar.complete > i { background: var(--ok); }
+  .bar.partial > i { background: var(--warn-line); }
+
+  /* One PNM */
+  .pnm { background: #fff; border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 16px; margin-bottom: 14px; }
+  .pnm.done { border-color: var(--ok); }
+  .pnm.partial { border-color: var(--warn-line); border-width: 2px; }
+  .pnm-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .pnm-photo { width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
+    flex: 0 0 60px; background: var(--gold-soft); }
+  .pnm-initials { width: 60px; height: 60px; border-radius: 50%; flex: 0 0 60px;
+    background: var(--gold-soft); color: var(--navy);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 20px; }
+  .pnm-name { font-weight: 700; font-size: 20px; font-stretch: 88%; line-height: 1.15; }
+  .pnm-meta { color: var(--muted); font-size: 14px; }
+  .pnm-state { margin-left: auto; font-size: 14px; font-weight: 700; color: var(--ok); text-align: right; }
+  .pnm-state.partial { color: var(--warn); }
+  .missing { color: var(--warn); font-size: 14px; font-weight: 600; margin: 2px 0 10px; }
+
+  .met { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .met button { min-height: 46px; font-size: 16px; background: #fff;
+    color: var(--ink); border: 1.5px solid var(--line); }
+  .met button:hover { background: var(--gold-soft); }
+  .met button.on { background: var(--navy); color: var(--gold); border-color: var(--navy); }
+
+  .q { margin-bottom: 10px; }
+  .q-label { font-weight: 600; font-size: 15px; margin-bottom: 5px; }
+  .q-hint { color: var(--muted); font-size: 13px; font-weight: 400; }
+  .scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .scale button { min-height: 46px; font-size: 16px; font-weight: 700;
+    background: #fff; color: var(--ink); border: 1.5px solid var(--line); }
+  .scale button:hover { background: var(--gold-soft); }
+  .scale button.on { background: var(--navy); color: var(--gold); border-color: var(--navy); }
+
+  .notmet { color: var(--muted); font-size: 15px; padding: 4px 0 8px; }
+  .saving { font-size: 14px; color: var(--muted); margin-top: 8px; }
+  .savefail { font-size: 14px; color: var(--error); font-weight: 600; margin-top: 8px; }
+
+  .sticky {
+    position: sticky; bottom: 0; background: var(--paper);
+    padding: 12px 0 0; margin-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  .empty { color: var(--muted); padding: 24px 0; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .screen { animation: settle 220ms ease-out; }
+    @keyframes settle { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="chapter">Alpha Kappa Psi, Gamma Epsilon</p>
+    <h1>Rush Scoring</h1>
+    <p class="lede" id="lede">Score the rushes you met. Your answers save as you go, so you can stop and come back.</p>
+    <div class="whoami" id="whoami" hidden>
+      <span id="whoami-text"></span>
+      <button type="button" id="signout">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="alert" id="alert" tabindex="-1" hidden></div>
+    <div id="screen" class="screen"></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  var SUPABASE_URL = 'https://yiuqnjwhuhyjugwjpfwk.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpdXFuandodWh5anVnd2pwZndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3OTYzODMsImV4cCI6MjA5MjM3MjM4M30.pxz-TTNjkfVgFGUFAH9OyS8BB9wzsU0kN_BSu8N1Pm0';
+
+  // persistSession is on so a brother who closes the tab comes back signed in.
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+  });
+
+  var QS = [
+    { id: 'passion',         label: 'Passion',         hint: 'Goals and aspirations. Did they light up talking about something?' },
+    { id: 'personality',     label: 'Personality',     hint: 'Did you enjoy the conversation, or was it dry?' },
+    { id: 'professionalism', label: 'Professionalism', hint: 'Did they act appropriately for the setting?' },
+    { id: 'potential',       label: 'Potential',       hint: 'Would they add to the chapter and stay involved?' }
+  ];
+
+  // Letter blocks by last name. Empty blocks are hidden, so this list can stay
+  // fixed as the pool shrinks after each cut.
+  var BLOCKS = [
+    ['A','C'], ['D','F'], ['G','I'], ['J','L'],
+    ['M','O'], ['P','R'], ['S','U'], ['V','Z']
+  ];
+
+  var state = {
+    uid: null,
+    psuId: null,
+    events: [],
+    eventId: null,
+    eventLabel: null,
+    roster: [],       // pnm_event_roster rows for the chosen event
+    ratings: {},      // pnm_id -> saved row
+    drafts: {},       // pnm_id -> partial row not yet valid to save
+    photos: {},       // photo_path -> signed url
+    blockIndex: null,
+    saving: {},       // pnm_id -> true
+    failed: {}        // pnm_id -> message
+  };
+
+  var screen = document.getElementById('screen');
+  var alertBox = document.getElementById('alert');
+  var whoami = document.getElementById('whoami');
+  var whoamiText = document.getElementById('whoami-text');
+  var lede = document.getElementById('lede');
+
+  function showError(msg) {
+    alertBox.textContent = msg;
+    alertBox.hidden = false;
+    alertBox.focus();
+  }
+  function clearError() { alertBox.hidden = true; }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function initials(f, l) {
+    return ((f || '?').charAt(0) + (l || '').charAt(0)).toUpperCase();
+  }
+  function draftKey() { return 'portal_draft_' + state.uid + '_' + state.eventId; }
+
+  function saveDrafts() {
+    try { localStorage.setItem(draftKey(), JSON.stringify(state.drafts)); } catch (e) {}
+  }
+  function loadDrafts() {
+    try {
+      var raw = localStorage.getItem(draftKey());
+      state.drafts = raw ? JSON.parse(raw) : {};
+    } catch (e) { state.drafts = {}; }
+  }
+
+  // ---------------------------------------------------------------- sign in
+
+  function renderSignIn() {
+    whoami.hidden = true;
+    lede.textContent = 'Score the rushes you met. Your answers save as you go, so you can stop and come back.';
+    screen.innerHTML =
+      '<h2>Sign in</h2>' +
+      '<p class="sub">Use your Penn State ID and the chapter password.</p>' +
+      '<div class="field">' +
+        '<label for="psu">Penn State ID</label>' +
+        '<input id="psu" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" ' +
+          'autocomplete="username" placeholder="abc1234" maxlength="40">' +
+        '<p class="hint">Just the ID, not the full email.</p>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label for="pw">Chapter password</label>' +
+        '<input id="pw" type="password" autocomplete="current-password">' +
+      '</div>' +
+      '<button type="button" id="go">Sign in</button>';
+
+    var psu = document.getElementById('psu');
+    var pw = document.getElementById('pw');
+    var go = document.getElementById('go');
+    psu.focus();
+    pw.addEventListener('keydown', function (e) { if (e.key === 'Enter') go.click(); });
+
+    go.addEventListener('click', async function () {
+      clearError();
+      var id = psu.value.trim().toLowerCase().replace(/@.*$/, '');
+      if (!id) { showError('Enter your Penn State ID.'); psu.focus(); return; }
+      if (!pw.value) { showError('Enter the chapter password.'); pw.focus(); return; }
+      go.disabled = true;
+      go.textContent = 'Signing in…';
+      try {
+        var res = await sb.auth.signInWithPassword({
+          email: id + '@psu.edu', password: pw.value
+        });
+        if (res.error) throw res.error;
+        await afterAuth();
+      } catch (e) {
+        showError(
+          /invalid/i.test(e.message || '')
+            ? 'That ID and password did not match. Check the ID, then ask a rush chair if it still fails.'
+            : (e.message || 'Sign-in failed.')
+        );
+        go.disabled = false;
+        go.textContent = 'Sign in';
+      }
+    });
+  }
+
+  async function afterAuth() {
+    clearError();
+    var s = await sb.auth.getSession();
+    if (!s.data.session) { renderSignIn(); return; }
+    state.uid = s.data.session.user.id;
+    state.psuId = (s.data.session.user.email || '').replace(/@.*$/, '');
+    whoamiText.textContent = 'Signed in as ' + state.psuId;
+    whoami.hidden = false;
+    await loadEvents();
+  }
+
+  document.getElementById('signout').addEventListener('click', async function () {
+    await sb.auth.signOut();
+    state.uid = null;
+    state.eventId = null;
+    renderSignIn();
+  });
+
+  // ----------------------------------------------------------------- events
+
+  async function loadEvents() {
+    screen.innerHTML = '<p class="empty">Loading events…</p>';
+    var res = await sb.from('rush_events').select('id, label, iso_date').order('iso_date');
+    if (res.error) { showError('Could not load events. ' + res.error.message); return; }
+    state.events = res.data || [];
+    renderEvents();
+  }
+
+  function renderEvents() {
+    state.eventId = null;
+    lede.textContent = 'Score the rushes you met. Your answers save as you go, so you can stop and come back.';
+    if (!state.events.length) {
+      screen.innerHTML = '<h2>Pick an event</h2><p class="empty">No events yet.</p>';
+      return;
+    }
+    var html = '<h2>Pick an event</h2><p class="sub">Score one night at a time.</p>';
+    state.events.forEach(function (ev, i) {
+      html +=
+        '<button type="button" class="pick" data-i="' + i + '">' +
+          '<span><span class="pick-name">' + esc(ev.label) + '</span>' +
+          '<span class="pick-meta"><br>' + esc(ev.iso_date || '') + '</span></span>' +
+        '</button>';
+    });
+    screen.innerHTML = html;
+    Array.prototype.forEach.call(screen.querySelectorAll('.pick'), function (b) {
+      b.addEventListener('click', function () {
+        var ev = state.events[Number(b.getAttribute('data-i'))];
+        state.eventId = ev.id;
+        state.eventLabel = ev.label;
+        loadEventData();
+      });
+    });
+  }
+
+  // ------------------------------------------------------------ event data
+
+  async function loadEventData() {
+    screen.innerHTML = '<p class="empty">Loading rushes…</p>';
+    clearError();
+    var out = await Promise.all([
+      sb.from('pnm_event_roster').select('*').eq('event_id', state.eventId),
+      sb.from('pnm_ratings').select('*').eq('event_id', state.eventId)
+    ]);
+    if (out[0].error) { showError('Could not load the rushes. ' + out[0].error.message); return; }
+    if (out[1].error) { showError('Could not load your scores. ' + out[1].error.message); return; }
+
+    state.roster = (out[0].data || []).slice().sort(function (a, b) {
+      var l = String(a.last_name || '').localeCompare(String(b.last_name || ''));
+      return l !== 0 ? l : String(a.first_name || '').localeCompare(String(b.first_name || ''));
+    });
+
+    // Chairs see every rater's rows; keep only this signed-in person's.
+    state.ratings = {};
+    (out[1].data || []).forEach(function (r) {
+      if (r.rater_id === state.uid) state.ratings[r.pnm_id] = r;
+    });
+
+    loadDrafts();
+    state.blockIndex = null;
+    renderBlocks();
+    signPhotos();
+  }
+
+  // Signed URLs expire; they are minted per load and the page is short-lived.
+  async function signPhotos() {
+    var paths = state.roster.map(function (r) { return r.photo_path; }).filter(Boolean);
+    if (!paths.length) return;
+    var res = await sb.storage.from('pnm-photos').createSignedUrls(paths, 60 * 60);
+    if (res.error) return;
+    (res.data || []).forEach(function (u) {
+      if (u.path && u.signedUrl) state.photos[u.path] = u.signedUrl;
+    });
+    if (state.blockIndex !== null) renderBlock();
+  }
+
+  function letterOf(r) {
+    var c = String(r.last_name || '').charAt(0).toUpperCase();
+    return /[A-Z]/.test(c) ? c : 'Z';
+  }
+  function inBlock(r, b) {
+    var c = letterOf(r);
+    return c >= b[0] && c <= b[1];
+  }
+  // 'none' — never touched. 'partial' — met, but not all four answered.
+  // 'done'  — did not meet, or met with all four answered.
+  function status(pnmId) {
+    var r = state.ratings[pnmId];
+    if (!r) return 'none';
+    if (r.met === false) return 'done';
+    var missing = QS.filter(function (q) { return r[q.id] == null; });
+    if (missing.length === 4) return 'none';
+    return missing.length ? 'partial' : 'done';
+  }
+  function missingLabels(pnmId) {
+    var r = state.ratings[pnmId];
+    if (!r || r.met === false) return [];
+    return QS.filter(function (q) { return r[q.id] == null; })
+             .map(function (q) { return q.label; });
+  }
+
+  // ----------------------------------------------------------- block picker
+
+  function renderBlocks() {
+    lede.textContent = state.eventLabel;
+    var total = state.roster.length;
+    var doneAll = state.roster.filter(function (r) { return status(r.pnm_id) === 'done'; }).length;
+    var partialAll = state.roster.filter(function (r) { return status(r.pnm_id) === 'partial'; }).length;
+
+    if (!total) {
+      screen.innerHTML =
+        '<h2>' + esc(state.eventLabel) + '</h2>' +
+        '<p class="empty">Nobody has checked in to this event yet. Try again once sign-in is running.</p>' +
+        '<button type="button" class="secondary" id="back">Pick a different event</button>';
+      document.getElementById('back').addEventListener('click', renderEvents);
+      return;
+    }
+
+    var html =
+      '<h2>' + esc(state.eventLabel) + '</h2>' +
+      '<p class="sub">' + doneAll + ' of ' + total + ' scored' +
+      (partialAll ? ' · ' + partialAll + ' incomplete' : '') +
+      '. Pick a group to work through.</p>';
+
+    BLOCKS.forEach(function (b, i) {
+      var rows = state.roster.filter(function (r) { return inBlock(r, b); });
+      if (!rows.length) return;
+      var done = rows.filter(function (r) { return status(r.pnm_id) === 'done'; }).length;
+      var partial = rows.filter(function (r) { return status(r.pnm_id) === 'partial'; }).length;
+      var pct = Math.round((done / rows.length) * 100);
+      var complete = done === rows.length;
+      var tone = complete ? ' complete' : (partial ? ' partial' : '');
+      html +=
+        '<button type="button" class="pick" data-i="' + i + '">' +
+          '<span style="flex:1">' +
+            '<span class="pick-name">Last names ' + b[0] + '–' + b[1] + '</span>' +
+            '<span class="bar' + tone + '"><i style="width:' + pct + '%"></i></span>' +
+            (partial ? '<span class="pick-note">' + partial + ' incomplete</span>' : '') +
+          '</span>' +
+          '<span class="pick-count' + tone + '">' +
+            (complete ? 'Done' : done + ' / ' + rows.length) +
+          '</span>' +
+        '</button>';
+    });
+
+    html += '<button type="button" class="secondary" id="back">Pick a different event</button>';
+    screen.innerHTML = html;
+
+    Array.prototype.forEach.call(screen.querySelectorAll('.pick'), function (btn) {
+      btn.addEventListener('click', function () {
+        state.blockIndex = Number(btn.getAttribute('data-i'));
+        renderBlock();
+        window.scrollTo(0, 0);
+      });
+    });
+    document.getElementById('back').addEventListener('click', renderEvents);
+  }
+
+  // ------------------------------------------------------------- one block
+
+  function currentRows() {
+    var b = BLOCKS[state.blockIndex];
+    return state.roster.filter(function (r) { return inBlock(r, b); });
+  }
+
+  function rowState(pnmId) {
+    return state.drafts[pnmId] || state.ratings[pnmId] || null;
+  }
+
+  function renderBlock() {
+    var b = BLOCKS[state.blockIndex];
+    var rows = currentRows();
+    var done = rows.filter(function (r) { return status(r.pnm_id) === 'done'; }).length;
+    var partial = rows.filter(function (r) { return status(r.pnm_id) === 'partial'; }).length;
+
+    var html =
+      '<h2>Last names ' + b[0] + '–' + b[1] + '</h2>' +
+      '<p class="sub">' + done + ' of ' + rows.length + ' scored' +
+      (partial ? ' · ' + partial + ' incomplete' : '') +
+      ' · ' + esc(state.eventLabel) + '</p>';
+
+    rows.forEach(function (r) {
+      var cur = rowState(r.pnm_id);
+      var met = cur ? cur.met : null;
+      var st = status(r.pnm_id);
+      var gaps = missingLabels(r.pnm_id);
+      var photo = r.photo_path ? state.photos[r.photo_path] : null;
+
+      html += '<div class="pnm' + (st === 'done' ? ' done' : st === 'partial' ? ' partial' : '') +
+              '" id="pnm-' + r.pnm_id + '">';
+      html += '<div class="pnm-head">' +
+        (photo
+          ? '<img class="pnm-photo" src="' + esc(photo) + '" alt="">'
+          : '<div class="pnm-initials">' + esc(initials(r.first_name, r.last_name)) + '</div>') +
+        '<div>' +
+          '<div class="pnm-name">' + esc(r.first_name) + ' ' + esc(r.last_name) + '</div>' +
+          '<div class="pnm-meta">' + esc(r.major || '—') + ' · ' + esc(r.year || '—') + '</div>' +
+        '</div>' +
+        (st === 'done' ? '<div class="pnm-state">Saved</div>' :
+         st === 'partial' ? '<div class="pnm-state partial">Incomplete</div>' : '') +
+      '</div>';
+
+      if (st === 'partial') {
+        html += '<p class="missing">Saved, but still missing ' +
+                esc(gaps.join(', ').replace(/, ([^,]*)$/, ' and $1')) + '.</p>';
+      }
+
+      html += '<div class="met">' +
+        '<button type="button" class="met-btn' + (met === true ? ' on' : '') + '" ' +
+          'data-pnm="' + r.pnm_id + '" data-met="1">I met them</button>' +
+        '<button type="button" class="met-btn' + (met === false ? ' on' : '') + '" ' +
+          'data-pnm="' + r.pnm_id + '" data-met="0">Did not meet</button>' +
+      '</div>';
+
+      if (met === false) {
+        html += '<p class="notmet">No scores are stored when you did not meet someone. ' +
+                'This does not count against them.</p>';
+      } else if (met === true) {
+        QS.forEach(function (q) {
+          var v = cur ? cur[q.id] : null;
+          html += '<div class="q">' +
+            '<div class="q-label">' + q.label +
+              ' <span class="q-hint">' + esc(q.hint) + '</span></div>' +
+            '<div class="scale">';
+          for (var n = 1; n <= 5; n++) {
+            html += '<button type="button" class="score-btn' + (v === n ? ' on' : '') + '" ' +
+              'data-pnm="' + r.pnm_id + '" data-q="' + q.id + '" data-n="' + n + '">' + n + '</button>';
+          }
+          html += '</div></div>';
+        });
+        html += '<div class="q">' +
+          '<div class="q-label">Comments</div>' +
+          '<textarea class="cm" data-pnm="' + r.pnm_id + '" ' +
+            'placeholder="Anything worth flagging">' + esc(cur && cur.comments ? cur.comments : '') + '</textarea>' +
+        '</div>';
+      }
+
+      if (state.saving[r.pnm_id]) html += '<div class="saving">Saving…</div>';
+      if (state.failed[r.pnm_id]) {
+        html += '<div class="savefail">' + esc(state.failed[r.pnm_id]) +
+                ' Your answers are kept on this device — try again.</div>';
+      }
+      html += '</div>';
+    });
+
+    html += '<div class="sticky">' +
+      '<button type="button" class="secondary" id="back" style="margin-top:0">Back to groups</button>' +
+    '</div>';
+
+    screen.innerHTML = html;
+    wireBlock();
+  }
+
+  function wireBlock() {
+    Array.prototype.forEach.call(screen.querySelectorAll('.met-btn'), function (b) {
+      b.addEventListener('click', function () {
+        write(b.getAttribute('data-pnm'), { met: b.getAttribute('data-met') === '1' });
+      });
+    });
+    Array.prototype.forEach.call(screen.querySelectorAll('.score-btn'), function (b) {
+      b.addEventListener('click', function () {
+        var patch = {};
+        patch[b.getAttribute('data-q')] = Number(b.getAttribute('data-n'));
+        write(b.getAttribute('data-pnm'), patch);
+      });
+    });
+    Array.prototype.forEach.call(screen.querySelectorAll('.cm'), function (t) {
+      t.addEventListener('blur', function () {
+        write(t.getAttribute('data-pnm'), { comments: t.value.trim() || null });
+      });
+    });
+    var back = document.getElementById('back');
+    if (back) back.addEventListener('click', function () {
+      state.blockIndex = null;
+      renderBlocks();
+      window.scrollTo(0, 0);
+    });
+  }
+
+  // ---------------------------------------------------------------- saving
+
+  // met = false stores no scores -- the CHECK constraint rejects that shape.
+  // Partial score sets DO save (0020 allows them) so work survives a device
+  // change; the card marks them incomplete until all four land.
+  async function write(pnmId, patch) {
+    var cur = rowState(pnmId) || {};
+    var row = {
+      pnm_id: pnmId,
+      event_id: state.eventId,
+      rater_id: state.uid,
+      met: cur.met == null ? true : cur.met,
+      passion: cur.passion == null ? null : cur.passion,
+      personality: cur.personality == null ? null : cur.personality,
+      professionalism: cur.professionalism == null ? null : cur.professionalism,
+      potential: cur.potential == null ? null : cur.potential,
+      comments: cur.comments == null ? null : cur.comments
+    };
+    Object.keys(patch).forEach(function (k) { row[k] = patch[k]; });
+
+    if (row.met === false) {
+      row.passion = row.personality = row.professionalism = row.potential = null;
+    }
+
+    state.drafts[pnmId] = row;
+    state.saving[pnmId] = true;
+    delete state.failed[pnmId];
+    saveDrafts();
+    renderBlock();
+
+    try {
+      var res = await sb.from('pnm_ratings')
+        .upsert(row, { onConflict: 'pnm_id,event_id,rater_id' })
+        .select()
+        .single();
+      if (res.error) throw res.error;
+      state.ratings[pnmId] = res.data;
+      delete state.drafts[pnmId];
+      saveDrafts();
+    } catch (e) {
+      state.failed[pnmId] = /row-level security/i.test(e.message || '')
+        ? 'That rush is not on this event\u2019s list.'
+        : 'Could not save.';
+    } finally {
+      delete state.saving[pnmId];
+      renderBlock();
+    }
+  }
+
+  // ------------------------------------------------------------------ boot
+
+  (async function boot() {
+    try {
+      var s = await sb.auth.getSession();
+      if (s.data.session) { await afterAuth(); return; }
+    } catch (e) {}
+    renderSignIn();
+  })();
+})();
+</script>
+</body>
+</html>
