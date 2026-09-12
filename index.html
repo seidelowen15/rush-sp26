@@ -5559,11 +5559,11 @@
     // the hot path during deliberations so it reloads votes only.
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'pnms' }, () => {
       clearTimeout(realtimeDebounce);
-      realtimeDebounce = setTimeout(async () => { await loadPnms(); render(); }, 250);
+      realtimeDebounce = setTimeout(async () => { await loadPnms(); renderUnlessTyping(); }, 250);
     });
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
       clearTimeout(realtimeDebounce);
-      realtimeDebounce = setTimeout(async () => { await loadPnms(); render(); }, 250);
+      realtimeDebounce = setTimeout(async () => { await loadPnms(); renderUnlessTyping(); }, 250);
     });
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'pnm_ratings' }, () => {
       clearTimeout(realtimeDebounce);
@@ -5661,7 +5661,11 @@
     authUid: null,
     pnmSort: 'recent',
     pnmSearch: '',
+    pnmFilter: 'all',
     expandedPnmId: null,
+    pnmProfiles: {},
+    presentMode: false,
+    presentIndex: 0,
     pnmRatings: [],
     rushEvents: [],
     ratingEventId: null,
@@ -5980,6 +5984,47 @@
   // ============================================================
   // RENDER
   // ============================================================
+  const PRESENT_CSS = '' +
+    '<style id="presentCss">' +
+    '.present-wrap{position:fixed; inset:0; z-index:900; background:var(--bg);' +
+      'display:flex; flex-direction:column; overflow:auto;}' +
+    '.present-bar{display:flex; align-items:center; gap:14px; padding:12px 20px;' +
+      'border-bottom:1px solid var(--line-strong); position:sticky; top:0;' +
+      'background:var(--surface); z-index:2;}' +
+    '.present-pos{font-family:\'JetBrains Mono\',monospace; font-size:13px; color:var(--fg-muted);}' +
+    '.present-body{flex:1; padding:0 20px 40px;}' +
+    '.present-body .pnm-pane-bar{display:none;}' +
+    '@media (min-width:1100px){.present-body .pnm-hero-img{max-height:46vh;}}' +
+    '</style>';
+
+  function renderPresent() {
+    const rows = sortedPnms();
+    if (!rows.length) { state.presentMode = false; return ''; }
+    const i = Math.max(0, Math.min(state.presentIndex, rows.length - 1));
+    const p = rows[i];
+    return PRESENT_CSS +
+      '<div class="present-wrap">' +
+        '<div class="present-bar">' +
+          '<button class="btn" onclick="endPresent()">‹ Exit review</button>' +
+          '<div class="present-pos">' + (i + 1) + ' of ' + rows.length + '</div>' +
+          '<div style="flex:1;"></div>' +
+          '<button class="btn" onclick="presentStep(-1)"' + (i === 0 ? ' disabled' : '') + '>Back</button>' +
+          '<button class="btn primary" onclick="presentStep(1)"' +
+            (i === rows.length - 1 ? ' disabled' : '') + '>Next</button>' +
+        '</div>' +
+        '<div class="present-body">' + renderPnmDetail(p) + '</div>' +
+      '</div>';
+  }
+
+  // Data is loaded either way; only the repaint waits. Without this, a
+  // check-in from any kiosk destroys the textarea someone is typing a note
+  // into, and the text is gone — comments only save on blur.
+  function renderUnlessTyping() {
+    const el = document.activeElement;
+    if (el && el.classList && el.classList.contains('rate-comments')) return;
+    render();
+  }
+
   function render() {
     const root = document.getElementById('root');
     if (state.loading) {
@@ -5996,6 +6041,10 @@
     }
     if (!state.currentUser) {
       root.innerHTML = renderLogin();
+      return;
+    }
+    if (state.presentMode) {
+      root.innerHTML = renderPresent();
       return;
     }
     root.innerHTML = '' +
@@ -8964,9 +9013,23 @@
     { id: 'votes',    label: 'Yes votes' }
   ];
 
+  const PNM_FILTERS = [
+    { id: 'all',         label: 'All' },
+    { id: 'no_profile',  label: 'Attended, no profile' },
+    { id: 'not_arrived', label: 'Profile, not attended' }
+  ];
+
+  function hasProfile(p) { return !!state.pnmProfiles[p.id]; }
+  function attendedCount(p) { return (state.pnmAttendance[p.id] || []).length; }
+
   function sortedPnms() {
     const q = state.pnmSearch.trim().toLowerCase();
     let rows = state.pnms.slice();
+    if (state.pnmFilter === 'no_profile') {
+      rows = rows.filter(function (p) { return attendedCount(p) > 0 && !hasProfile(p); });
+    } else if (state.pnmFilter === 'not_arrived') {
+      rows = rows.filter(function (p) { return attendedCount(p) === 0 && hasProfile(p); });
+    }
     if (q) {
       rows = rows.filter(function (p) {
         return (pnmDisplayName(p) + ' ' + (p.psu_id || '') + ' ' +
@@ -9009,7 +9072,16 @@
           return '<button class="chip ' + (state.pnmSort === s.id ? 'selected' : '') + '" ' +
                  'onclick="setPnmSort(\'' + s.id + '\')">' + s.label + '</button>';
         }).join('') +
-        '<span style="margin-left:auto; color:var(--muted); font-size:12px;">' +
+        '<span style="color:var(--muted); font-size:12px;">Show</span>' +
+        PNM_FILTERS.map(function (f) {
+          const n = f.id === 'all' ? state.pnms.length : pnmFilterCount(f.id);
+          return '<button class="chip ' + (state.pnmFilter === f.id ? 'selected' : '') + '" ' +
+                 'onclick="setPnmFilter(\'' + f.id + '\')">' + f.label + ' ' + n + '</button>';
+        }).join('') +
+        '<button class="btn primary" onclick="startPresent()" ' +
+          (rows.length ? '' : 'disabled ') +
+          'style="margin-left:auto;">Review ' + rows.length + '</button>' +
+        '<span style="color:var(--muted); font-size:12px;">' +
           rows.length + ' of ' + state.pnms.length + '</span>' +
       '</div>';
 
@@ -9084,6 +9156,7 @@
              'color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.08em;">' +
           events + ' event' + (events === 1 ? '' : 's') +
           (seen ? ' · ' + timeAgo(seen) : '') +
+          (hasProfile(p) ? ' · profile' : ' · no profile') +
         '</div>' +
       '</div>' +
     '</div>';
@@ -9176,6 +9249,7 @@
             renderPnmField('Phone', p.phone) +
             renderPnmField('Attended', att.length + ' of ' + (state.rushEvents.length || 4)) +
             renderPnmField('Votes', '✓ ' + tally.yes + '  ? ' + tally.maybe + '  ✕ ' + tally.no) +
+            renderProfileFields(p) +
           '</div>' +
 
           '<div class="pnm-rate">' +
@@ -9216,6 +9290,53 @@
         '</div>' +
       '</div>';
   }
+
+  // Everything from the rush profile form. Resume and transcript links are
+  // chair-tier only, matching the storage policy — showing them to a brother
+  // would only produce a failed request.
+  function renderProfileFields(p) {
+    const rp = state.pnmProfiles[p.id];
+    if (!rp) {
+      return '<div class="pnm-field"><span class="pnm-field-label">Profile</span>' +
+             '<span style="color:var(--fg-muted);">Not submitted</span></div>';
+    }
+    const gpa = rp.gpa != null
+      ? Number(rp.gpa).toFixed(2)
+      : (rp.hs_gpa != null ? Number(rp.hs_gpa).toFixed(2) + ' (high school)' : 'None yet');
+
+    const doc = function (label, path) {
+      if (!path || tierRank(state.currentTier) < 2) return '';
+      return '<div class="pnm-field">' +
+        '<span class="pnm-field-label">' + label + '</span>' +
+        '<span><a href="#" onclick="event.preventDefault(); openPnmDoc(\'' +
+          escapeHtml(path) + '\')">Open</a></span>' +
+      '</div>';
+    };
+
+    return renderPnmField('Hometown', rp.hometown) +
+      renderPnmField('Minor', rp.minor) +
+      renderPnmField('GPA', gpa) +
+      renderPnmField('Knows', rp.previously_knowns) +
+      renderPnmField('Clubs', rp.clubs) +
+      doc('Resume', rp.resume_path) +
+      doc('Transcript', rp.transcript_path);
+  }
+
+  // The tab is opened synchronously, before the await, or the popup blocker
+  // eats it. The signed URL is short-lived and minted fresh on every click.
+  window.openPnmDoc = async function (path) {
+    const tab = window.open('', '_blank');
+    try {
+      const { data, error } = await sb.storage.from('pnm-docs').createSignedUrl(path, 300);
+      if (error) throw error;
+      if (tab) tab.location = data.signedUrl;
+      else window.location = data.signedUrl;
+    } catch (e) {
+      if (tab) tab.close();
+      console.error('openPnmDoc failed', e);
+      toast('Could not open document: ' + (e.message || 'unknown error'), 'error');
+    }
+  };
 
   async function writeRating(pnmId, patch) {
     if (!state.authUid || !state.ratingEventId) return;
@@ -9264,7 +9385,38 @@
   window.saveComments   = function (pnmId, v)    { writeRating(pnmId, { comments: v || null }); };
   window.setRatingEvent = function (id) { state.ratingEventId = id; render(); };
 
+  function pnmFilterCount(id) {
+    return state.pnms.filter(function (p) {
+      if (id === 'no_profile')  return attendedCount(p) > 0 && !hasProfile(p);
+      if (id === 'not_arrived') return attendedCount(p) === 0 && hasProfile(p);
+      return true;
+    }).length;
+  }
+
+  window.setPnmFilter = function (id) { state.pnmFilter = id; render(); };
   window.setPnmSort   = function (id) { state.pnmSort = id; render(); };
+  window.startPresent = function () {
+    const rows = sortedPnms();
+    if (!rows.length) return;
+    state.expandedPnmId = null;
+    state.presentIndex = 0;
+    state.presentMode = true;
+    render();
+  };
+
+  window.endPresent = function () {
+    state.presentMode = false;
+    render();
+  };
+
+  window.presentStep = function (d) {
+    const rows = sortedPnms();
+    const next = state.presentIndex + d;
+    if (next < 0 || next >= rows.length) return;
+    state.presentIndex = next;
+    render();
+  };
+
   window.togglePnm    = function (id) {
     state.expandedPnmId = (state.expandedPnmId === id) ? null : id;
     render();
@@ -10115,6 +10267,13 @@
 
   // keyboard shortcuts
   document.addEventListener('keydown', (e) => {
+    if (state.presentMode) {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'textarea' || tag === 'input' || tag === 'select') return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); window.presentStep(1);  return; }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); window.presentStep(-1); return; }
+      if (e.key === 'Escape')     { e.preventDefault(); window.endPresent();    return; }
+    }
     if (e.key === 'Escape') {
       document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
       state.editingNoteId = null;
@@ -10170,14 +10329,20 @@
   async function loadPnms() {
     if (!sb) return;
     try {
-      const [pnmRes, attRes] = await Promise.all([
+      const [pnmRes, attRes, profRes] = await Promise.all([
         sb.from('pnms').select(
           'id, psu_id, psu_id_unverified, first_name, last_name, ' +
           'psu_email, phone, major, year, photo_path, created_at'),
-        sb.from('attendance').select('pnm_id, event_id, signed_in_at')
+        sb.from('attendance').select('pnm_id, event_id, signed_in_at'),
+        sb.from('rush_profiles').select('*')
       ]);
       if (pnmRes.error) throw pnmRes.error;
       state.pnms = pnmRes.data || [];
+
+      // Keyed by pnm_id. A missing key means no profile submitted.
+      const profs = {};
+      (profRes.data || []).forEach(function (r) { profs[r.pnm_id] = r; });
+      state.pnmProfiles = profs;
 
       const att = {};
       (attRes.data || []).forEach(function (a) {
@@ -10188,6 +10353,7 @@
       console.error('loadPnms failed', e);
       state.pnms = [];
       state.pnmAttendance = {};
+      state.pnmProfiles = {};
     }
     state.pnmsLoaded = true;
     try {
