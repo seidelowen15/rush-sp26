@@ -9189,8 +9189,10 @@
     });
     const metRows = rows.filter(function (r) { return r.met; });
     if (!metRows.length) return { raters: rows.length, met: 0, avg: null };
-    const sum = metRows.reduce(function (a, r) { return a + Number(r.raw_score || 0); }, 0);
-    return { raters: rows.length, met: metRows.length, avg: sum / metRows.length };
+    const scored = metRows.filter(function (r) { return r.score_norm != null; });
+    if (!scored.length) return { raters: rows.length, met: metRows.length, avg: null };
+    const sum = scored.reduce(function (a, r) { return a + Number(r.score_norm); }, 0);
+    return { raters: rows.length, met: metRows.length, avg: sum / scored.length };
   }
 
   function renderPnmDetail(p) {
@@ -9283,7 +9285,7 @@
                            '“Did not meet” first.</div>') +
               (sum ? '<div class="pnm-rate-note">' + sum.raters + ' rater' +
                      (sum.raters === 1 ? '' : 's') + ' · ' + sum.met + ' met' +
-                     (sum.avg !== null ? ' · avg ' + sum.avg.toFixed(1) + ' / 20' : '') +
+                     (sum.avg !== null ? ' · avg ' + Math.round(sum.avg * 100) + '%' : '') +
                      '</div>' : '')
             ) +
           '</div>' +
