@@ -132,12 +132,14 @@
   .pnm.done { border-color: var(--ok); }
   .pnm.partial { border-color: var(--warn-line); border-width: 2px; }
   .pnm-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
-  .pnm-photo { width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
-    flex: 0 0 60px; background: var(--gold-soft); }
-  .pnm-initials { width: 60px; height: 60px; border-radius: 50%; flex: 0 0 60px;
+  .pnm-photo { width: 100%; height: 220px; border-radius: 12px; object-fit: cover;
+    border: 2px solid var(--navy); background: var(--gold-soft);
+    display: block; margin-bottom: 14px; }
+  .pnm-initials { width: 100%; height: 220px; border-radius: 12px;
+    border: 2px solid var(--navy);
     background: var(--gold-soft); color: var(--navy);
     display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: 20px; }
+    font-weight: 800; font-size: 56px; margin-bottom: 14px; }
   .pnm-name { font-weight: 700; font-size: 20px; font-stretch: 88%; line-height: 1.15; }
   .pnm-meta { color: var(--muted); font-size: 14px; }
   .pnm-state { margin-left: auto; font-size: 14px; font-weight: 700; color: var(--ok); text-align: right; }
@@ -529,10 +531,10 @@
 
       html += '<div class="pnm' + (st === 'done' ? ' done' : st === 'partial' ? ' partial' : '') +
               '" id="pnm-' + r.pnm_id + '">';
+      html += (photo
+        ? '<img class="pnm-photo" src="' + esc(photo) + '" alt="">'
+        : '<div class="pnm-initials">' + esc(initials(r.first_name, r.last_name)) + '</div>');
       html += '<div class="pnm-head">' +
-        (photo
-          ? '<img class="pnm-photo" src="' + esc(photo) + '" alt="">'
-          : '<div class="pnm-initials">' + esc(initials(r.first_name, r.last_name)) + '</div>') +
         '<div>' +
           '<div class="pnm-name">' + esc(r.first_name) + ' ' + esc(r.last_name) + '</div>' +
           '<div class="pnm-meta">' + esc(r.major || '—') + ' · ' + esc(r.year || '—') + '</div>' +
