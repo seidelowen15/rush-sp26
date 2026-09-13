@@ -9010,8 +9010,7 @@
    const PNM_SORTS = [
     { id: 'recent',   label: 'Recent check-in' },
     { id: 'name',     label: 'Name' },
-    { id: 'events',   label: 'Events attended' },
-    { id: 'votes',    label: 'Yes votes' }
+    { id: 'events',   label: 'Events attended' }
   ];
 
   const PNM_FILTERS = [
@@ -9104,19 +9103,12 @@
     const initials = ((p.first_name || '?')[0] + (p.last_name || '?')[0]).toUpperCase();
     const photo    = p.photo_path ? state.pnmPhotoUrls[p.photo_path] : null;
     const events   = (state.pnmAttendance[p.id] || []).length;
-    const tally    = pnmVoteTally(p.id);
     const open     = state.expandedPnmId === p.id;
     const seen     = pnmFirstSeen(p);
 
     const avatar = photo
       ? '<img class="pnm-photo" src="' + escapeHtml(photo) + '" alt="" />'
       : '<div class="pnm-photo pnm-photo-fallback">' + escapeHtml(initials) + '</div>';
-
-    const voteBtn = function (v, glyph, label) {
-      return '<button class="vote-btn ' + (tally.mine === v ? 'picked-' + v : '') + '" ' +
-             'onclick="event.stopPropagation(); votePnm(\'' + p.id + '\',\'' + v + '\')">' +
-             glyph + ' ' + label + '</button>';
-    };
 
     const detail = !open ? '' :
       '<div class="pnm-detail" onclick="event.stopPropagation()">' +
@@ -9127,9 +9119,6 @@
         renderPnmField('Email', p.psu_email) +
         renderPnmField('Phone', p.phone) +
         renderPnmField('Events', events + ' of 4') +
-        '<div class="vote-buttons" style="margin-top:12px;">' +
-          voteBtn('yes', '✓', 'Yes') + voteBtn('maybe', '?', 'Maybe') + voteBtn('no', '✕', 'No') +
-        '</div>' +
       '</div>';
 
     return '<div class="candidate-card' + (open ? ' pnm-open' : '') + '" ' +
@@ -9148,11 +9137,6 @@
       '</div>' +
       detail +
       '<div class="candidate-meta">' +
-        '<div class="vote-display">' +
-          '<span class="vote-count vote-yes">✓ ' + tally.yes + '</span>' +
-          '<span class="vote-count vote-maybe">? ' + tally.maybe + '</span>' +
-          '<span class="vote-count vote-no">✕ ' + tally.no + '</span>' +
-        '</div>' +
         '<div style="font-family:\'JetBrains Mono\',monospace; font-size:9px; ' +
              'color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.08em;">' +
           events + ' event' + (events === 1 ? '' : 's') +
@@ -9199,18 +9183,12 @@
   function renderPnmDetail(p) {
     const name  = pnmDisplayName(p);
     const photo = p.photo_path ? state.pnmPhotoUrls[p.photo_path] : null;
-    const tally = pnmVoteTally(p.id);
     const evId  = state.ratingEventId;
     const mine  = evId ? myRating(p.id, evId) : null;
     const sum   = evId ? eventRatingSummary(p.id, evId) : null;
     const att   = state.pnmAttendance[p.id] || [];
     const attended = {};
     att.forEach(function (a) { attended[a.event_id] = true; });
-
-    const voteBtn = function (v, glyph, label) {
-      return '<button class="vote-btn ' + (tally.mine === v ? 'picked-' + v : '') + '" ' +
-        'onclick="votePnm(\'' + p.id + '\',\'' + v + '\')">' + glyph + ' ' + label + '</button>';
-    };
 
     const scale = function (q) {
       const cur = mine ? mine[q.id] : null;
@@ -9231,9 +9209,6 @@
         '<div class="pnm-pane-bar">' +
           '<button class="btn" onclick="togglePnm(null)">‹ All candidates</button>' +
           '<div class="pnm-pane-title">' + escapeHtml(name) + '</div>' +
-          '<div class="vote-buttons" style="margin:0;">' +
-            voteBtn('yes','✓','Yes') + voteBtn('maybe','?','Maybe') + voteBtn('no','✕','No') +
-          '</div>' +
         '</div>' +
 
         '<div class="pnm-pane-body">' +
