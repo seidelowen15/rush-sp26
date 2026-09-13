@@ -1867,24 +1867,65 @@
   }
   .pnm-pane-body {
     display: grid;
-    grid-template-columns: minmax(320px, 460px) 1fr;
-    grid-template-areas: 'hero rate' 'info rate';
-    gap: 20px 28px;
-    align-content: start;
+    grid-template-columns: minmax(230px, 300px) minmax(300px, 1fr) minmax(330px, 400px);
+    grid-template-areas: 'hero info rate' 'att att notes';
+    gap: 18px;
+    align-items: start;
   }
-  .pnm-hero { grid-area: hero; }
-  .pnm-info { grid-area: info; }
-  .pnm-rate { grid-area: rate; }
+  .pnm-hero  { grid-area: hero; }
+  .pnm-info  { grid-area: info; }
+  .pnm-rate  { grid-area: rate; }
+  .pnm-att   { grid-area: att; }
+  .pnm-notes { grid-area: notes; }
+
+  /* Card shell shared by every block in the pane. */
+  .pnm-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .pnm-card-title {
+    display: flex; align-items: baseline; gap: 10px;
+    font-family: 'Playfair Display', serif;
+    font-size: 17px; font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .pnm-hero.pnm-card { padding: 10px; }
   .pnm-hero-img {
-    width: 100%; aspect-ratio: 4 / 5;
-    object-fit: cover; border-radius: 10px;
-    border: 1px solid var(--line-strong); background: var(--surface);
+    width: 100%; aspect-ratio: 4 / 5; max-height: 340px;
+    object-fit: cover; border-radius: 8px;
+    background: var(--surface-2);
     display: block;
   }
   .pnm-hero-empty {
     display: flex; align-items: center; justify-content: center;
     color: var(--fg-muted); font-size: 13px;
   }
+  .pnm-att-row {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .pnm-att-count {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.08em;
+    margin-left: auto;
+  }
+  .pnm-att-tile {
+    flex: 1 1 120px; min-width: 110px;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--surface-2);
+    padding: 10px 12px; text-align: center;
+  }
+  .pnm-att-tile.on { border-color: var(--gold); background: var(--gold-soft, var(--surface)); }
+  .pnm-att-name {
+    font-size: 12px; color: var(--fg-soft);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pnm-att-mark {
+    margin-top: 4px; font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: var(--fg-muted);
+  }
+  .pnm-att-tile.on .pnm-att-mark { color: var(--success); }
   .pnm-rate-head {
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px; margin-bottom: 14px;
@@ -1914,7 +1955,7 @@
   }
   .rate-dot:disabled { opacity: 0.35; cursor: not-allowed; }
   .rate-comments {
-    width: 100%; min-height: 90px; margin-top: 14px;
+    width: 100%; min-height: 110px; margin-top: 0;
     padding: 10px; border: 1px solid var(--line-strong);
     border-radius: 6px; background: var(--surface);
     color: var(--fg); font-family: Inter, sans-serif; font-size: 13px;
@@ -1923,10 +1964,16 @@
   .pnm-rate-note {
     margin-top: 10px; font-size: 12px; color: var(--fg-muted); line-height: 1.5;
   }
+  @media (max-width: 1200px) {
+    .pnm-pane-body {
+      grid-template-columns: minmax(200px, 260px) 1fr;
+      grid-template-areas: 'hero info' 'rate rate' 'att att' 'notes notes';
+    }
+  }
   @media (max-width: 900px) {
     .pnm-pane-body {
       grid-template-columns: 1fr;
-      grid-template-areas: 'hero' 'info' 'rate';
+      grid-template-areas: 'hero' 'info' 'rate' 'att' 'notes';
     }
   }
 
@@ -9212,24 +9259,24 @@
         '</div>' +
 
         '<div class="pnm-pane-body">' +
-          '<div class="pnm-hero">' +
+          '<div class="pnm-hero pnm-card">' +
             (photo
               ? '<img class="pnm-hero-img" src="' + escapeHtml(photo) + '" alt="" />'
               : '<div class="pnm-hero-img pnm-hero-empty">No photo on file</div>') +
           '</div>' +
 
-          '<div class="pnm-info">' +
+          '<div class="pnm-info pnm-card">' +
+            '<div class="pnm-card-title">Candidate Information</div>' +
             renderPnmField('PSU ID', (p.psu_id || '—') +
               (p.psu_id_unverified ? ' <span class="pnm-flag">unverified</span>' : ''), true) +
             renderPnmField('Year', p.year) +
             renderPnmField('Major', p.major) +
             renderPnmField('Email', p.psu_email) +
             renderPnmField('Phone', p.phone) +
-            renderPnmField('Attended', att.length + ' of ' + (state.rushEvents.length || 4)) +
             renderProfileFields(p) +
           '</div>' +
 
-          '<div class="pnm-rate">' +
+          '<div class="pnm-rate pnm-card">' +
             '<div class="pnm-rate-head">' +
               '<span>Rating</span>' +
               '<select class="pnm-event-pick" onchange="setRatingEvent(this.value)">' +
@@ -9252,10 +9299,6 @@
               (mine && mine.met === false
                 ? '<div class="pnm-rate-note">Marked as not met — no scores are stored.</div>'
                 : RATING_QS.map(scale).join('')) +
-              '<textarea class="rate-comments" placeholder="Misc comments (chairs only)" ' +
-                (mine ? '' : 'disabled ') +
-                'onblur="saveComments(\'' + p.id + '\', this.value)">' +
-                escapeHtml((mine && mine.comments) || '') + '</textarea>' +
               (mine ? '' : '<div class="pnm-rate-note">Answer “I met them” or ' +
                            '“Did not meet” first.</div>') +
               (sum ? '<div class="pnm-rate-note">' + sum.raters + ' rater' +
@@ -9263,6 +9306,31 @@
                      (sum.avg !== null ? ' · avg ' + Math.round(sum.avg * 100) + '%' : '') +
                      '</div>' : '')
             ) +
+          '</div>' +
+
+          '<div class="pnm-att pnm-card">' +
+            '<div class="pnm-card-title">Event Attendance' +
+              '<span class="pnm-att-count">' + att.length + ' of ' +
+                (state.rushEvents.length || 4) + '</span>' +
+            '</div>' +
+            '<div class="pnm-att-row">' +
+              (state.rushEvents.length
+                ? state.rushEvents.map(function (e) {
+                    return '<div class="pnm-att-tile' + (attended[e.id] ? ' on' : '') + '">' +
+                      '<div class="pnm-att-name">' + escapeHtml(e.label) + '</div>' +
+                      '<div class="pnm-att-mark">' + (attended[e.id] ? '✓' : '—') + '</div>' +
+                    '</div>';
+                  }).join('')
+                : '<div class="pnm-rate-note">No events loaded.</div>') +
+            '</div>' +
+          '</div>' +
+
+          '<div class="pnm-notes pnm-card">' +
+            '<div class="pnm-card-title">Notes</div>' +
+            '<textarea class="rate-comments" placeholder="Misc comments (chairs only)" ' +
+              (mine ? '' : 'disabled ') +
+              'onblur="saveComments(\'' + p.id + '\', this.value)">' +
+              escapeHtml((mine && mine.comments) || '') + '</textarea>' +
           '</div>' +
         '</div>' +
       '</div>';
