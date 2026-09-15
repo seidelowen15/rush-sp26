@@ -384,7 +384,7 @@
     clearError();
     var out = await Promise.all([
       sb.from('pnm_event_roster').select('*').eq('event_id', state.eventId),
-      sb.from('pnm_ratings').select('*').eq('event_id', state.eventId)
+      sb.from('pnm_ratings').select('*').eq('event_id', state.eventId).eq('rater_id', state.uid)
     ]);
     if (out[0].error) { showError('Could not load the rushes. ' + out[0].error.message); return; }
     if (out[1].error) { showError('Could not load your scores. ' + out[1].error.message); return; }
