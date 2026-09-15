@@ -6480,7 +6480,7 @@
 
   async function loadRatingsBoard() {
     if (!sb) return;
-    if (tierRank(state.currentTier) < 2) { state.ratingsLoaded = true; return; }
+    if (tierRank(state.currentTier) < 1) { state.ratingsLoaded = true; return; }
     try {
       const [boardRes, cfgRes, cmtRes, usersRes] = await Promise.all([
         sb.from('v_pnm_final_score').select('*'),
@@ -6730,9 +6730,9 @@
   // ---------- page ----------
 
   function renderRatings() {
-    if (tierRank(state.currentTier) < 2) {
+    if (tierRank(state.currentTier) < 1) {
       return '<div class="card" style="padding:28px; text-align:center; color:var(--fg-muted);">' +
-        'Brotherhood Ratings is limited to rush chairs.</div>';
+        'Brotherhood Ratings is limited to chairs and PMs.</div>';
     }
     if (!state.ratingsLoaded) {
       return '<div class="card" style="padding:28px; color:var(--fg-muted);">Loading ratings…</div>';
