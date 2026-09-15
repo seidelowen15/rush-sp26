@@ -5694,6 +5694,11 @@
     currentTier: null,
     setPasswordMode: false,
     setPasswordError: null,
+    recoverMode: false,
+    recoverSent: false,
+    recoverEmail: null,
+    recoverError: null,
+    recoverNotice: null,
     isExec: false,
     loginEmail: null,
     loginError: null,
@@ -6087,6 +6092,10 @@
       root.innerHTML = renderSetPassword();
       return;
     }
+    if (state.recoverMode) {
+      root.innerHTML = renderRecover();
+      return;
+    }
     if (!state.currentUser) {
       root.innerHTML = renderLogin();
       return;
@@ -6170,6 +6179,11 @@
               'onkeydown="if(event.key===\'Enter\'){doLogin();}" />' +
           '</div>' +
           '<button class="btn primary" id="login-btn" onclick="doLogin()" style="width:100%;">Sign In</button>' +
+          '<div style="margin-top:12px; text-align:center;">' +
+            '<a href="#" onclick="startRecover();return false;" ' +
+              'style="font-size:12px; color:var(--fg-muted); text-decoration:underline;">' +
+              'Forgot password?</a>' +
+          '</div>' +
           '<div class="login-footer">' +
             '<span class="greek">ΑΚΨ</span>' +
             '<span>·</span>' +
@@ -6255,7 +6269,132 @@
     }
   };
 
-  window.doLogin = async function() {
+  function renderRecover() {
+    const inputStyle = 'padding:11px 13px; border:1px solid var(--line-strong); ' +
+      'border-radius:8px; background:var(--surface); color:var(--fg); ' +
+      'font-family:Inter,sans-serif; font-size:14px; width:100%;';
+    return '' +
+      '<div class="login-screen">' +
+        '<div class="login-card">' +
+          '<div class="big-shield">ΑΚΨ</div>' +
+          '<div class="brand-text">Rush <em>SP\'26</em></div>' +
+          '<div class="login-subtitle">' +
+            (state.recoverSent ? 'Enter the code we emailed you' : 'Reset your password') +
+          '</div>' +
+          (state.recoverError
+            ? '<div style="color:var(--danger); font-size:13px; margin:12px 0 0; line-height:1.5;">' +
+                escapeHtml(state.recoverError) + '</div>'
+            : '') +
+          (state.recoverNotice
+            ? '<div style="color:var(--fg-muted); font-size:13px; margin:12px 0 0; line-height:1.5;">' +
+                escapeHtml(state.recoverNotice) + '</div>'
+            : '') +
+          '<div style="display:flex; flex-direction:column; gap:10px; margin:18px 0;">' +
+            '<input id="rec-email" type="email" autocomplete="username" placeholder="Email" ' +
+              'value="' + escapeHtml(state.recoverEmail || '') + '" style="' + inputStyle + '" ' +
+              (state.recoverSent ? 'readonly ' : '') +
+              'onkeydown="if(event.key===\'Enter\'){' +
+                (state.recoverSent ? 'verifyRecoverCode()' : 'sendRecoverCode()') + ';}" />' +
+            (state.recoverSent
+              ? '<input id="rec-code" type="text" inputmode="numeric" autocomplete="one-time-code" ' +
+                  'placeholder="6-digit code" style="' + inputStyle +
+                  ' letter-spacing:4px; font-family:JetBrains Mono,monospace;" ' +
+                  'onkeydown="if(event.key===\'Enter\'){verifyRecoverCode();}" />'
+              : '') +
+          '</div>' +
+          (state.recoverSent
+            ? '<button class="btn primary" id="rec-btn" onclick="verifyRecoverCode()" ' +
+                'style="width:100%;">Continue</button>'
+            : '<button class="btn primary" id="rec-btn" onclick="sendRecoverCode()" ' +
+                'style="width:100%;">Email me a code</button>') +
+          '<div style="margin-top:12px; text-align:center;">' +
+            '<a href="#" onclick="cancelRecover();return false;" ' +
+              'style="font-size:12px; color:var(--fg-muted); text-decoration:underline;">' +
+              'Back to sign in</a>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  window.startRecover = function() {
+    const el = document.getElementById('login-email');
+    state.recoverEmail = el ? el.value.trim() : (state.loginEmail || '');
+    state.recoverMode = true;
+    state.recoverSent = false;
+    state.recoverError = null;
+    state.recoverNotice = null;
+    render();
+  };
+
+  window.cancelRecover = function() {
+    state.recoverMode = false;
+    state.recoverSent = false;
+    state.recoverError = null;
+    state.recoverNotice = null;
+    render();
+  };
+
+  window.sendRecoverCode = async function() {
+    const el = document.getElementById('rec-email');
+    const btn = document.getElementById('rec-btn');
+    const email = el ? el.value.trim() : '';
+
+    state.recoverEmail = email;
+    if (!email) {
+      state.recoverError = 'Enter your email.';
+      render(); return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+    try {
+      const { error } = await sb.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      state.recoverSent = true;
+      state.recoverError = null;
+      state.recoverNotice = 'Code sent. It expires in one hour.';
+    } catch (e) {
+      console.error('resetPasswordForEmail failed', e);
+      state.recoverError = (e && e.message) ? e.message : 'Could not send the code.';
+    }
+    render();
+  };
+
+  window.verifyRecoverCode = async function() {
+    const codeEl = document.getElementById('rec-code');
+    const btn = document.getElementById('rec-btn');
+    const code = codeEl ? codeEl.value.trim() : '';
+
+    if (!code) {
+      state.recoverError = 'Enter the code from your email.';
+      render(); return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+
+    try {
+      const { error } = await sb.auth.verifyOtp({
+        email: state.recoverEmail,
+        token: code,
+        type: 'recovery'
+      });
+      if (error) throw error;
+
+      state.recoverMode = false;
+      state.recoverSent = false;
+      state.recoverError = null;
+      state.recoverNotice = null;
+      state.setPasswordMode = true;
+      state.setPasswordError = null;
+      render();
+    } catch (e) {
+      console.error('verifyOtp failed', e);
+      state.recoverError = (e && e.message) ? e.message : 'That code is not valid.';
+      render();
+    }
+  };
+
+  window.doLogin = async function() {  
     const emailEl = document.getElementById('login-email');
     const passEl  = document.getElementById('login-password');
     const btn     = document.getElementById('login-btn');
