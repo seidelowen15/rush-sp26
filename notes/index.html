@@ -6994,6 +6994,7 @@
       '</div>' +
     '</div>';
   }
+  function renderSidebar() {
     const openTasks = state.tasks.filter(t => !t.templateId && t.status !== 'done').length;
     const nav = [
       { id: 'dashboard', label: 'Dashboard', icon: '◐' },
