@@ -5694,6 +5694,13 @@
     currentTier: null,
     setPasswordMode: false,
     setPasswordError: null,
+    ratings: [],
+    ratingsLoaded: false,
+    ratingsComments: [],
+    ratingsConfig: {},
+    ratingsSelected: null,
+    ratingsSort: 'score',
+    ratingsShowUnrated: false,
     recoverMode: false,
     recoverSent: false,
     recoverEmail: null,
@@ -5902,6 +5909,8 @@
       await loadIdReviews();
       // Candidates is now a view over pnms + attendance + pnm_votes.
       await loadPnms();
+      // Brotherhood Ratings board. Chair-only; soft-fails for lower tiers.
+      await loadRatingsBoard();
       // Phase 0 #4 v2: silent boot-time sync. No toast, no banner — generation
       // is invisible to chairs at boot. Explicit saveChapterDate triggers
       // surface counts in their own toast.
@@ -6116,6 +6125,7 @@
           '<div class="view ' + (state.currentView === 'schedule' ? 'active' : '') + '">' + renderSchedule() + '</div>' +
 
           '<div class="view ' + (state.currentView === 'candidates' ? 'active' : '') + '">' + renderCandidates() + '</div>' +
+          '<div class="view ' + (state.currentView === 'ratings' ? 'active' : '') + '">' + renderRatings() + '</div>' +
           '<div class="view ' + (state.currentView === 'brothers' ? 'active' : '') + '">' + renderBrothers() + '</div>' +
 
           '<div class="view ' + (state.currentView === 'marketing' ? 'active' : '') + '">' + renderMarketingView() + renderMarketingPostModal() + '</div>' +
@@ -6460,10 +6470,530 @@
     marketing: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10v4h3l9 4.5v-13L6 10H3Z"/><path d="M18 9.5a3 3 0 0 1 0 5"/></svg>',
     budget: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4h10.5A1.5 1.5 0 0 1 18 5.5V20H7.5A1.5 1.5 0 0 1 6 18.5z"/><path d="M6 4v16"/><path d="M9.5 9h5M9.5 12.5h5"/></svg>',
     reviews: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4"/><circle cx="12" cy="16.8" r="0.35" fill="currentColor" stroke="none"/></svg>',
+    ratings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M4 19.5V13m4 6.5V8.5m4 11V5m4 14.5V10m4 9.5v-5.5"/><path d="M2.5 21h19" stroke-width="1.2"/></svg>',
   };
   const BRAND_HEX = '<svg viewBox="0 0 46 50" preserveAspectRatio="none"><polygon points="23,1.5 44.5,13 44.5,37 23,48.5 1.5,37 1.5,13" fill="#13213a" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 
-  function renderSidebar() {
+  // ============================================================
+  // BROTHERHOOD RATINGS
+  // ============================================================
+
+  async function loadRatingsBoard() {
+    if (!sb) return;
+    if (tierRank(state.currentTier) < 2) { state.ratingsLoaded = true; return; }
+    try {
+      const [boardRes, cfgRes, cmtRes, usersRes] = await Promise.all([
+        sb.from('v_pnm_final_score').select('*'),
+        sb.from('score_config').select('key, value'),
+        sb.from('pnm_ratings')
+          .select('pnm_id, rater_id, event_id, met, answered, raw_score, comments, updated_at')
+          .not('comments', 'is', null),
+        sb.from('app_users').select('user_id, psu_id, tier')
+      ]);
+
+      if (boardRes.error) throw boardRes.error;
+      state.ratings = boardRes.data || [];
+
+      const cfg = {};
+      (cfgRes.data || []).forEach(function (r) { cfg[r.key] = Number(r.value); });
+      state.ratingsConfig = cfg;
+
+      const byUid = {};
+      (usersRes.data || []).forEach(function (u) { byUid[u.user_id] = u; });
+
+      state.ratingsComments = (cmtRes.data || [])
+        .filter(function (c) { return c.comments && c.comments.trim(); })
+        .map(function (c) {
+          const u = byUid[c.rater_id];
+          const b = u ? state.brothers.find(function (x) { return x.psu_id === u.psu_id; }) : null;
+          return {
+            pnm_id: c.pnm_id,
+            text: c.comments.trim(),
+            raw_score: c.raw_score,
+            answered: c.answered,
+            updated_at: c.updated_at,
+            rater_psu_id: u ? u.psu_id : null,
+            rater_tier: u ? u.tier : null,
+            rater_name: b
+              ? ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim()
+              : (u ? u.psu_id : 'Unknown rater'),
+            rater_role: b ? (b.role || null) : null
+          };
+        });
+    } catch (e) {
+      console.error('loadRatingsBoard failed', e);
+      state.ratings = [];
+      state.ratingsComments = [];
+    }
+    state.ratingsLoaded = true;
+  }
+
+  // Rank band by the two targets in score_config. Bands are drawn off
+  // final_score_available, not final_score, because the interview block
+  // is 30% of the formula and has not happened yet — final_score
+  // coalesces that to zero and flattens everyone.
+  function ratingBand(rank) {
+    const c1 = state.ratingsConfig.cut1_target || 64;
+    const c2 = state.ratingsConfig.cut2_target || 40;
+    if (!rank) return 'none';
+    if (rank <= c2) return 'green';
+    if (rank <= c1) return 'amber';
+    return 'red';
+  }
+
+  const BAND_TINT = {
+    green: 'rgba(72, 160, 90, 0.34)',
+    amber: 'rgba(224, 168, 40, 0.34)',
+    red:   'rgba(198, 74, 74, 0.32)',
+    none:  'rgba(120, 120, 120, 0.18)'
+  };
+  const BAND_EDGE = {
+    green: '#48a05a', amber: '#e0a828', red: '#c64a4a', none: '#8896a8'
+  };
+
+  // Sorted board rows with a rank attached. Anyone with no ratings at all
+  // is held out of ranking so they don't occupy a cut slot they never
+  // earned — they show in a separate block instead.
+  function ratingRows() {
+    const scored = state.ratings.filter(function (r) {
+      return r.unique_raters > 0 && r.final_score_available !== null;
+    });
+    scored.sort(function (a, b) {
+      return Number(b.final_score_available) - Number(a.final_score_available);
+    });
+    scored.forEach(function (r, i) { r._rank = i + 1; r._band = ratingBand(i + 1); });
+
+    const unscored = state.ratings.filter(function (r) {
+      return !(r.unique_raters > 0 && r.final_score_available !== null);
+    });
+    unscored.forEach(function (r) { r._rank = null; r._band = 'none'; });
+
+    return { scored: scored, unscored: unscored };
+  }
+
+  function ratingPhotoUrl(pnmId) {
+    const p = state.pnms.find(function (x) { return x.id === pnmId; });
+    if (!p || !p.photo_path) return null;
+    return state.pnmPhotoUrls[p.photo_path] || null;
+  }
+
+  // ---------- charts (inline SVG, no libraries) ----------
+
+  // Chart 1. Ranked strip. Each PNM is one vertical tick at their score,
+  // height scaled by how many raters saw them. Cut targets drawn as rules.
+  // This is the chart to make decisions from: it shows the boundary
+  // crowding that a bare ranked list hides.
+  function ratingsRankChart(rows) {
+    if (!rows.length) return '';
+    const W = 900, H = 190, PADL = 44, PADR = 16, PADT = 16, PADB = 30;
+    const iw = W - PADL - PADR, ih = H - PADT - PADB;
+    const c1 = state.ratingsConfig.cut1_target || 64;
+    const c2 = state.ratingsConfig.cut2_target || 40;
+    const maxR = Math.max.apply(null, rows.map(function (r) { return r.unique_raters || 1; }));
+
+    const x = function (i) { return PADL + (i / Math.max(rows.length - 1, 1)) * iw; };
+    const lo = Math.min.apply(null, rows.map(function (r) { return Number(r.final_score_available); }));
+    const hi = Math.max.apply(null, rows.map(function (r) { return Number(r.final_score_available); }));
+    const span = (hi - lo) || 1;
+    const y = function (v) { return PADT + ih - ((Number(v) - lo) / span) * ih; };
+
+    let ticks = '';
+    rows.forEach(function (r, i) {
+      const h = 3 + ((r.unique_raters || 1) / maxR) * 9;
+      ticks += '<line x1="' + x(i).toFixed(1) + '" y1="' + (y(r.final_score_available) - h).toFixed(1) +
+               '" x2="' + x(i).toFixed(1) + '" y2="' + (y(r.final_score_available) + h).toFixed(1) +
+               '" stroke="' + BAND_EDGE[r._band] + '" stroke-width="2.2" opacity="0.8"><title>' +
+               escapeHtml(r.name) + ' — ' + Number(r.final_score_available).toFixed(3) +
+               ' · ' + r.unique_raters + ' raters</title></line>';
+    });
+
+    let rules = '';
+    [[c2, 'Cut 2 · ' + c2], [c1, 'Cut 1 · ' + c1]].forEach(function (pair) {
+      if (pair[0] > rows.length) return;
+      const px = x(pair[0] - 1);
+      rules += '<line x1="' + px.toFixed(1) + '" y1="' + PADT + '" x2="' + px.toFixed(1) +
+               '" y2="' + (PADT + ih) + '" stroke="var(--fg-muted)" stroke-width="1" ' +
+               'stroke-dasharray="4 3" opacity="0.75"/>' +
+               '<text x="' + (px + 4).toFixed(1) + '" y="' + (PADT + 11) +
+               '" font-size="9" fill="var(--fg-muted)" font-family="JetBrains Mono,monospace">' +
+               pair[1] + '</text>';
+    });
+
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;">' +
+      '<text x="6" y="' + (PADT + 6) + '" font-size="9" fill="var(--fg-muted)" ' +
+        'font-family="JetBrains Mono,monospace">' + hi.toFixed(2) + '</text>' +
+      '<text x="6" y="' + (PADT + ih) + '" font-size="9" fill="var(--fg-muted)" ' +
+        'font-family="JetBrains Mono,monospace">' + lo.toFixed(2) + '</text>' +
+      rules + ticks +
+      '<text x="' + PADL + '" y="' + (H - 9) + '" font-size="9" fill="var(--fg-muted)" ' +
+        'font-family="JetBrains Mono,monospace">rank 1 → ' + rows.length +
+        ' · tick height = rater count</text>' +
+      '</svg>';
+  }
+
+  // Chart 2. Coverage. How many PNMs have been seen by how many brothers.
+  // A score built on two raters is noise; this is the chart that tells you
+  // who to push toward at the next event.
+  function ratingsCoverageChart(rows) {
+    if (!rows.length) return '';
+    const buckets = [0, 0, 0, 0, 0, 0];
+    const labels = ['1-2', '3-4', '5-7', '8-11', '12-16', '17+'];
+    rows.forEach(function (r) {
+      const n = r.unique_raters || 0;
+      if (n <= 2) buckets[0]++;
+      else if (n <= 4) buckets[1]++;
+      else if (n <= 7) buckets[2]++;
+      else if (n <= 11) buckets[3]++;
+      else if (n <= 16) buckets[4]++;
+      else buckets[5]++;
+    });
+    const max = Math.max.apply(null, buckets) || 1;
+    const W = 420, H = 150, PADB = 26, PADT = 10;
+    const bw = W / buckets.length;
+
+    let bars = '';
+    buckets.forEach(function (v, i) {
+      const h = (v / max) * (H - PADB - PADT);
+      const bx = i * bw + 8, by = H - PADB - h;
+      const danger = i === 0;
+      bars +=
+        '<rect x="' + bx + '" y="' + by.toFixed(1) + '" width="' + (bw - 16) +
+          '" height="' + Math.max(h, 1).toFixed(1) + '" rx="2" fill="' +
+          (danger ? BAND_EDGE.red : 'var(--gold-dark)') + '" opacity="' +
+          (danger ? '0.65' : '0.55') + '"/>' +
+        '<text x="' + (bx + (bw - 16) / 2) + '" y="' + (by - 4).toFixed(1) +
+          '" font-size="10" text-anchor="middle" fill="var(--fg)" ' +
+          'font-family="JetBrains Mono,monospace">' + v + '</text>' +
+        '<text x="' + (bx + (bw - 16) / 2) + '" y="' + (H - 9) +
+          '" font-size="9" text-anchor="middle" fill="var(--fg-muted)" ' +
+          'font-family="JetBrains Mono,monospace">' + labels[i] + '</text>';
+    });
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;">' +
+      bars + '</svg>';
+  }
+
+  // Chart 3. Score histogram with the two cut targets overlaid, so you can
+  // see how tight the boundary is before treating a rank as a decision.
+  function ratingsDistChart(rows) {
+    if (!rows.length) return '';
+    const N = 22;
+    const vals = rows.map(function (r) { return Number(r.final_score_available); });
+    const lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    const span = (hi - lo) || 1;
+    const bins = new Array(N).fill(0);
+    vals.forEach(function (v) {
+      let i = Math.floor(((v - lo) / span) * N);
+      if (i >= N) i = N - 1;
+      if (i < 0) i = 0;
+      bins[i]++;
+    });
+    const max = Math.max.apply(null, bins) || 1;
+    const W = 420, H = 150, PADB = 26, PADT = 10;
+    const bw = W / N;
+
+    const c1 = state.ratingsConfig.cut1_target || 64;
+    const c2 = state.ratingsConfig.cut2_target || 40;
+    const cutVal = function (k) {
+      return rows[k - 1] ? Number(rows[k - 1].final_score_available) : null;
+    };
+    const vx = function (v) { return ((v - lo) / span) * W; };
+
+    let bars = '';
+    bins.forEach(function (v, i) {
+      const h = (v / max) * (H - PADB - PADT);
+      bars += '<rect x="' + (i * bw + 1).toFixed(1) + '" y="' + (H - PADB - h).toFixed(1) +
+              '" width="' + (bw - 2).toFixed(1) + '" height="' + Math.max(h, 0.5).toFixed(1) +
+              '" fill="var(--gold-dark)" opacity="0.45"/>';
+    });
+
+    let rules = '';
+    [[cutVal(c2), 'Cut 2'], [cutVal(c1), 'Cut 1']].forEach(function (p) {
+      if (p[0] === null) return;
+      const px = vx(p[0]);
+      rules += '<line x1="' + px.toFixed(1) + '" y1="' + PADT + '" x2="' + px.toFixed(1) +
+               '" y2="' + (H - PADB) + '" stroke="var(--danger)" stroke-width="1.2" ' +
+               'stroke-dasharray="4 3" opacity="0.8"/>' +
+               '<text x="' + (px + 3).toFixed(1) + '" y="' + (PADT + 9) +
+               '" font-size="9" fill="var(--danger)" ' +
+               'font-family="JetBrains Mono,monospace">' + p[1] + '</text>';
+    });
+
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;">' +
+      bars + rules +
+      '<text x="2" y="' + (H - 9) + '" font-size="9" fill="var(--fg-muted)" ' +
+        'font-family="JetBrains Mono,monospace">' + lo.toFixed(2) + '</text>' +
+      '<text x="' + (W - 4) + '" y="' + (H - 9) + '" font-size="9" text-anchor="end" ' +
+        'fill="var(--fg-muted)" font-family="JetBrains Mono,monospace">' + hi.toFixed(2) + '</text>' +
+      '</svg>';
+  }
+
+  // ---------- page ----------
+
+  function renderRatings() {
+    if (tierRank(state.currentTier) < 2) {
+      return '<div class="card" style="padding:28px; text-align:center; color:var(--fg-muted);">' +
+        'Brotherhood Ratings is limited to rush chairs.</div>';
+    }
+    if (!state.ratingsLoaded) {
+      return '<div class="card" style="padding:28px; color:var(--fg-muted);">Loading ratings…</div>';
+    }
+    if (!state.ratings.length) {
+      return '<div class="card" style="padding:28px; color:var(--fg-muted);">' +
+        'No ratings yet. The board fills in as brothers submit scores.</div>';
+    }
+
+    const groups = ratingRows();
+    const rows = groups.scored;
+    const c1 = state.ratingsConfig.cut1_target || 64;
+    const c2 = state.ratingsConfig.cut2_target || 40;
+
+    const thin = rows.filter(function (r) { return r.unique_raters <= 2; }).length;
+    const noProfile = state.ratings.filter(function (r) {
+      return !state.pnmProfiles[r.pnm_id];
+    }).length;
+
+    const stat = function (n, label, tone) {
+      return '<div style="flex:1; min-width:120px; padding:12px 14px; border-radius:10px; ' +
+        'background:var(--surface); border:1px solid var(--line);">' +
+        '<div style="font-family:JetBrains Mono,monospace; font-size:22px; color:' +
+          (tone || 'var(--fg)') + ';">' + n + '</div>' +
+        '<div style="font-size:11px; color:var(--fg-muted); text-transform:uppercase; ' +
+          'letter-spacing:0.08em; margin-top:2px;">' + label + '</div></div>';
+    };
+
+    return '' +
+      // interview-weight warning: this is the single most load-bearing caveat
+      '<div style="padding:11px 14px; border-radius:9px; margin-bottom:16px; ' +
+        'background:rgba(224,168,40,0.12); border:1px solid rgba(224,168,40,0.45); ' +
+        'font-size:12.5px; line-height:1.55;">' +
+        '<strong>Ranked on available components only.</strong> Interviews are 30% of the ' +
+        'final formula and have not happened, so this board renormalises across the ' +
+        'components that exist today. Ranks will move once interview scores land. ' +
+        'Cut targets (' + c1 + ' / ' + c2 + ') come from score_config and are marked ' +
+        'unconfirmed there.' +
+      '</div>' +
+
+      '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;">' +
+        stat(rows.length, 'ranked') +
+        stat(groups.unscored.length, 'no ratings yet', BAND_EDGE.none) +
+        stat(thin, '≤2 raters', thin ? BAND_EDGE.red : 'var(--fg)') +
+        stat(noProfile, 'no profile', BAND_EDGE.amber) +
+        stat(state.ratingsComments.length, 'written notes') +
+      '</div>' +
+
+      '<div class="card" style="padding:16px; margin-bottom:14px;">' +
+        '<div class="section-label" style="margin-bottom:6px;">Ranked scores with cut targets</div>' +
+        ratingsRankChart(rows) +
+      '</div>' +
+
+      '<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px;">' +
+        '<div class="card" style="padding:16px;">' +
+          '<div class="section-label" style="margin-bottom:6px;">Rater coverage</div>' +
+          ratingsCoverageChart(rows) +
+          '<div style="font-size:11px; color:var(--fg-muted); margin-top:6px; line-height:1.5;">' +
+            'PNMs by number of distinct raters. The left bar is the danger zone — ' +
+            'a score from one or two brothers is not a ranking.</div>' +
+        '</div>' +
+        '<div class="card" style="padding:16px;">' +
+          '<div class="section-label" style="margin-bottom:6px;">Score distribution</div>' +
+          ratingsDistChart(rows) +
+          '<div style="font-size:11px; color:var(--fg-muted); margin-top:6px; line-height:1.5;">' +
+            'Where the cut targets actually land. A tall bar straddling a line ' +
+            'means the boundary is a judgement call, not a gap.</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="section-label" style="margin:0 0 8px;">Board</div>' +
+      '<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px;">' +
+        rows.map(ratingCard).join('') +
+      '</div>' +
+
+      (groups.unscored.length
+        ? '<div class="section-label" style="margin:22px 0 8px;">Not yet rated · ' +
+            groups.unscored.length + '</div>' +
+          '<div style="font-size:12px; color:var(--fg-muted); margin-bottom:8px; line-height:1.55;">' +
+            'Attended but nobody has scored them. Absence of a score is not a low ' +
+            'score — these need coverage at the next event, not a cut.</div>' +
+          '<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px;">' +
+            groups.unscored.map(ratingCard).join('') +
+          '</div>'
+        : '') +
+
+      (state.ratingsSelected ? ratingDetailModal(state.ratingsSelected) : '');
+  }
+
+  function ratingCard(r) {
+    const url = ratingPhotoUrl(r.pnm_id);
+    const tint = BAND_TINT[r._band];
+    const edge = BAND_EDGE[r._band];
+    const prof = state.pnmProfiles[r.pnm_id];
+    const notes = state.ratingsComments.filter(function (c) { return c.pnm_id === r.pnm_id; }).length;
+
+    const photo = url
+      ? '<div style="position:relative; width:100%; aspect-ratio:1; overflow:hidden; ' +
+          'border-radius:9px 9px 0 0;">' +
+          '<img src="' + url + '" alt="" style="width:100%; height:100%; object-fit:cover; display:block;"/>' +
+          '<div style="position:absolute; inset:0; background:' + tint + ';"></div>' +
+        '</div>'
+      : '<div style="width:100%; aspect-ratio:1; border-radius:9px 9px 0 0; background:' + tint +
+          '; display:flex; align-items:center; justify-content:center; color:var(--fg-muted); ' +
+          'font-size:11px;">no photo</div>';
+
+    return '<div onclick="openRatingDetail(\'' + r.pnm_id + '\')" ' +
+      'style="cursor:pointer; border:1px solid var(--line); border-top:3px solid ' + edge +
+      '; border-radius:10px; overflow:hidden; background:var(--surface);">' +
+      photo +
+      '<div style="padding:10px 12px 12px;">' +
+        '<div style="display:flex; justify-content:space-between; align-items:baseline; gap:6px;">' +
+          '<div style="font-weight:600; font-size:13.5px; line-height:1.3;">' +
+            escapeHtml(r.name || '') + '</div>' +
+          '<div style="font-family:JetBrains Mono,monospace; font-size:11px; color:var(--fg-muted);">' +
+            (r._rank ? '#' + r._rank : '—') + '</div>' +
+        '</div>' +
+        '<div style="font-size:11px; color:var(--fg-muted); margin-top:2px;">' +
+          escapeHtml(r.year || '') + (r.major ? ' · ' + escapeHtml(r.major) : '') + '</div>' +
+        '<div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px; font-size:10px;">' +
+          '<span style="font-family:JetBrains Mono,monospace; padding:2px 6px; border-radius:4px; ' +
+            'background:var(--bg2); color:var(--fg);">' +
+            (r.final_score_available !== null
+              ? Number(r.final_score_available).toFixed(3) : '—') + '</span>' +
+          '<span style="padding:2px 6px; border-radius:4px; background:var(--bg2); color:' +
+            (r.unique_raters <= 2 ? BAND_EDGE.red : 'var(--fg-muted)') + ';">' +
+            r.unique_raters + ' rater' + (r.unique_raters === 1 ? '' : 's') + '</span>' +
+          (notes ? '<span style="padding:2px 6px; border-radius:4px; background:var(--bg2); ' +
+            'color:var(--fg-muted);">' + notes + ' note' + (notes === 1 ? '' : 's') + '</span>' : '') +
+          (!prof ? '<span style="padding:2px 6px; border-radius:4px; ' +
+            'background:rgba(224,168,40,0.16); color:' + BAND_EDGE.amber + ';">no profile</span>' : '') +
+          (r.is_cut ? '<span style="padding:2px 6px; border-radius:4px; ' +
+            'background:rgba(198,74,74,0.16); color:' + BAND_EDGE.red + ';">cut</span>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.openRatingDetail = function (pnmId) {
+    state.ratingsSelected = pnmId;
+    render();
+  };
+  window.closeRatingDetail = function () {
+    state.ratingsSelected = null;
+    render();
+  };
+
+  function ratingDetailModal(pnmId) {
+    const r = state.ratings.find(function (x) { return x.pnm_id === pnmId; });
+    if (!r) return '';
+    const prof = state.pnmProfiles[pnmId] || null;
+    const url = ratingPhotoUrl(pnmId);
+    const notes = state.ratingsComments
+      .filter(function (c) { return c.pnm_id === pnmId; })
+      .sort(function (a, b) { return (b.raw_score || 0) - (a.raw_score || 0); });
+
+    const field = function (label, val) {
+      if (val === null || val === undefined || val === '') return '';
+      return '<div style="display:flex; gap:10px; padding:5px 0; border-bottom:1px solid var(--line);">' +
+        '<div style="min-width:132px; font-size:11px; color:var(--fg-muted); ' +
+          'text-transform:uppercase; letter-spacing:0.06em;">' + label + '</div>' +
+        '<div style="font-size:13px; flex:1;">' + escapeHtml(String(val)) + '</div></div>';
+    };
+
+    const metric = function (label, val, sub) {
+      return '<div style="flex:1; min-width:92px;">' +
+        '<div style="font-family:JetBrains Mono,monospace; font-size:17px;">' + val + '</div>' +
+        '<div style="font-size:10px; color:var(--fg-muted); text-transform:uppercase; ' +
+          'letter-spacing:0.07em;">' + label + '</div>' +
+        (sub ? '<div style="font-size:10px; color:var(--fg-muted);">' + sub + '</div>' : '') +
+      '</div>';
+    };
+
+    return '<div onclick="closeRatingDetail()" style="position:fixed; inset:0; ' +
+      'background:rgba(3,16,46,0.55); z-index:400; display:flex; align-items:flex-start; ' +
+      'justify-content:center; padding:40px 20px; overflow-y:auto;">' +
+      '<div onclick="event.stopPropagation()" style="background:var(--bg); border-radius:14px; ' +
+        'max-width:780px; width:100%; border:1px solid var(--line-strong); overflow:hidden;">' +
+
+        '<div style="display:flex; gap:16px; padding:18px; border-bottom:1px solid var(--line);">' +
+          (url
+            ? '<div style="position:relative; width:96px; height:96px; flex-shrink:0; ' +
+                'border-radius:10px; overflow:hidden;">' +
+                '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:cover;"/>' +
+                '<div style="position:absolute; inset:0; background:' + BAND_TINT[r._band] + ';"></div>' +
+              '</div>'
+            : '') +
+          '<div style="flex:1;">' +
+            '<div style="font-size:20px; font-weight:600;">' + escapeHtml(r.name || '') + '</div>' +
+            '<div style="font-size:12px; color:var(--fg-muted); margin-top:2px;">' +
+              escapeHtml(r.psu_id || '') + ' · ' + escapeHtml(r.year || '') +
+              (r.major ? ' · ' + escapeHtml(r.major) : '') + '</div>' +
+            '<div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:12px;">' +
+              metric('rank', r._rank ? '#' + r._rank : '—',
+                     r._rank ? ratingBand(r._rank) : 'unranked') +
+              metric('score', r.final_score_available !== null
+                       ? Number(r.final_score_available).toFixed(3) : '—',
+                     r.components_present + '/4 parts') +
+              metric('raters', r.unique_raters,
+                     r.total_interactions + ' interactions') +
+              metric('events', r.events_attended, '') +
+            '</div>' +
+          '</div>' +
+          '<button class="btn" onclick="closeRatingDetail()" ' +
+            'style="align-self:flex-start;">Close</button>' +
+        '</div>' +
+
+        '<div style="padding:18px;">' +
+          '<div class="section-label" style="margin-bottom:6px;">Score components</div>' +
+          '<div style="font-size:12px; color:var(--fg-muted); margin-bottom:10px; line-height:1.55;">' +
+            'Brotherhood is shrunk toward the field mean, so a thinly-rated PNM sits ' +
+            'closer to average than their raw scores suggest. That is deliberate.</div>' +
+          field('Brotherhood (50%)', r.db_norm !== null ? Number(r.db_norm).toFixed(4) : 'none yet') +
+          field('Interview (30%)', r.interview_norm !== null
+                 ? Number(r.interview_norm).toFixed(4) + ' · ' + (r.interview_count || 0) + ' interview(s)'
+                 : 'not yet held') +
+          field('PM pool (10%)', r.pm_norm !== null
+                 ? Number(r.pm_norm).toFixed(4) + ' · ' + r.pm_raters + ' rater(s)' : 'none yet') +
+          field('Rush pool (10%)', r.rush_norm !== null
+                 ? Number(r.rush_norm).toFixed(4) + ' · ' + r.rush_raters + ' rater(s)' : 'none yet') +
+
+          '<div class="section-label" style="margin:18px 0 6px;">Rush profile</div>' +
+          (prof
+            ? field('GPA', prof.gpa) +
+              field('GPA basis', prof.gpa_basis) +
+              field('HS GPA', prof.hs_gpa) +
+              field('Hometown', prof.hometown) +
+              field('Minor', prof.minor) +
+              field('Email', prof.email) +
+              field('Clubs', prof.clubs) +
+              field('Previously knowns', prof.previously_knowns) +
+              field('Submitted', prof.submitted_at
+                     ? new Date(prof.submitted_at).toLocaleString() : null)
+            : '<div style="font-size:13px; color:' + BAND_EDGE.amber + ';">' +
+                'No profile submitted. That is a gap in the record, not a negative signal.</div>') +
+
+          '<div class="section-label" style="margin:18px 0 6px;">' +
+            'Written notes · ' + notes.length + '</div>' +
+          (notes.length
+            ? notes.map(function (c) {
+                return '<div style="padding:10px 12px; border-radius:9px; background:var(--surface); ' +
+                  'border:1px solid var(--line); margin-bottom:8px;">' +
+                  '<div style="display:flex; justify-content:space-between; gap:8px; ' +
+                    'align-items:baseline; margin-bottom:5px;">' +
+                    '<div style="font-size:12px; font-weight:600;">' +
+                      escapeHtml(c.rater_name) +
+                      (c.rater_role ? ' <span style="font-weight:400; color:var(--fg-muted);">· ' +
+                        escapeHtml(c.rater_role) + '</span>' : '') + '</div>' +
+                    '<div style="font-family:JetBrains Mono,monospace; font-size:11px; ' +
+                      'color:var(--fg-muted);">' +
+                      (c.answered ? c.raw_score + '/' + (c.answered * 5) : 'no score') + '</div>' +
+                  '</div>' +
+                  '<div style="font-size:13px; line-height:1.55; white-space:pre-wrap;">' +
+                    escapeHtml(c.text) + '</div>' +
+                '</div>';
+              }).join('')
+            : '<div style="font-size:13px; color:var(--fg-muted);">No written notes.</div>') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
     const openTasks = state.tasks.filter(t => !t.templateId && t.status !== 'done').length;
     const nav = [
       { id: 'dashboard', label: 'Dashboard', icon: '◐' },
@@ -6472,6 +7002,8 @@
       { id: 'schedule', label: 'Schedule', icon: '◷', count: state.scheduleEvents.length },
 
       { id: 'candidates', label: 'Candidates', icon: '★', count: state.pnms.length },
+      { id: 'ratings', label: 'Brotherhood Ratings', icon: '▲',
+        count: state.ratings.filter(function (r) { return r.unique_raters > 0; }).length },
       { id: 'brothers', label: 'Brothers', icon: '◍', count: state.brothers.length },
       { id: 'marketing', label: 'Marketing', icon: '◭', count: state.marketingPosts.length },
     ];
@@ -6539,6 +7071,7 @@
       tasks: ['Tasks', '& to-dos'],
       candidates: ['Candidates', ''],
       brothers: ['Brothers', '& chapter'],
+      ratings: ['Brotherhood', 'Ratings'],
       nametags: ['Nametags', '& print'],
       marketing: ['Marketing', '& calendar'],
       budget: ['Budget', '& expenses'],
