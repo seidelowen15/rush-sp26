@@ -5699,6 +5699,10 @@
     ratingsComments: [],
     ratingsConfig: {},
     ratingsSelected: null,
+    ratingsDetailRows: [],
+    ratingsDetailLoading: false,
+    ratingsDetailTab: 'distribution',
+    ratingsRaters: {},
     ratingsSort: 'score',
     ratingsShowUnrated: false,
     recoverMode: false,
@@ -6501,6 +6505,21 @@
       const byUid = {};
       (usersRes.data || []).forEach(function (u) { byUid[u.user_id] = u; });
 
+      // Reused by the detail modal so it doesn't re-query app_users per open.
+      const raterNames = {};
+      Object.keys(byUid).forEach(function (uid) {
+        const u = byUid[uid];
+        const b = state.brothers.find(function (x) { return x.psu_id === u.psu_id; });
+        raterNames[uid] = {
+          name: b
+            ? ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim()
+            : u.psu_id,
+          role: b ? (b.role || null) : null,
+          tier: u.tier
+        };
+      });
+      state.ratingsRaters = raterNames;
+
       state.ratingsComments = (cmtRes.data || [])
         .filter(function (c) { return c.comments && c.comments.trim(); })
         .map(function (c) {
@@ -6871,14 +6890,173 @@
     '</div>';
   }
 
-  window.openRatingDetail = function (pnmId) {
+  window.openRatingDetail = async function (pnmId) {
     state.ratingsSelected = pnmId;
+    state.ratingsDetailRows = [];
+    state.ratingsDetailLoading = true;
+    state.ratingsDetailTab = 'distribution';
+    render();
+    try {
+      // Scoped to one PNM on purpose — an unscoped select would truncate
+      // at PostgREST's 1000-row cap.
+      const { data, error } = await sb
+        .from('pnm_ratings')
+        .select('rater_id, event_id, met, answered, raw_score, score_norm, ' +
+                'passion, personality, professionalism, potential, comments, updated_at')
+        .eq('pnm_id', pnmId);
+      if (error) throw error;
+      state.ratingsDetailRows = data || [];
+    } catch (e) {
+      console.error('loadRatingDetail failed', e);
+      state.ratingsDetailRows = [];
+    }
+    state.ratingsDetailLoading = false;
     render();
   };
+
   window.closeRatingDetail = function () {
     state.ratingsSelected = null;
+    state.ratingsDetailRows = [];
     render();
   };
+
+  window.setRatingDetailTab = function (tab) {
+    state.ratingsDetailTab = tab;
+    render();
+  };
+
+  const RATING_CATS = [
+    { id: 'passion',         label: 'Passion' },
+    { id: 'personality',     label: 'Personality' },
+    { id: 'professionalism', label: 'Professionalism' },
+    { id: 'potential',       label: 'Potential' }
+  ];
+
+  // Per-category 1–5 histogram across everyone who marked "met".
+  function ratingDistribution(rows) {
+    const scored = rows.filter(function (r) { return r.met && r.answered > 0; });
+    if (!scored.length) return '';
+
+    const bar = function (cat) {
+      const counts = [0, 0, 0, 0, 0];
+      let sum = 0, n = 0;
+      scored.forEach(function (r) {
+        const v = r[cat.id];
+        if (v >= 1 && v <= 5) { counts[v - 1]++; sum += v; n++; }
+      });
+      if (!n) return '';
+      const max = Math.max.apply(null, counts) || 1;
+      const avg = sum / n;
+
+      return '<div style="margin-bottom:14px;">' +
+        '<div style="display:flex; justify-content:space-between; align-items:baseline; ' +
+          'margin-bottom:5px;">' +
+          '<span style="font-size:12.5px; font-weight:600;">' + cat.label + '</span>' +
+          '<span style="font-family:JetBrains Mono,monospace; font-size:11px; ' +
+            'color:var(--fg-muted);">avg ' + avg.toFixed(2) + ' · n=' + n + '</span>' +
+        '</div>' +
+        '<div style="display:flex; gap:4px; align-items:flex-end; height:52px;">' +
+          counts.map(function (c, i) {
+            const h = (c / max) * 44;
+            return '<div style="flex:1; display:flex; flex-direction:column; ' +
+              'align-items:center; justify-content:flex-end;">' +
+              '<div style="font-family:JetBrains Mono,monospace; font-size:9px; ' +
+                'color:var(--fg-muted); margin-bottom:2px;">' + (c || '') + '</div>' +
+              '<div style="width:100%; height:' + Math.max(h, 1).toFixed(1) + 'px; ' +
+                'background:var(--gold-dark); opacity:' +
+                (c ? '0.55' : '0.12') + '; border-radius:2px 2px 0 0;"></div>' +
+              '<div style="font-family:JetBrains Mono,monospace; font-size:9px; ' +
+                'color:var(--fg-muted); margin-top:3px;">' + (i + 1) + '</div>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+    };
+
+    const notMet = rows.filter(function (r) { return !r.met; }).length;
+
+    return RATING_CATS.map(bar).join('') +
+      '<div style="font-size:11.5px; color:var(--fg-muted); line-height:1.55; ' +
+        'margin-top:4px;">' +
+        scored.length + ' scored · ' + notMet + ' marked did-not-meet. ' +
+        'A wide spread means raters disagreed; a tight one means they didn\'t.' +
+      '</div>';
+  }
+
+  // Every rater's row, all four categories.
+  function ratingByRater(rows) {
+    const scored = rows.filter(function (r) { return r.met && r.answered > 0; })
+      .sort(function (a, b) { return (b.raw_score || 0) - (a.raw_score || 0); });
+    const notMet = rows.filter(function (r) { return !r.met; });
+
+    if (!scored.length && !notMet.length) {
+      return '<div style="font-size:13px; color:var(--fg-muted);">No ratings yet.</div>';
+    }
+
+    const head = '<tr>' +
+      '<th style="text-align:left; padding:6px 8px; font-size:10px; ' +
+        'text-transform:uppercase; letter-spacing:0.07em; color:var(--fg-muted); ' +
+        'font-weight:600;">Rater</th>' +
+      RATING_CATS.map(function (c) {
+        return '<th style="padding:6px 6px; font-size:10px; text-transform:uppercase; ' +
+          'letter-spacing:0.07em; color:var(--fg-muted); font-weight:600; ' +
+          'width:44px;">' + c.label.slice(0, 4) + '</th>';
+      }).join('') +
+      '<th style="padding:6px 8px; font-size:10px; text-transform:uppercase; ' +
+        'letter-spacing:0.07em; color:var(--fg-muted); font-weight:600; ' +
+        'width:52px;">Total</th>' +
+    '</tr>';
+
+    const row = function (r) {
+      const who = state.ratingsRaters[r.rater_id] || { name: 'Unknown rater', role: null };
+      return '<tr style="border-top:1px solid var(--line);">' +
+        '<td style="padding:7px 8px; font-size:12.5px;">' +
+          escapeHtml(who.name) +
+          (who.role ? '<span style="color:var(--fg-muted); font-weight:400;"> · ' +
+            escapeHtml(who.role) + '</span>' : '') +
+        '</td>' +
+        RATING_CATS.map(function (c) {
+          const v = r[c.id];
+          return '<td style="padding:7px 6px; text-align:center; ' +
+            'font-family:JetBrains Mono,monospace; font-size:12.5px; color:' +
+            (v == null ? 'var(--fg-muted)' : 'var(--fg)') + ';">' +
+            (v == null ? '—' : v) + '</td>';
+        }).join('') +
+        '<td style="padding:7px 8px; text-align:center; ' +
+          'font-family:JetBrains Mono,monospace; font-size:12.5px; font-weight:600;">' +
+          (r.raw_score != null ? r.raw_score : '—') + '</td>' +
+      '</tr>';
+    };
+
+    return '<table style="width:100%; border-collapse:collapse;">' +
+        '<thead>' + head + '</thead>' +
+        '<tbody>' + scored.map(row).join('') + '</tbody>' +
+      '</table>' +
+      (notMet.length
+        ? '<div style="margin-top:12px; font-size:11.5px; color:var(--fg-muted); ' +
+            'line-height:1.6;">' +
+            '<strong>Did not meet (' + notMet.length + '):</strong> ' +
+            escapeHtml(notMet.map(function (r) {
+              const w = state.ratingsRaters[r.rater_id];
+              return w ? w.name : 'Unknown';
+            }).join(', ')) +
+          '</div>'
+        : '');
+  }
+
+  // pnm-docs is chair-tier only at the storage policy, so don't offer the
+  // link to anyone who would just get a failed request.
+  function ratingDocLink(label, path) {
+    if (!path || tierRank(state.currentTier) < 2) return '';
+    return '<div style="display:flex; gap:10px; padding:5px 0; ' +
+      'border-bottom:1px solid var(--line);">' +
+      '<div style="min-width:132px; font-size:11px; color:var(--fg-muted); ' +
+        'text-transform:uppercase; letter-spacing:0.06em;">' + label + '</div>' +
+      '<div style="font-size:13px; flex:1;">' +
+        '<a href="#" onclick="event.preventDefault(); openPnmDoc(\'' +
+          escapeHtml(path) + '\')">Open ' + label.toLowerCase() + ' ↗</a>' +
+      '</div></div>';
+  }
 
   function ratingDetailModal(pnmId) {
     const r = state.ratings.find(function (x) { return x.pnm_id === pnmId; });
@@ -6910,11 +7088,11 @@
       'background:rgba(3,16,46,0.55); z-index:400; display:flex; align-items:flex-start; ' +
       'justify-content:center; padding:40px 20px; overflow-y:auto;">' +
       '<div onclick="event.stopPropagation()" style="background:var(--bg); border-radius:14px; ' +
-        'max-width:780px; width:100%; border:1px solid var(--line-strong); overflow:hidden;">' +
+        'max-width:920px; width:100%; border:1px solid var(--line-strong); overflow:hidden;">' +
 
         '<div style="display:flex; gap:16px; padding:18px; border-bottom:1px solid var(--line);">' +
           (url
-            ? '<div style="position:relative; width:96px; height:96px; flex-shrink:0; ' +
+            ? '<div style="position:relative; width:190px; height:238px; flex-shrink:0; ' +
                 'border-radius:10px; overflow:hidden;">' +
                 '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:cover;"/>' +
                 '<div style="position:absolute; inset:0; background:' + BAND_TINT[r._band] + ';"></div>' +
@@ -6964,6 +7142,8 @@
               field('Email', prof.email) +
               field('Clubs', prof.clubs) +
               field('Previously knowns', prof.previously_knowns) +
+              ratingDocLink('Resume', prof.resume_path) +
+              ratingDocLink('Transcript', prof.transcript_path) +
               field('Submitted', prof.submitted_at
                      ? new Date(prof.submitted_at).toLocaleString() : null)
             : '<div style="font-size:13px; color:' + BAND_EDGE.amber + ';">' +
@@ -6990,6 +7170,30 @@
                 '</div>';
               }).join('')
             : '<div style="font-size:13px; color:var(--fg-muted);">No written notes.</div>') +
+
+          '<div style="display:flex; gap:6px; margin:22px 0 12px; ' +
+            'border-bottom:1px solid var(--line);">' +
+            [['distribution', 'Score distribution'], ['byrater', 'Every rating']]
+              .map(function (t) {
+                const on = state.ratingsDetailTab === t[0];
+                return '<button onclick="setRatingDetailTab(\'' + t[0] + '\')" ' +
+                  'style="background:none; border:none; cursor:pointer; ' +
+                  'padding:8px 12px; margin-bottom:-1px; font-size:12px; ' +
+                  'font-weight:600; letter-spacing:0.04em; ' +
+                  'color:' + (on ? 'var(--fg)' : 'var(--fg-muted)') + '; ' +
+                  'border-bottom:2px solid ' + (on ? 'var(--gold)' : 'transparent') +
+                  ';">' + t[1] + '</button>';
+              }).join('') +
+          '</div>' +
+
+          (state.ratingsDetailLoading
+            ? '<div style="font-size:13px; color:var(--fg-muted); padding:10px 0;">' +
+                'Loading ratings…</div>'
+            : state.ratingsDetailTab === 'distribution'
+              ? (ratingDistribution(state.ratingsDetailRows) ||
+                 '<div style="font-size:13px; color:var(--fg-muted);">' +
+                   'Nobody has scored them yet.</div>')
+              : ratingByRater(state.ratingsDetailRows)) +
         '</div>' +
       '</div>' +
     '</div>';
