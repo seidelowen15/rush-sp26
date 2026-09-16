@@ -7085,6 +7085,8 @@
           '</div>'
         : '');
   }
+
+  function ratingByRater(rows) {
     const scored = rows.filter(function (r) { return r.met && r.answered > 0; })
       .sort(function (a, b) { return (b.raw_score || 0) - (a.raw_score || 0); });
     const notMet = rows.filter(function (r) { return !r.met; });
