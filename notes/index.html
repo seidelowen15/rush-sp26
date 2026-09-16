@@ -6932,7 +6932,28 @@
     { id: 'potential',       label: 'Potential' }
   ];
 
-  // Per-category 1–5 histogram across everyone who marked "met".
+  // 1–5 color scale, shared by the distribution bars and the table numbers
+  // so a 5 reads the same in both places.
+  const SCORE_COLORS = {
+    1: '#c0524f', 2: '#c67d43', 3: '#bfa03c', 4: '#8aa martial',
+  };
+
+  const SCORE_SCALE = {
+    1: { fg: '#d96b68', bg: 'rgba(192,82,79,0.16)' },
+    2: { fg: '#d68a52', bg: 'rgba(198,125,67,0.15)' },
+    3: { fg: '#c9ad4a', bg: 'rgba(191,160,60,0.15)' },
+    4: { fg: '#8fb85f', bg: 'rgba(122,162,74,0.15)' },
+    5: { fg: '#5cbf7d', bg: 'rgba(72,160,90,0.18)' }
+  };
+
+  function ratingEventLabel(eventId) {
+    const e = (state.rushEvents || []).find(function (x) { return x.id === eventId; });
+    return e ? e.label : '—';
+  }
+
+  // One horizontal stacked bar per category. Segments are colored by score
+  // value, so the shape of the bar is the distribution and its color tells
+  // you which way it leans.
   function ratingDistribution(rows) {
     const scored = rows.filter(function (r) { return r.met && r.answered > 0; });
     if (!scored.length) return '';
@@ -6945,46 +6966,125 @@
         if (v >= 1 && v <= 5) { counts[v - 1]++; sum += v; n++; }
       });
       if (!n) return '';
-      const max = Math.max.apply(null, counts) || 1;
       const avg = sum / n;
 
-      return '<div style="margin-bottom:14px;">' +
-        '<div style="display:flex; justify-content:space-between; align-items:baseline; ' +
-          'margin-bottom:5px;">' +
-          '<span style="font-size:12.5px; font-weight:600;">' + cat.label + '</span>' +
-          '<span style="font-family:JetBrains Mono,monospace; font-size:11px; ' +
-            'color:var(--fg-muted);">avg ' + avg.toFixed(2) + ' · n=' + n + '</span>' +
-        '</div>' +
-        '<div style="display:flex; gap:4px; align-items:flex-end; height:52px;">' +
+      return '<div style="display:flex; align-items:center; gap:14px; ' +
+        'padding:9px 0; border-bottom:1px solid var(--line);">' +
+        '<div style="width:108px; font-size:12.5px; flex-shrink:0;">' +
+          cat.label + '</div>' +
+        '<div style="flex:1; display:flex; height:22px; border-radius:4px; ' +
+          'overflow:hidden; background:var(--surface-2);">' +
           counts.map(function (c, i) {
-            const h = (c / max) * 44;
-            return '<div style="flex:1; display:flex; flex-direction:column; ' +
-              'align-items:center; justify-content:flex-end;">' +
-              '<div style="font-family:JetBrains Mono,monospace; font-size:9px; ' +
-                'color:var(--fg-muted); margin-bottom:2px;">' + (c || '') + '</div>' +
-              '<div style="width:100%; height:' + Math.max(h, 1).toFixed(1) + 'px; ' +
-                'background:var(--gold-dark); opacity:' +
-                (c ? '0.55' : '0.12') + '; border-radius:2px 2px 0 0;"></div>' +
-              '<div style="font-family:JetBrains Mono,monospace; font-size:9px; ' +
-                'color:var(--fg-muted); margin-top:3px;">' + (i + 1) + '</div>' +
-            '</div>';
+            if (!c) return '';
+            const pct = (c / n) * 100;
+            return '<div title="' + c + ' rated ' + (i + 1) + '" ' +
+              'style="width:' + pct.toFixed(2) + '%; background:' +
+              SCORE_SCALE[i + 1].fg + '; opacity:0.78; display:flex; ' +
+              'align-items:center; justify-content:center; ' +
+              'font-family:JetBrains Mono,monospace; font-size:10px; ' +
+              'color:rgba(255,255,255,0.92);">' +
+              (pct > 7 ? c : '') + '</div>';
           }).join('') +
         '</div>' +
+        '<div style="width:52px; text-align:right; flex-shrink:0; ' +
+          'font-family:JetBrains Mono,monospace; font-size:13px; ' +
+          'color:' + SCORE_SCALE[Math.max(1, Math.min(5, Math.round(avg)))].fg + ';">' +
+          avg.toFixed(2) + '</div>' +
       '</div>';
     };
 
     const notMet = rows.filter(function (r) { return !r.met; }).length;
 
-    return RATING_CATS.map(bar).join('') +
-      '<div style="font-size:11.5px; color:var(--fg-muted); line-height:1.55; ' +
-        'margin-top:4px;">' +
-        scored.length + ' scored · ' + notMet + ' marked did-not-meet. ' +
-        'A wide spread means raters disagreed; a tight one means they didn\'t.' +
+    return '<div style="display:flex; align-items:center; gap:14px; ' +
+        'padding-bottom:6px; font-size:10px; text-transform:uppercase; ' +
+        'letter-spacing:0.07em; color:var(--fg-muted);">' +
+        '<div style="width:108px;">Category</div>' +
+        '<div style="flex:1;">Spread (1 → 5)</div>' +
+        '<div style="width:52px; text-align:right;">Avg</div>' +
+      '</div>' +
+      RATING_CATS.map(bar).join('') +
+      '<div style="font-size:11.5px; color:var(--fg-muted); line-height:1.6; ' +
+        'margin-top:10px;">' +
+        scored.length + ' scored across ' + notMet + ' did-not-meet. ' +
+        'A bar split across several colors means raters disagreed.' +
       '</div>';
   }
 
-  // Every rater's row, all four categories.
   function ratingByRater(rows) {
+    const scored = rows.filter(function (r) { return r.met && r.answered > 0; })
+      .sort(function (a, b) { return (b.raw_score || 0) - (a.raw_score || 0); });
+    const notMet = rows.filter(function (r) { return !r.met; });
+
+    if (!scored.length && !notMet.length) {
+      return '<div style="font-size:13px; color:var(--fg-muted);">No ratings yet.</div>';
+    }
+
+    const th = function (label, w, center) {
+      return '<th style="padding:0 8px 8px; font-size:10px; text-transform:uppercase; ' +
+        'letter-spacing:0.07em; color:var(--fg-muted); font-weight:600;' +
+        (w ? ' width:' + w + ';' : '') +
+        ' text-align:' + (center ? 'center' : 'left') + ';">' + label + '</th>';
+    };
+
+    const cell = function (v) {
+      if (v == null) {
+        return '<td style="padding:6px 8px; text-align:center; ' +
+          'color:var(--fg-muted); font-family:JetBrains Mono,monospace; ' +
+          'font-size:12px;">—</td>';
+      }
+      const s = SCORE_SCALE[v] || SCORE_SCALE[3];
+      return '<td style="padding:6px 8px; text-align:center;">' +
+        '<span style="display:inline-block; min-width:24px; padding:2px 0; ' +
+          'border-radius:4px; background:' + s.bg + '; color:' + s.fg + '; ' +
+          'font-family:JetBrains Mono,monospace; font-size:12.5px; ' +
+          'font-weight:600;">' + v + '</span></td>';
+    };
+
+    const row = function (r) {
+      const who = state.ratingsRaters[r.rater_id] || { name: 'Unknown rater', role: null };
+      const avg = r.answered ? r.raw_score / r.answered : null;
+      const totalColor = avg
+        ? SCORE_SCALE[Math.max(1, Math.min(5, Math.round(avg)))].fg
+        : 'var(--fg-muted)';
+      return '<tr style="border-top:1px solid var(--line);">' +
+        '<td style="padding:6px 8px; font-size:12.5px;">' +
+          escapeHtml(who.name) +
+          (who.role ? '<span style="color:var(--fg-muted);"> · ' +
+            escapeHtml(who.role) + '</span>' : '') +
+        '</td>' +
+        '<td style="padding:6px 8px; font-size:11px; color:var(--fg-muted);">' +
+          escapeHtml(ratingEventLabel(r.event_id)) + '</td>' +
+        RATING_CATS.map(function (c) { return cell(r[c.id]); }).join('') +
+        '<td style="padding:6px 8px; text-align:center; ' +
+          'font-family:JetBrains Mono,monospace; font-size:13px; ' +
+          'font-weight:600; color:' + totalColor + ';">' +
+          (r.raw_score != null ? r.raw_score : '—') + '</td>' +
+      '</tr>';
+    };
+
+    return '<table style="width:100%; border-collapse:collapse;">' +
+        '<thead><tr>' +
+          th('Rater') + th('Event', '130px') +
+          RATING_CATS.map(function (c) {
+            return th(c.label.slice(0, 4), '52px', true);
+          }).join('') +
+          th('Total', '58px', true) +
+        '</tr></thead>' +
+        '<tbody>' + scored.map(row).join('') + '</tbody>' +
+      '</table>' +
+      (notMet.length
+        ? '<div style="margin-top:14px; padding-top:12px; ' +
+            'border-top:1px solid var(--line); font-size:11.5px; ' +
+            'color:var(--fg-muted); line-height:1.65;">' +
+            '<strong style="color:var(--fg);">Did not meet · ' + notMet.length +
+            '</strong><br/>' +
+            escapeHtml(notMet.map(function (r) {
+              const w = state.ratingsRaters[r.rater_id];
+              return w ? w.name : 'Unknown';
+            }).sort().join(', ')) +
+          '</div>'
+        : '');
+  }
     const scored = rows.filter(function (r) { return r.met && r.answered > 0; })
       .sort(function (a, b) { return (b.raw_score || 0) - (a.raw_score || 0); });
     const notMet = rows.filter(function (r) { return !r.met; });
