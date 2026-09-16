@@ -6806,14 +6806,6 @@
         stat(state.ratingsComments.length, 'written notes') +
       '</div>' +
 
-      (groups.cut.length
-        ? '<div class="section-label" style="margin:22px 0 8px;">Cut · ' +
-            groups.cut.length + '</div>' +
-          '<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; opacity:0.55;">' +
-            groups.cut.map(ratingCard).join('') +
-          '</div>'
-        : '') +
-
       '<div class="card" style="padding:16px; margin-bottom:14px;">' +
         '<div class="section-label" style="margin-bottom:6px;">Ranked scores with cut targets</div>' +
         ratingsRankChart(rows) +
@@ -6849,6 +6841,14 @@
             'score — these need coverage at the next event, not a cut.</div>' +
           '<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px;">' +
             groups.unscored.map(ratingCard).join('') +
+          '</div>'
+        : '') +
+
+      (groups.cut.length
+        ? '<div class="section-label" style="margin:22px 0 8px;">Cut · ' +
+            groups.cut.length + '</div>' +
+          '<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; opacity:0.55;">' +
+            groups.cut.map(ratingCard).join('') +
           '</div>'
         : '') +
 
