@@ -6551,12 +6551,13 @@
   // final_score_available, not final_score, because the interview block
   // is 30% of the formula and has not happened yet — final_score
   // coalesces that to zero and flattens everyone.
+  // Bands now key off the 64 target for the next cut. Anyone already cut
+  // is banded separately and never occupies a slot.
   function ratingBand(rank) {
-    const c1 = state.ratingsConfig.cut1_target || 64;
-    const c2 = state.ratingsConfig.cut2_target || 40;
+    const target = state.ratingsConfig.cut2_target || 64;
     if (!rank) return 'none';
-    if (rank <= c2) return 'green';
-    if (rank <= c1) return 'amber';
+    if (rank <= target) return 'green';
+    if (rank <= Math.round(target * 1.25)) return 'amber';
     return 'red';
   }
 
@@ -6575,8 +6576,13 @@
   // earned — they show in a separate block instead.
   function ratingRows() {
     const scored = state.ratings.filter(function (r) {
-      return r.unique_raters > 0 && r.final_score_available !== null;
+      return r.unique_raters > 0 && r.final_score_available !== null && !r.is_cut;
     });
+    const cutRows = state.ratings.filter(function (r) { return r.is_cut; });
+    cutRows.sort(function (a, b) {
+      return Number(b.final_score_available || 0) - Number(a.final_score_available || 0);
+    });
+    cutRows.forEach(function (r) { r._rank = null; r._band = 'red'; });
     scored.sort(function (a, b) {
       return Number(b.final_score_available) - Number(a.final_score_available);
     });
@@ -6587,7 +6593,7 @@
     });
     unscored.forEach(function (r) { r._rank = null; r._band = 'none'; });
 
-    return { scored: scored, unscored: unscored };
+    return { scored: scored, unscored: unscored, cut: cutRows };
   }
 
   function ratingPhotoUrl(pnmId) {
@@ -6799,6 +6805,14 @@
         stat(noProfile, 'no profile', BAND_EDGE.amber) +
         stat(state.ratingsComments.length, 'written notes') +
       '</div>' +
+
+      (groups.cut.length
+        ? '<div class="section-label" style="margin:22px 0 8px;">Cut · ' +
+            groups.cut.length + '</div>' +
+          '<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; opacity:0.55;">' +
+            groups.cut.map(ratingCard).join('') +
+          '</div>'
+        : '') +
 
       '<div class="card" style="padding:16px; margin-bottom:14px;">' +
         '<div class="section-label" style="margin-bottom:6px;">Ranked scores with cut targets</div>' +
