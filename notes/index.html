@@ -7168,8 +7168,20 @@
       out.push({ kind: 'rush', row: r, block: blk, n: n });
     };
     if (blocked.length === rows.length && rows.length) {
+      const decs = state.delibDecisions || {};
+      const movedAt = function (r) {
+        const d = decs[r.pnm_id];
+        return d && d.block_override ? String(d.block_moved_at || d.decided_at || '') : null;
+      };
       DELIB_ORDER.forEach(function (blk) {
-        const group = rows.filter(function (r) { return delibBlock(delibScore(r), r.pnm_id) === blk; });
+        const group = rows.filter(function (r) { return delibBlock(delibScore(r), r.pnm_id) === blk; })
+          .sort(function (x, y) {
+            const mx = movedAt(x), my = movedAt(y);
+            if (!mx && !my) return byScore(x, y);       // untouched: by score
+            if (!mx) return -1;                          // moved rushes go last,
+            if (!my) return 1;
+            return mx.localeCompare(my);                 // in the order they were moved
+          });
         if (!group.length) return;
         out.push({ kind: 'divider', block: blk, count: group.length });
         group.forEach(function (r) { push(r, blk); });
@@ -7369,7 +7381,7 @@
     const [ivRes, decRes] = await Promise.all([
       sb.from('v_interview_board')
         .select('pnm_id, interviewer_psu_id, score_raw, score_adjusted, exempt, missed_interview, comment'),
-      sb.from('delib_decisions').select('pnm_id, decision, redelib_at, redelib_yes_pct, block_override, decided_at')
+      sb.from('delib_decisions').select('pnm_id, decision, redelib_at, redelib_yes_pct, block_override, block_moved_at, decided_at')
     ]);
     const m = {};
     (ivRes.data || []).forEach(function (row) { m[row.pnm_id] = row; });
@@ -7641,25 +7653,35 @@
   // Moving a rush between blocks is public, so this control shows its state.
   window.setDelibBlockOverride = async function (pnmId, v) {
     const cur = (state.delibDecisions || {})[pnmId] || null;
-    const keep = delibSlides().slides.find(function (x) { return x.kind === 'rush' && x.row.pnm_id === pnmId; });
+    // Remember who was up next, so the move doesn't drag the presenter along.
+    const before = delibSlides().slides;
+    let nextId = null, nextRedelib = false;
+    for (let i = state.delibIndex + 1; i < before.length; i++) {
+      if (before[i].kind === 'rush' && before[i].row.pnm_id !== pnmId) {
+        nextId = before[i].row.pnm_id; nextRedelib = !!before[i].redelib; break;
+      }
+    }
     const row = {
       pnm_id: pnmId,
       decision: cur ? cur.decision : null,
       redelib_at: cur ? cur.redelib_at : null,
       redelib_yes_pct: cur ? cur.redelib_yes_pct : null,
       block_override: v || null,
-      decided_at: new Date().toISOString()
+      block_moved_at: v ? new Date().toISOString() : null,
+      decided_at: cur && cur.decided_at ? cur.decided_at : new Date().toISOString()
     };
     const { error } = await sb.from('delib_decisions').upsert(row, { onConflict: 'pnm_id' });
     if (error) { toast('Block not changed: ' + error.message, 'error'); return; }
     state.delibDecisions[pnmId] = row;
-    // the rush just moved sections: follow it
-    const slides = delibSlides().slides;
-    const idx = slides.findIndex(function (x) {
-      return x.kind === 'rush' && x.row.pnm_id === pnmId && (!keep || !keep.redelib) === !x.redelib;
-    });
-    if (idx >= 0) state.delibIndex = idx;
-    toast(v ? 'Moved to ' + v + ' block' : 'Block set back to automatic');
+    const after = delibSlides().slides;
+    let idx = -1;
+    if (nextId) {
+      idx = after.findIndex(function (x) {
+        return x.kind === 'rush' && x.row.pnm_id === nextId && !!x.redelib === nextRedelib;
+      });
+    }
+    state.delibIndex = idx >= 0 ? idx : Math.min(state.delibIndex, after.length - 1);
+    toast(v ? 'Moved to the end of ' + v + ' block' : 'Block set back to automatic');
     render();
   };
 
