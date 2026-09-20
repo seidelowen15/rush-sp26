@@ -7151,9 +7151,16 @@
     if (score !== null && score >= b) return 'B';
     return 'C';
   }
-  // Deliberations open in C block, so sections run C -> B -> A, each by score.
-  // With no cutpoints set the deck is one list, highest score first.
-  const DELIB_ORDER = ['C', 'B', 'A'];
+  // Deliberations open in C block (bring-ups), then A, then B, then C again
+  // for the second pass, then the redelib section. Each section is rebuilt from
+  // current block membership, so a rush moved out of C in the first pass is not
+  // in the second. With no cutpoints set the deck is one list, highest first.
+  const DELIB_SECTIONS = [
+    { block: 'C', label: 'C Block' },
+    { block: 'A', label: 'A Block' },
+    { block: 'B', label: 'B Block' },
+    { block: 'C', label: 'C Block · second pass' }
+  ];
   function delibSlides() {
     const byScore = function (x, y) {
       const sx = delibScore(x), sy = delibScore(y);
@@ -7163,9 +7170,9 @@
     const blocked = rows.filter(function (r) { return delibBlock(delibScore(r), r.pnm_id); });
     const out = [];
     let n = 0;
-    const push = function (r, blk) {
+    const push = function (r, blk, si) {
       n += 1;
-      out.push({ kind: 'rush', row: r, block: blk, n: n });
+      out.push({ kind: 'rush', row: r, block: blk, sec: si, n: n });
     };
     if (blocked.length === rows.length && rows.length) {
       const decs = state.delibDecisions || {};
@@ -7173,7 +7180,8 @@
         const d = decs[r.pnm_id];
         return d && d.block_override ? String(d.block_moved_at || d.decided_at || '') : null;
       };
-      DELIB_ORDER.forEach(function (blk) {
+      DELIB_SECTIONS.forEach(function (sec, si) {
+        const blk = sec.block;
         const group = rows.filter(function (r) { return delibBlock(delibScore(r), r.pnm_id) === blk; })
           .sort(function (x, y) {
             const mx = movedAt(x), my = movedAt(y);
@@ -7183,8 +7191,8 @@
             return mx.localeCompare(my);                 // in the order they were moved
           });
         if (!group.length) return;
-        out.push({ kind: 'divider', block: blk, count: group.length });
-        group.forEach(function (r) { push(r, blk); });
+        out.push({ kind: 'divider', block: blk, count: group.length, label: sec.label });
+        group.forEach(function (r) { push(r, blk, si); });
       });
     } else {
       rows.forEach(function (r) { push(r, null); });
@@ -7198,7 +7206,7 @@
         out.push({ kind: 'rush', row: r, block: null, redelib: true, n: k + 1, of: redelib.length });
       });
     }
-    return { slides: out, total: rows.length };
+    return { slides: out, total: n };
   }
 
   function delibBrotherName(psu) {
@@ -7332,7 +7340,7 @@
     } else if (s.kind === 'divider') {
       const lo = s.block === 'A' ? '≥ ' + a : s.block === 'B' ? b + ' – ' + a : '&lt; ' + b;
       body = '<div class="delib-divider">' +
-        '<div style="font-size:72px; font-weight:700;">' + s.block + ' Block</div>' +
+        '<div style="font-size:72px; font-weight:700;">' + escapeHtml(s.label || (s.block + ' Block')) + '</div>' +
         '<div style="font-size:22px; color:var(--fg-muted); margin-top:10px;">' +
           s.count + ' rush' + (s.count === 1 ? '' : 'es') + ' · rush week score ' + lo + '</div>' +
       '</div>';
@@ -7655,10 +7663,13 @@
     const cur = (state.delibDecisions || {})[pnmId] || null;
     // Remember who was up next, so the move doesn't drag the presenter along.
     const before = delibSlides().slides;
-    let nextId = null, nextRedelib = false;
+    let nextId = null, nextRedelib = false, nextSec = null;
     for (let i = state.delibIndex + 1; i < before.length; i++) {
       if (before[i].kind === 'rush' && before[i].row.pnm_id !== pnmId) {
-        nextId = before[i].row.pnm_id; nextRedelib = !!before[i].redelib; break;
+        nextId = before[i].row.pnm_id;
+        nextRedelib = !!before[i].redelib;
+        nextSec = before[i].sec === undefined ? null : before[i].sec;
+        break;
       }
     }
     const row = {
@@ -7677,8 +7688,14 @@
     let idx = -1;
     if (nextId) {
       idx = after.findIndex(function (x) {
-        return x.kind === 'rush' && x.row.pnm_id === nextId && !!x.redelib === nextRedelib;
+        return x.kind === 'rush' && x.row.pnm_id === nextId && !!x.redelib === nextRedelib &&
+               (nextSec === null || x.sec === nextSec);
       });
+      if (idx < 0) {
+        idx = after.findIndex(function (x) {
+          return x.kind === 'rush' && x.row.pnm_id === nextId && !!x.redelib === nextRedelib;
+        });
+      }
     }
     state.delibIndex = idx >= 0 ? idx : Math.min(state.delibIndex, after.length - 1);
     toast(v ? 'Moved to the end of ' + v + ' block' : 'Block set back to automatic');
