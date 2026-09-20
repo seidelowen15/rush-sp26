@@ -7194,8 +7194,8 @@
     else if (iv.missed_interview) ivText = 'Missed · 0';
     else if (iv.score_raw === null) ivText = 'Not entered';
     else ivText = num(iv.score_raw) +
-      (iv.interviewer_psu_id ? ' (' + escapeHtml(delibBrotherName(iv.interviewer_psu_id)) + ')' : '') +
-      ' · adj ' + num(iv.score_adjusted);
+      (iv.interviewer_psu_id ? ' (' + escapeHtml(delibBrotherName(iv.interviewer_psu_id)) + ')' : '');
+    const adjText = iv && !iv.exempt && iv.score_raw !== null ? num(iv.score_adjusted) : '—';
 
     const stat = function (k, v) {
       return '<div><div class="delib-k">' + k + '</div><div class="delib-v">' + v + '</div></div>';
@@ -7222,9 +7222,10 @@
           stat('Rush week score', score === null ? '—' : score.toFixed(2)) +
           stat('DB score', r.db_norm === null ? '—' : (Number(r.db_norm) * 100).toFixed(2)) +
           stat('Interview', ivText) +
-          stat('GPA', gpa) +
+          stat('Adjusted interview', adjText) +
           stat('PM', num(r.pm_norm)) +
           stat('Rush', num(r.rush_norm)) +
+          stat('GPA', gpa) +
         '</div>' +
         text('Involvements', prof ? prof.clubs : null) +
         text('Previously knowns', prof ? prof.previously_knowns : null) +
