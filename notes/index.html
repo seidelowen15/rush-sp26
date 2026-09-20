@@ -6087,7 +6087,8 @@
   // into, and the text is gone — comments only save on blur.
   function renderUnlessTyping() {
     const el = document.activeElement;
-    if (el && el.classList && el.classList.contains('rate-comments')) return;
+    if (el && el.classList && (el.classList.contains('rate-comments') ||
+                                el.classList.contains('iv-import-text'))) return;
     render();
   }
 
@@ -6798,6 +6799,10 @@
         'unconfirmed there.' +
       '</div>' +
 
+      '<div style="display:flex; justify-content:flex-end; margin-bottom:12px;">' +
+        '<button class="btn" onclick="openInterviewImport()">Import interview scores</button>' +
+      '</div>' +
+
       '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;">' +
         stat(rows.length, 'ranked') +
         stat(groups.unscored.length, 'no ratings yet', BAND_EDGE.none) +
@@ -6852,7 +6857,243 @@
           '</div>'
         : '') +
 
-      (state.ratingsSelected ? ratingDetailModal(state.ratingsSelected) : '');
+      (state.ratingsSelected ? ratingDetailModal(state.ratingsSelected) : '') +
+      (state.ivImport ? interviewImportModal() : '');
+  }
+
+  // ---------- interview score import ----------
+  // Paste columns A–D of the interview scores sheet (Rush Name, id, Head
+  // Interviewer, Interview Score). Rows with a blank score are skipped.
+  // Nothing writes until Save; Save upserts on interviews.pnm_id, so a
+  // re-paste updates scores instead of duplicating them.
+
+  function ivNorm(s) {
+    return String(s || '').toLowerCase().replace(/\(.*?\)/g, ' ')
+      .replace(/[^a-z' -]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function ivSplit(s) {
+    const t = ivNorm(s).split(' ').filter(Boolean);
+    return { first: t[0] || '', last: t.length > 1 ? t[t.length - 1] : '' };
+  }
+  // Exact normalized name wins. Otherwise same last name plus one first name
+  // being a prefix of the other (Ben/Benjamin), then same last name plus first
+  // initial (Kishel/Kissel). A fallback counts only if exactly one candidate
+  // qualifies, and it is marked unsure so the row asks for a check.
+  function ivMatch(name, candidates, keyOf) {
+    const n = ivNorm(name);
+    const exact = candidates.filter(function (c) { return ivNorm(keyOf(c)) === n; });
+    if (exact.length === 1) return { hit: exact[0], sure: true };
+    const a = ivSplit(name);
+    if (!a.last || !a.first) return { hit: null, sure: false };
+    const sameLast = candidates.filter(function (c) { return ivSplit(keyOf(c)).last === a.last; });
+    const prefix = sameLast.filter(function (c) {
+      const f = ivSplit(keyOf(c)).first;
+      return f && (f.indexOf(a.first) === 0 || a.first.indexOf(f) === 0);
+    });
+    if (prefix.length === 1) return { hit: prefix[0], sure: false };
+    const initial = sameLast.filter(function (c) { return ivSplit(keyOf(c)).first[0] === a.first[0]; });
+    if (initial.length === 1) return { hit: initial[0], sure: false };
+    return { hit: null, sure: false };
+  }
+  function ivBrotherFirst(b) { return ((b.first_name || '') + ' ' + (b.last_name || '')).trim(); }
+  function ivBrotherPref(b) { return ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim(); }
+  function ivMatchBrother(name) {
+    const pool = state.brothers.filter(function (b) { return b.psu_id; });
+    const m = ivMatch(name, pool, ivBrotherPref);
+    if (m.sure) return m;
+    const m2 = ivMatch(name, pool, ivBrotherFirst);
+    return (m2.sure || !m.hit) ? m2 : m;
+  }
+
+  function ivRowState(row, imp) {
+    if (row.scoreTxt === '') return { kind: 'skip', note: 'no score yet' };
+    const score = Number(row.scoreTxt);
+    if (!isFinite(score) || score < 0 || score > 10) return { kind: 'bad', note: 'score must be 0–10' };
+    if (!row.pnmId) return { kind: 'bad', note: 'pick the rush' };
+    const dup = imp.rows.filter(function (r) { return r.pnmId === row.pnmId && r.scoreTxt !== ''; }).length > 1;
+    if (dup) return { kind: 'bad', note: 'rush appears twice' };
+    const s = imp.survivors.find(function (x) { return x.pnm_id === row.pnmId; });
+    if (s && s.exempt) return { kind: 'bad', note: 'rush is marked exempt' };
+    const notes = [];
+    if (!row.pnmSure) notes.push('check rush match');
+    if (!row.headPsu) notes.push('no head interviewer: left out of room offsets');
+    else if (!row.headSure) notes.push('check interviewer match');
+    if (s && s.score_raw !== null && Number(s.score_raw) !== score) notes.push('replaces ' + Number(s.score_raw));
+    return { kind: notes.length ? 'check' : 'ok', note: notes.join(' · '), score: score };
+  }
+
+  window.openInterviewImport = async function () {
+    state.ivImport = { text: '', rows: null, survivors: [], loading: true,
+                       saving: false, error: null, result: null };
+    render();
+    const { data, error } = await sb.from('v_interview_board')
+      .select('pnm_id, name, is_cut, score_raw, exempt');
+    if (!state.ivImport) return;
+    state.ivImport.loading = false;
+    if (error) {
+      state.ivImport.error = 'Could not load the interview board: ' + error.message;
+    } else {
+      state.ivImport.survivors = (data || [])
+        .filter(function (r) { return !r.is_cut; })
+        .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    }
+    render();
+  };
+  window.closeInterviewImport = function () { state.ivImport = null; render(); };
+  window.setIvText = function (v) { if (state.ivImport) state.ivImport.text = v; };
+  window.backInterviewImport = function () { if (state.ivImport) { state.ivImport.rows = null; render(); } };
+  window.setIvPnm = function (i, v) {
+    const row = state.ivImport && state.ivImport.rows[i]; if (!row) return;
+    row.pnmId = v; row.pnmSure = true; render();
+  };
+  window.setIvHead = function (i, v) {
+    const row = state.ivImport && state.ivImport.rows[i]; if (!row) return;
+    row.headPsu = v; row.headSure = true; render();
+  };
+
+  window.previewInterviewImport = function () {
+    const imp = state.ivImport; if (!imp) return;
+    const rows = [];
+    imp.text.split(/\r?\n/).forEach(function (line) {
+      const c = line.split('\t');
+      const name = (c[0] || '').trim();
+      if (!name || /^rush name$/i.test(name)) return;
+      const head = (c[2] || '').trim();
+      const pm = ivMatch(name, imp.survivors, function (s) { return s.name; });
+      const hm = head ? ivMatchBrother(head) : { hit: null, sure: false };
+      rows.push({
+        sheetName: name, sheetHead: head, scoreTxt: (c[3] || '').trim(),
+        pnmId: pm.hit ? pm.hit.pnm_id : '', pnmSure: pm.sure,
+        headPsu: hm.hit ? hm.hit.psu_id : '', headSure: hm.sure
+      });
+    });
+    imp.rows = rows; imp.result = null; imp.error = null;
+    render();
+  };
+
+  window.saveInterviewImport = async function () {
+    const imp = state.ivImport; if (!imp || !imp.rows || imp.saving) return;
+    const now = new Date().toISOString();
+    const payload = [];
+    imp.rows.forEach(function (row) {
+      const st = ivRowState(row, imp);
+      if (st.kind === 'ok' || st.kind === 'check') payload.push({
+        pnm_id: row.pnmId, interviewer_psu_id: row.headPsu || null,
+        score_raw: st.score, conducted_at: now
+      });
+    });
+    if (!payload.length) return;
+    imp.saving = true; imp.error = null; render();
+    const { error } = await sb.from('interviews').upsert(payload, { onConflict: 'pnm_id' });
+    imp.saving = false;
+    if (error) { imp.error = 'Nothing saved: ' + error.message; render(); return; }
+    imp.result = payload.length;
+    toast(payload.length + ' interview score' + (payload.length === 1 ? '' : 's') + ' saved');
+    await loadRatingsBoard();
+    render();
+  };
+
+  function interviewImportModal() {
+    const imp = state.ivImport;
+    const TONE = { ok: 'var(--fg-muted)', check: BAND_EDGE.amber, bad: BAND_EDGE.red, skip: BAND_EDGE.none };
+    let body;
+
+    if (imp.loading) {
+      body = '<div style="color:var(--fg-muted);">Loading survivors…</div>';
+    } else if (!imp.rows) {
+      body =
+        '<div style="font-size:12.5px; color:var(--fg-muted); line-height:1.55; margin-bottom:10px;">' +
+          'In the interview scores sheet, select columns A–D (Rush Name, id, Head Interviewer, ' +
+          'Interview Score) for every row, copy, and paste below. The header row is fine to include.</div>' +
+        '<textarea class="iv-import-text" oninput="setIvText(this.value)" ' +
+          'style="width:100%; height:260px; font-family:JetBrains Mono,monospace; font-size:12px; ' +
+          'padding:10px; border:1px solid var(--line-strong); border-radius:8px; ' +
+          'background:var(--surface); color:var(--fg);">' + escapeHtml(imp.text) + '</textarea>' +
+        '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">' +
+          '<button class="btn" onclick="closeInterviewImport()">Cancel</button>' +
+          '<button class="btn primary" onclick="previewInterviewImport()">Preview</button>' +
+        '</div>';
+    } else {
+      const states = imp.rows.map(function (r) { return ivRowState(r, imp); });
+      const count = function (k) { return states.filter(function (s) { return s.kind === k; }).length; };
+      const toSave = count('ok') + count('check');
+      const brothers = state.brothers.filter(function (b) { return b.psu_id; })
+        .slice().sort(function (a, b) { return String(a.last_name).localeCompare(String(b.last_name)); });
+      const selStyle = 'width:100%; padding:4px 6px; font-size:12px; border:1px solid var(--line); ' +
+        'border-radius:6px; background:var(--surface); color:var(--fg);';
+
+      body =
+        '<div style="font-size:12.5px; margin-bottom:10px;">' +
+          '<strong>' + toSave + '</strong> will save · ' +
+          '<span style="color:' + BAND_EDGE.amber + ';">' + count('check') + ' to check</span> · ' +
+          '<span style="color:' + BAND_EDGE.red + ';">' + count('bad') + ' blocked</span> · ' +
+          '<span style="color:var(--fg-muted);">' + count('skip') + ' with no score (skipped)</span>' +
+        '</div>' +
+        '<div style="max-height:52vh; overflow:auto; border:1px solid var(--line); border-radius:8px;">' +
+        '<table style="width:100%; border-collapse:collapse; font-size:12px;">' +
+          '<thead><tr style="position:sticky; top:0; background:var(--bg);">' +
+            ['Sheet name', 'Rush', 'Head interviewer', 'Score', 'Status'].map(function (h) {
+              return '<th style="text-align:left; padding:7px 8px; border-bottom:1px solid var(--line);">' + h + '</th>';
+            }).join('') +
+          '</tr></thead><tbody>' +
+          imp.rows.map(function (row, i) {
+            const st = states[i];
+            return '<tr style="border-bottom:1px solid var(--line);' +
+                (st.kind === 'skip' ? ' opacity:0.5;' : '') + '">' +
+              '<td style="padding:6px 8px;">' + escapeHtml(row.sheetName) + '</td>' +
+              '<td style="padding:6px 8px; min-width:170px;">' +
+                '<select style="' + selStyle + '" onchange="setIvPnm(' + i + ', this.value)">' +
+                  '<option value="">— pick —</option>' +
+                  imp.survivors.map(function (s) {
+                    return '<option value="' + s.pnm_id + '"' + (s.pnm_id === row.pnmId ? ' selected' : '') +
+                      '>' + escapeHtml(s.name) + '</option>';
+                  }).join('') +
+                '</select></td>' +
+              '<td style="padding:6px 8px; min-width:170px;">' +
+                '<div style="font-size:10.5px; color:var(--fg-muted); margin-bottom:2px;">' +
+                  escapeHtml(row.sheetHead || '(blank)') + '</div>' +
+                '<select style="' + selStyle + '" onchange="setIvHead(' + i + ', this.value)">' +
+                  '<option value="">— none —</option>' +
+                  brothers.map(function (b) {
+                    return '<option value="' + escapeHtml(b.psu_id) + '"' + (b.psu_id === row.headPsu ? ' selected' : '') +
+                      '>' + escapeHtml(ivBrotherPref(b)) + '</option>';
+                  }).join('') +
+                '</select></td>' +
+              '<td style="padding:6px 8px; font-family:JetBrains Mono,monospace;">' +
+                escapeHtml(row.scoreTxt || '—') + '</td>' +
+              '<td style="padding:6px 8px; color:' + TONE[st.kind] + ';">' +
+                escapeHtml(st.kind === 'ok' ? 'ready' : st.note) + '</td>' +
+            '</tr>';
+          }).join('') +
+        '</tbody></table></div>' +
+        (imp.result !== null
+          ? '<div style="margin-top:10px; font-size:12.5px; color:' + BAND_EDGE.green + ';">' +
+              imp.result + ' saved. The board has been refreshed.</div>'
+          : '') +
+        '<div style="display:flex; justify-content:space-between; gap:8px; margin-top:12px;">' +
+          '<button class="btn" onclick="backInterviewImport()">Edit paste</button>' +
+          '<div style="display:flex; gap:8px;">' +
+            '<button class="btn" onclick="closeInterviewImport()">Close</button>' +
+            '<button class="btn primary" onclick="saveInterviewImport()"' +
+              (toSave && !imp.saving ? '' : ' disabled') + '>' +
+              (imp.saving ? 'Saving…' : 'Save ' + toSave + ' score' + (toSave === 1 ? '' : 's')) +
+            '</button>' +
+          '</div>' +
+        '</div>';
+    }
+
+    return '<div onclick="closeInterviewImport()" style="position:fixed; inset:0; z-index:1000; ' +
+        'background:rgba(0,0,0,0.55); display:flex; align-items:flex-start; justify-content:center; ' +
+        'padding:40px 20px; overflow-y:auto;">' +
+      '<div onclick="event.stopPropagation()" style="background:var(--bg); border-radius:14px; ' +
+        'max-width:980px; width:100%; border:1px solid var(--line-strong); padding:18px;">' +
+        '<div style="font-size:18px; font-weight:600; margin-bottom:12px;">Import interview scores</div>' +
+        (imp.error
+          ? '<div style="padding:9px 12px; border-radius:8px; margin-bottom:10px; font-size:12.5px; ' +
+              'background:rgba(198,74,74,0.12); color:' + BAND_EDGE.red + ';">' + escapeHtml(imp.error) + '</div>'
+          : '') +
+        body +
+      '</div></div>';
   }
 
   function ratingCard(r) {
@@ -14351,4 +14592,3 @@
 </script>
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
