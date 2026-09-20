@@ -7360,6 +7360,7 @@
           '<div style="flex:1;"></div>' +
           (s.kind === 'rush' && !state.delibCommentsFor ? delibBlockSelect(s.row.pnm_id) : '') +
           (s.kind === 'rush' && !state.delibCommentsFor ? delibDecisionSelect(s.row.pnm_id) : '') +
+          '<button class="btn" onclick="exportDelibDeckPdf()">Export deck PDF</button>' +
           '<button class="btn" onclick="exportBidSlides()">Export bid slides</button>' +
           '<span class="delib-k">A ≥</span>' +
           '<input class="delib-input" id="delibA" value="' + (isFinite(a) ? a : '') + '">' +
@@ -7822,6 +7823,153 @@
     }
     doc.save('Bid_Slides.pdf');
     toast('Bid slides exported' + (missing ? ' · ' + missing + ' without a headshot' : ''));
+  };
+
+  // ---------- deck PDF (pre-deliberation handout) ----------
+  // A -> B -> C, a divider page per block, one page per rush with the same
+  // fields as the live slide. No decisions, no redelib section: this is the
+  // follow-along copy, exported before anything is rated.
+  const DECK_PDF_ORDER = ['A', 'B', 'C'];
+  const DECK_RGB = { A: [47, 143, 78], B: [91, 100, 120], C: [178, 87, 127] };
+  const RESUME_TTL = 43200;   // 12 hours
+
+  window.exportDelibDeckPdf = async function () {
+    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!jsPDF) { toast('PDF library did not load', 'error'); return; }
+
+    const byScore = function (x, y) {
+      const sx = delibScore(x), sy = delibScore(y);
+      return (sy === null ? -1 : sy) - (sx === null ? -1 : sx);
+    };
+    const rows = state.ratings.filter(function (r) { return !r.is_cut; }).slice().sort(byScore);
+    if (!rows.length) { toast('No rushes to export', 'error'); return; }
+
+    const groups = DECK_PDF_ORDER.map(function (blk) {
+      return { block: blk, rows: rows.filter(function (r) { return delibBlock(delibScore(r), r.pnm_id) === blk; }) };
+    }).filter(function (g) { return g.rows.length; });
+    const plan = groups.length ? groups : [{ block: null, rows: rows }];
+
+    toast('Building the deck…');
+    const W = 960, H = 540, PX = 300, PY = 380, TX = 400, TW = W - TX - 50;
+    const doc = new jsPDF({ unit: 'pt', format: [W, H], orientation: 'landscape' });
+    let first = true, noPhoto = 0, noResume = 0;
+
+    for (const g of plan) {
+      if (g.block) {
+        if (!first) doc.addPage([W, H], 'landscape');
+        first = false;
+        const c = DECK_RGB[g.block];
+        doc.setFillColor(c[0], c[1], c[2]); doc.rect(0, 0, W, H, 'F');
+        doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(64);
+        doc.text(g.block + ' Block', W / 2, H / 2 - 10, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(20);
+        doc.text(g.rows.length + (g.rows.length === 1 ? ' rush' : ' rushes'), W / 2, H / 2 + 30, { align: 'center' });
+      }
+
+      for (const r of g.rows) {
+        if (!first) doc.addPage([W, H], 'landscape');
+        first = false;
+        const prof = state.pnmProfiles[r.pnm_id] || null;
+        const iv = state.delibIv ? state.delibIv[r.pnm_id] : null;
+        const score = delibScore(r);
+
+        doc.setFillColor(12, 18, 33); doc.rect(0, 0, W, H, 'F');
+
+        const url = ratingPhotoUrl(r.pnm_id);
+        let drew = false;
+        if (url) {
+          try { doc.addImage(await delibCoverJpeg(url, PX, PY), 'JPEG', 50, 80, PX, PY); drew = true; }
+          catch (e) { console.error('deck photo failed', r.name, e); }
+        }
+        if (!drew) {
+          noPhoto += 1;
+          doc.setDrawColor(90, 100, 120); doc.setLineWidth(1); doc.rect(50, 80, PX, PY);
+          doc.setTextColor(140, 150, 170); doc.setFontSize(13);
+          doc.text('no headshot', 50 + PX / 2, 80 + PY / 2, { align: 'center' });
+        }
+
+        let y = 78;
+        if (g.block) {
+          const c = DECK_RGB[g.block];
+          doc.setFillColor(c[0], c[1], c[2]); doc.roundedRect(TX, y - 16, 92, 24, 5, 5, 'F');
+          doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+          doc.text(g.block + ' BLOCK', TX + 46, y, { align: 'center' });
+          y += 34;
+        }
+
+        doc.setTextColor(246, 247, 250); doc.setFont('helvetica', 'bold'); doc.setFontSize(24);
+        const title = String(r.name || '') + (r.year ? ' (' + r.year + ')' : '') + (r.major ? ' — ' + r.major : '');
+        const titleLines = doc.splitTextToSize(title, TW);
+        doc.text(titleLines, TX, y); y += titleLines.length * 26 + 16;
+
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(150, 160, 180);
+        doc.text('RUSH WEEK SCORE', TX, y);
+        doc.setTextColor(212, 166, 74); doc.setFont('helvetica', 'bold'); doc.setFontSize(42);
+        doc.text(score === null ? '—' : score.toFixed(2), TX, y + 40);
+        y += 62;
+
+        const num = function (v) { return v === null || v === undefined ? '—' : String(Number(v)); };
+        let ivText = '—', adjText = '—';
+        if (iv && iv.exempt) ivText = 'Exempt';
+        else if (iv && iv.missed_interview) ivText = 'Missed · 0';
+        else if (iv && iv.score_raw !== null && iv.score_raw !== undefined) {
+          ivText = num(iv.score_raw) +
+            (iv.interviewer_psu_id ? ' (' + delibBrotherName(iv.interviewer_psu_id) + ')' : '');
+          adjText = num(iv.score_adjusted);
+        } else if (iv) ivText = 'Not entered';
+        const has = function (v) { return v !== null && v !== undefined && String(v).trim() !== ''; };
+        const gpa = prof && has(prof.gpa)
+          ? String(prof.gpa) + (prof.gpa_basis ? ' (' + prof.gpa_basis + ')' : '')
+          : prof && has(prof.hs_gpa) ? String(prof.hs_gpa) + ' (hs)' : '—';
+
+        const stats = [
+          ['BROTHERHOOD SCORE', r.db_norm === null || r.db_norm === undefined ? '—' : (Number(r.db_norm) * 100).toFixed(2)],
+          ['INTERVIEW', ivText],
+          ['ADJUSTED INTERVIEW', adjText],
+          ['GPA', gpa],
+          ['PM', num(r.pm_norm)],
+          ['RUSH', num(r.rush_norm)]
+        ];
+        stats.forEach(function (st, i) {
+          const cx = TX + (i % 2) * (TW / 2), cy = y + Math.floor(i / 2) * 44;
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(150, 160, 180);
+          doc.text(st[0], cx, cy);
+          doc.setFontSize(14); doc.setTextColor(246, 247, 250);
+          doc.text(doc.splitTextToSize(String(st[1]), TW / 2 - 14)[0], cx, cy + 17);
+        });
+        y += 3 * 44 + 6;
+
+        const block = function (label, value) {
+          doc.setFontSize(9); doc.setTextColor(150, 160, 180); doc.text(label, TX, y); y += 13;
+          doc.setFontSize(11); doc.setTextColor(226, 230, 240);
+          const lines = doc.splitTextToSize(String(value || '—'), TW).slice(0, 3);
+          doc.text(lines, TX, y); y += lines.length * 13 + 10;
+        };
+        block('INVOLVEMENTS', prof ? prof.clubs : 'no rush profile');
+        block('PREVIOUSLY KNOWNS', prof ? prof.previously_knowns : 'no rush profile');
+
+        doc.setFontSize(12);
+        if (prof && prof.resume_path) {
+          let link = null;
+          try {
+            const signed = await sb.storage.from('pnm-docs').createSignedUrl(prof.resume_path, RESUME_TTL);
+            if (signed.error) throw signed.error;
+            link = signed.data.signedUrl;
+          } catch (e) { console.error('resume link failed', r.name, e); }
+          if (link) {
+            doc.setTextColor(120, 170, 255);
+            doc.textWithLink('Resume (opens in browser)', TX, H - 40, { url: link });
+          } else { noResume += 1; doc.setTextColor(150, 160, 180); doc.text('Resume link unavailable', TX, H - 40); }
+        } else {
+          doc.setTextColor(150, 160, 180); doc.text('No resume', TX, H - 40);
+        }
+      }
+    }
+
+    doc.save('Delib_Deck.pdf');
+    toast('Deck exported' +
+      (noPhoto ? ' · ' + noPhoto + ' without a headshot' : '') +
+      (noResume ? ' · ' + noResume + ' resume link failed' : ''));
   };
 
   function ratingCard(r) {
