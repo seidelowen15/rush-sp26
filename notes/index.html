@@ -7850,6 +7850,7 @@
     const plan = groups.length ? groups : [{ block: null, rows: rows }];
 
     toast('Building the deck…');
+    try {
     const W = 960, H = 540, PX = 300, PY = 380, TX = 400, TW = W - TX - 50;
     const doc = new jsPDF({ unit: 'pt', format: [W, H], orientation: 'landscape' });
     let first = true, noPhoto = 0, noResume = 0;
@@ -7970,6 +7971,10 @@
     toast('Deck exported' +
       (noPhoto ? ' · ' + noPhoto + ' without a headshot' : '') +
       (noResume ? ' · ' + noResume + ' resume link failed' : ''));
+    } catch (e) {
+      console.error('deck export failed', e);
+      toast('Deck export failed: ' + (e && e.message ? e.message : e), 'error');
+    }
   };
 
   function ratingCard(r) {
