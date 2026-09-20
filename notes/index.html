@@ -7164,6 +7164,15 @@
       n += 1;
       out.push({ kind: 'rush', row: r, block: blk, n: n });
     });
+    const dec = state.delibDecisions || {};
+    const redelib = rows.filter(function (r) { return dec[r.pnm_id] && dec[r.pnm_id].redelib_at; })
+      .sort(function (x, y) { return String(dec[x.pnm_id].redelib_at).localeCompare(String(dec[y.pnm_id].redelib_at)); });
+    if (redelib.length) {
+      out.push({ kind: 'divider', block: 'R', count: redelib.length });
+      redelib.forEach(function (r, k) {
+        out.push({ kind: 'rush', row: r, block: null, redelib: true, n: k + 1, of: redelib.length });
+      });
+    }
     return { slides: out, total: rows.length };
   }
   function delibBrotherName(psu) {
@@ -7204,8 +7213,10 @@
       return '<div class="delib-text"><span class="delib-k">' + k + '</span><br>' +
         escapeHtml(v || (prof ? '—' : 'no rush profile')) + '</div>';
     };
-    const gpa = prof && prof.gpa !== null && prof.gpa !== undefined && prof.gpa !== ''
+    const has = function (v) { return v !== null && v !== undefined && String(v).trim() !== ''; };
+    const gpa = prof && has(prof.gpa)
       ? escapeHtml(String(prof.gpa)) + (prof.gpa_basis ? ' (' + escapeHtml(prof.gpa_basis) + ')' : '')
+      : prof && has(prof.hs_gpa) ? escapeHtml(String(prof.hs_gpa)) + ' (hs)'
       : '—';
     const nComments = delibComments(r.pnm_id).length;
 
@@ -7268,11 +7279,19 @@
     state.delibIndex = i;
     const s = d.slides[i];
     const a = state.ratingsConfig.block_a_min, b = state.ratingsConfig.block_b_min;
-    const pos = s.kind === 'rush' ? s.n + ' of ' + d.total : s.block + ' block';
+    const pos = s.kind === 'rush'
+      ? (s.redelib ? 'Redelib ' + s.n + ' of ' + s.of : s.n + ' of ' + d.total)
+      : (s.block === 'R' ? 'Redelib' : s.block + ' block');
 
     let body;
     if (state.delibCommentsFor) {
       body = delibCommentsPage(state.delibCommentsFor);
+    } else if (s.kind === 'divider' && s.block === 'R') {
+      body = '<div class="delib-divider">' +
+        '<div style="font-size:72px; font-weight:700;">Redelib</div>' +
+        '<div style="font-size:22px; color:var(--fg-muted); margin-top:10px;">' +
+          s.count + ' rush' + (s.count === 1 ? '' : 'es') + ', in the order they were sent back</div>' +
+      '</div>';
     } else if (s.kind === 'divider') {
       const lo = s.block === 'A' ? '≥ ' + a : s.block === 'B' ? b + ' – ' + a : '&lt; ' + b;
       body = '<div class="delib-divider">' +
@@ -7294,6 +7313,11 @@
                 escapeHtml(state.delibIvError) + '</div>'
             : '') +
           '<div style="flex:1;"></div>' +
+          (s.kind === 'rush' && !state.delibCommentsFor ? delibDecisionButtons(s.row.pnm_id) : '') +
+          '<button class="btn" onclick="exportBidSlides()">Export bid slides (' +
+            Object.keys(state.delibDecisions || {}).filter(function (k) {
+              return state.delibDecisions[k].decision === 'accepted';
+            }).length + ')</button>' +
           '<span class="delib-k">A ≥</span>' +
           '<input class="delib-input" id="delibA" value="' + (isFinite(a) ? a : '') + '">' +
           '<span class="delib-k">B ≥</span>' +
@@ -7316,12 +7340,20 @@
     state.delibIv = null;
     state.delibIvError = null;
     render();
-    const { data, error } = await sb.from('v_interview_board')
-      .select('pnm_id, interviewer_psu_id, score_raw, score_adjusted, exempt, missed_interview, comment');
+    state.delibDecisions = {};
+    const [ivRes, decRes] = await Promise.all([
+      sb.from('v_interview_board')
+        .select('pnm_id, interviewer_psu_id, score_raw, score_adjusted, exempt, missed_interview, comment'),
+      sb.from('delib_decisions').select('pnm_id, decision, redelib_at, decided_at')
+    ]);
     const m = {};
-    (data || []).forEach(function (row) { m[row.pnm_id] = row; });
+    (ivRes.data || []).forEach(function (row) { m[row.pnm_id] = row; });
     state.delibIv = m;
-    state.delibIvError = error ? error.message : null;
+    const dm = {};
+    (decRes.data || []).forEach(function (row) { dm[row.pnm_id] = row; });
+    state.delibDecisions = dm;
+    state.delibIvError = ivRes.error ? ivRes.error.message
+                       : decRes.error ? 'decisions: ' + decRes.error.message : null;
     render();
   };
   window.endDelib = function () { state.delibMode = false; state.delibCommentsFor = null; render(); };
@@ -7535,6 +7567,115 @@
         body +
       '</div></div>';
   }
+
+  // ---------- deliberation decisions + bid slides ----------
+  // delib_decisions holds one row per rush: accepted / denied / redelib.
+  // redelib_at is stamped the first time a rush is sent to redelib and never
+  // cleared, so the redelib section at the end of the deck keeps a stable
+  // order even after those rushes are decided.
+
+  window.setDelibDecision = async function (pnmId, decision) {
+    const cur = (state.delibDecisions || {})[pnmId] || null;
+    const next = cur && cur.decision === decision ? null : decision;   // click again to clear
+    const row = {
+      pnm_id: pnmId,
+      decision: next,
+      redelib_at: cur && cur.redelib_at ? cur.redelib_at
+                : (next === 'redelib' ? new Date().toISOString() : null),
+      decided_at: new Date().toISOString()
+    };
+    const { error } = await sb.from('delib_decisions').upsert(row, { onConflict: 'pnm_id' });
+    if (error) { toast('Decision not saved: ' + error.message, 'error'); return; }
+    state.delibDecisions[pnmId] = row;
+    render();
+  };
+
+  function delibDecisionButtons(pnmId) {
+    const cur = ((state.delibDecisions || {})[pnmId] || {}).decision || null;
+    const btn = function (key, label, color) {
+      const on = cur === key;
+      return '<button class="btn" onclick="setDelibDecision(\'' + pnmId + '\', \'' + key + '\')" ' +
+        'style="' + (on ? 'background:' + color + '; border-color:' + color + '; color:#fff; font-weight:600;' : '') + '">' +
+        label + '</button>';
+    };
+    return btn('accepted', 'Accept', '#2f8f4e') + btn('denied', 'Deny', '#b23a3a') + btn('redelib', 'Redelib', '#b8860b');
+  }
+
+  function delibLastName(name) {
+    const t = String(name || '').trim().split(/\s+/);
+    return (t[t.length - 1] || '').toLowerCase();
+  }
+
+  // Draw an image into a w x h box, cropped to fill (object-fit: cover).
+  // Fetching to a blob first keeps the canvas untainted.
+  async function delibCoverJpeg(url, w, h) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('photo ' + res.status);
+    const objUrl = URL.createObjectURL(await res.blob());
+    try {
+      const img = await new Promise(function (resolve, reject) {
+        const im = new Image();
+        im.onload = function () { resolve(im); };
+        im.onerror = reject;
+        im.src = objUrl;
+      });
+      const scale = Math.max(w / img.width, h / img.height);
+      const sw = w / scale, sh = h / scale;
+      const c = document.createElement('canvas');
+      c.width = w * 2; c.height = h * 2;
+      c.getContext('2d').drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', 0.9);
+    } finally {
+      URL.revokeObjectURL(objUrl);
+    }
+  }
+
+  // One 16:9 page per accepted rush, alphabetical by last name.
+  window.exportBidSlides = async function () {
+    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!jsPDF) { toast('PDF library did not load', 'error'); return; }
+    const dec = state.delibDecisions || {};
+    const rows = state.ratings.filter(function (r) { return dec[r.pnm_id] && dec[r.pnm_id].decision === 'accepted'; })
+      .sort(function (a, b) {
+        return delibLastName(a.name).localeCompare(delibLastName(b.name)) ||
+               String(a.name).localeCompare(String(b.name));
+      });
+    if (!rows.length) { toast('No accepted rushes yet', 'error'); return; }
+    toast('Building ' + rows.length + ' bid slides…');
+
+    const W = 960, H = 540, PX = 330, PY = 405;
+    const doc = new jsPDF({ unit: 'pt', format: [W, H], orientation: 'landscape' });
+    let missing = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (i > 0) doc.addPage([W, H], 'landscape');
+      doc.setFillColor(10, 36, 99); doc.rect(0, 0, W, H, 'F');
+      doc.setFillColor(212, 166, 74); doc.rect(0, H - 10, W, 10, 'F');
+
+      const url = ratingPhotoUrl(r.pnm_id);
+      let drew = false;
+      if (url) {
+        try { doc.addImage(await delibCoverJpeg(url, PX, PY), 'JPEG', 60, 62, PX, PY); drew = true; }
+        catch (e) { console.error('bid photo failed', r.name, e); }
+      }
+      if (!drew) {
+        missing += 1;
+        doc.setDrawColor(212, 166, 74); doc.setLineWidth(1.5); doc.rect(60, 62, PX, PY);
+        doc.setTextColor(212, 166, 74); doc.setFontSize(14);
+        doc.text('no headshot', 60 + PX / 2, 62 + PY / 2, { align: 'center' });
+      }
+
+      const tx = 60 + PX + 50, tw = W - tx - 50;
+      doc.setTextColor(212, 166, 74); doc.setFont('helvetica', 'bold'); doc.setFontSize(40);
+      const nameLines = doc.splitTextToSize(String(r.name || ''), tw);
+      doc.text(nameLines, tx, 230);
+      doc.setTextColor(246, 247, 250); doc.setFont('helvetica', 'normal'); doc.setFontSize(20);
+      const sub = [r.year, r.major].filter(Boolean).join(' — ');
+      if (sub) doc.text(doc.splitTextToSize(sub, tw), tx, 230 + nameLines.length * 44 + 10);
+    }
+    doc.save('Bid_Slides.pdf');
+    toast(rows.length + ' bid slides exported' + (missing ? ' · ' + missing + ' without a headshot' : ''));
+  };
 
   function ratingCard(r) {
     const url = ratingPhotoUrl(r.pnm_id);
