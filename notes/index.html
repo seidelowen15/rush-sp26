@@ -6806,6 +6806,7 @@
 
       '<div style="display:flex; justify-content:flex-end; margin-bottom:12px;">' +
         '<button class="btn" onclick="openInterviewImport()">Import interview scores</button>' +
+        '<button class="btn" onclick="openChairImport()" style="margin-left:8px;">Import PM / Rush scores</button>' +
         '<button class="btn primary" onclick="startDelib()" style="margin-left:8px;">Deliberation slides</button>' +
       '</div>' +
 
@@ -6864,7 +6865,8 @@
         : '') +
 
       (state.ratingsSelected ? ratingDetailModal(state.ratingsSelected) : '') +
-      (state.ivImport ? interviewImportModal() : '');
+      (state.ivImport ? interviewImportModal() : '') +
+      (state.csImport ? chairImportModal() : '');
   }
 
   // ---------- interview score import ----------
@@ -7362,6 +7364,176 @@
     toast('Blocks set: A ≥ ' + a + ', B ≥ ' + b);
     render();
   };
+
+  // ---------- PM / Rush score import ----------
+  // Paste three columns: Rush Name, PM, Rush. Each score is 0, 0.5 or 1;
+  // a blank cell leaves that score alone. Save upserts on
+  // chair_scores (pnm_id, kind), so a re-paste updates instead of duplicating.
+  // Reuses ivMatch() from the interview import for name matching.
+
+  function csParse(txt) {
+    const t = String(txt || '').trim();
+    if (t === '') return { blank: true };
+    const v = Number(t);
+    return (v === 0 || v === 0.5 || v === 1) ? { value: v } : { bad: true };
+  }
+  function csSurvivors() {
+    return state.ratings.filter(function (r) { return !r.is_cut; }).slice()
+      .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+  }
+  function csRowState(row, imp) {
+    const pm = csParse(row.pmTxt), ru = csParse(row.rushTxt);
+    if (pm.blank && ru.blank) return { kind: 'skip', note: 'no scores' };
+    if (pm.bad || ru.bad) return { kind: 'bad', note: 'scores must be 0, 0.5 or 1' };
+    if (!row.pnmId) return { kind: 'bad', note: 'pick the rush' };
+    if (imp.rows.filter(function (r) {
+          return r.pnmId === row.pnmId && (r.pmTxt !== '' || r.rushTxt !== '');
+        }).length > 1)
+      return { kind: 'bad', note: 'rush appears twice' };
+    const cur = state.ratings.find(function (r) { return r.pnm_id === row.pnmId; }) || {};
+    const notes = [];
+    if (!row.pnmSure) notes.push('check rush match');
+    if (!pm.blank && cur.pm_norm !== null && cur.pm_norm !== undefined && Number(cur.pm_norm) !== pm.value)
+      notes.push('PM replaces ' + Number(cur.pm_norm));
+    if (!ru.blank && cur.rush_norm !== null && cur.rush_norm !== undefined && Number(cur.rush_norm) !== ru.value)
+      notes.push('Rush replaces ' + Number(cur.rush_norm));
+    return { kind: notes.length ? 'check' : 'ok', note: notes.join(' · '), pm: pm, rush: ru };
+  }
+
+  window.openChairImport = function () {
+    state.csImport = { text: '', rows: null, saving: false, error: null, result: null };
+    render();
+  };
+  window.closeChairImport = function () { state.csImport = null; render(); };
+  window.setCsText = function (v) { if (state.csImport) state.csImport.text = v; };
+  window.backChairImport = function () { if (state.csImport) { state.csImport.rows = null; render(); } };
+  window.setCsPnm = function (i, v) {
+    const row = state.csImport && state.csImport.rows[i]; if (!row) return;
+    row.pnmId = v; row.pnmSure = true; render();
+  };
+
+  window.previewChairImport = function () {
+    const imp = state.csImport; if (!imp) return;
+    const surv = csSurvivors();
+    const rows = [];
+    imp.text.split(/\r?\n/).forEach(function (line) {
+      const c = line.split('\t');
+      const name = (c[0] || '').trim();
+      if (!name || /^(rush )?name$/i.test(name)) return;
+      const m = ivMatch(name, surv, function (s) { return s.name; });
+      rows.push({ sheetName: name, pmTxt: (c[1] || '').trim(), rushTxt: (c[2] || '').trim(),
+                  pnmId: m.hit ? m.hit.pnm_id : '', pnmSure: m.sure });
+    });
+    imp.rows = rows; imp.result = null; imp.error = null;
+    render();
+  };
+
+  window.saveChairImport = async function () {
+    const imp = state.csImport; if (!imp || !imp.rows || imp.saving) return;
+    const now = new Date().toISOString();
+    const payload = [];
+    imp.rows.forEach(function (row) {
+      const st = csRowState(row, imp);
+      if (st.kind !== 'ok' && st.kind !== 'check') return;
+      if (!st.pm.blank)   payload.push({ pnm_id: row.pnmId, kind: 'pm',   score: st.pm.value,   scored_at: now });
+      if (!st.rush.blank) payload.push({ pnm_id: row.pnmId, kind: 'rush', score: st.rush.value, scored_at: now });
+    });
+    if (!payload.length) return;
+    imp.saving = true; imp.error = null; render();
+    const { error } = await sb.from('chair_scores').upsert(payload, { onConflict: 'pnm_id,kind' });
+    imp.saving = false;
+    if (error) { imp.error = 'Nothing saved: ' + error.message; render(); return; }
+    imp.result = payload.length;
+    toast(payload.length + ' PM/Rush score' + (payload.length === 1 ? '' : 's') + ' saved');
+    await loadRatingsBoard();
+    render();
+  };
+
+  function chairImportModal() {
+    const imp = state.csImport;
+    const TONE = { ok: 'var(--fg-muted)', check: BAND_EDGE.amber, bad: BAND_EDGE.red, skip: BAND_EDGE.none };
+    let body;
+    if (!imp.rows) {
+      body =
+        '<div style="font-size:12.5px; color:var(--fg-muted); line-height:1.55; margin-bottom:10px;">' +
+          'Paste three columns: Rush Name, PM, Rush. Each score is 0, 0.5 or 1. ' +
+          'A blank cell leaves that score as it is. A header row is fine.</div>' +
+        '<textarea class="iv-import-text" oninput="setCsText(this.value)" ' +
+          'style="width:100%; height:260px; font-family:JetBrains Mono,monospace; font-size:12px; ' +
+          'padding:10px; border:1px solid var(--line-strong); border-radius:8px; ' +
+          'background:var(--surface); color:var(--fg);">' + escapeHtml(imp.text) + '</textarea>' +
+        '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">' +
+          '<button class="btn" onclick="closeChairImport()">Cancel</button>' +
+          '<button class="btn primary" onclick="previewChairImport()">Preview</button>' +
+        '</div>';
+    } else {
+      const surv = csSurvivors();
+      const states = imp.rows.map(function (r) { return csRowState(r, imp); });
+      const count = function (k) { return states.filter(function (s) { return s.kind === k; }).length; };
+      const toSave = count('ok') + count('check');
+      const selStyle = 'width:100%; padding:4px 6px; font-size:12px; border:1px solid var(--line); ' +
+        'border-radius:6px; background:var(--surface); color:var(--fg);';
+      body =
+        '<div style="font-size:12.5px; margin-bottom:10px;">' +
+          '<strong>' + toSave + '</strong> rushes will save · ' +
+          '<span style="color:' + BAND_EDGE.amber + ';">' + count('check') + ' to check</span> · ' +
+          '<span style="color:' + BAND_EDGE.red + ';">' + count('bad') + ' blocked</span> · ' +
+          '<span style="color:var(--fg-muted);">' + count('skip') + ' with no scores (skipped)</span>' +
+        '</div>' +
+        '<div style="max-height:52vh; overflow:auto; border:1px solid var(--line); border-radius:8px;">' +
+        '<table style="width:100%; border-collapse:collapse; font-size:12px;">' +
+          '<thead><tr style="position:sticky; top:0; background:var(--bg);">' +
+            ['Sheet name', 'Rush', 'PM', 'Rush score', 'Status'].map(function (h) {
+              return '<th style="text-align:left; padding:7px 8px; border-bottom:1px solid var(--line);">' + h + '</th>';
+            }).join('') +
+          '</tr></thead><tbody>' +
+          imp.rows.map(function (row, i) {
+            const st = states[i];
+            return '<tr style="border-bottom:1px solid var(--line);' + (st.kind === 'skip' ? ' opacity:0.5;' : '') + '">' +
+              '<td style="padding:6px 8px;">' + escapeHtml(row.sheetName) + '</td>' +
+              '<td style="padding:6px 8px; min-width:190px;">' +
+                '<select style="' + selStyle + '" onchange="setCsPnm(' + i + ', this.value)">' +
+                  '<option value="">— pick —</option>' +
+                  surv.map(function (s) {
+                    return '<option value="' + s.pnm_id + '"' + (s.pnm_id === row.pnmId ? ' selected' : '') +
+                      '>' + escapeHtml(s.name) + '</option>';
+                  }).join('') +
+                '</select></td>' +
+              '<td style="padding:6px 8px; font-family:JetBrains Mono,monospace;">' + escapeHtml(row.pmTxt || '—') + '</td>' +
+              '<td style="padding:6px 8px; font-family:JetBrains Mono,monospace;">' + escapeHtml(row.rushTxt || '—') + '</td>' +
+              '<td style="padding:6px 8px; color:' + TONE[st.kind] + ';">' +
+                escapeHtml(st.kind === 'ok' ? 'ready' : st.note) + '</td>' +
+            '</tr>';
+          }).join('') +
+        '</tbody></table></div>' +
+        (imp.result !== null
+          ? '<div style="margin-top:10px; font-size:12.5px; color:' + BAND_EDGE.green + ';">' +
+              imp.result + ' scores saved. The board has been refreshed.</div>'
+          : '') +
+        '<div style="display:flex; justify-content:space-between; gap:8px; margin-top:12px;">' +
+          '<button class="btn" onclick="backChairImport()">Edit paste</button>' +
+          '<div style="display:flex; gap:8px;">' +
+            '<button class="btn" onclick="closeChairImport()">Close</button>' +
+            '<button class="btn primary" onclick="saveChairImport()"' +
+              (toSave && !imp.saving ? '' : ' disabled') + '>' +
+              (imp.saving ? 'Saving…' : 'Save ' + toSave + ' rush' + (toSave === 1 ? '' : 'es')) +
+            '</button>' +
+          '</div>' +
+        '</div>';
+    }
+    return '<div onclick="closeChairImport()" style="position:fixed; inset:0; z-index:1000; ' +
+        'background:rgba(0,0,0,0.55); display:flex; align-items:flex-start; justify-content:center; ' +
+        'padding:40px 20px; overflow-y:auto;">' +
+      '<div onclick="event.stopPropagation()" style="background:var(--bg); border-radius:14px; ' +
+        'max-width:900px; width:100%; border:1px solid var(--line-strong); padding:18px;">' +
+        '<div style="font-size:18px; font-weight:600; margin-bottom:12px;">Import PM / Rush scores</div>' +
+        (imp.error
+          ? '<div style="padding:9px 12px; border-radius:8px; margin-bottom:10px; font-size:12.5px; ' +
+              'background:rgba(198,74,74,0.12); color:' + BAND_EDGE.red + ';">' + escapeHtml(imp.error) + '</div>'
+          : '') +
+        body +
+      '</div></div>';
+  }
 
   function ratingCard(r) {
     const url = ratingPhotoUrl(r.pnm_id);
