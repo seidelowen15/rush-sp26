@@ -7136,6 +7136,7 @@
     '</style>';
 
   const DELIB_TINT = { A: 'rgba(72,160,90,0.16)', B: 'transparent', C: 'rgba(214,120,160,0.16)' };
+  const DELIB_BADGE = { A: '#2f8f4e', B: '#5b6478', C: '#b8577f' };
 
   function delibScore(r) {
     return r.final_score_available === null || r.final_score_available === undefined
@@ -7220,6 +7221,7 @@
       : '—';
     const nComments = delibComments(r.pnm_id).length;
     const dec = (state.delibDecisions || {})[r.pnm_id] || null;
+    const blk = s.block || delibBlock(score);   // redelib slides carry no block; derive it
 
     return '<div class="delib-grid">' +
       (url ? '<img class="delib-photo" src="' + url + '" alt="">'
@@ -7227,6 +7229,11 @@
                'justify-content:center; border:1px dashed var(--line-strong); color:var(--fg-muted);">' +
                'no headshot</div>') +
       '<div>' +
+        (blk
+          ? '<div style="display:inline-block; padding:4px 12px; margin-bottom:10px; border-radius:6px; ' +
+              'font-size:15px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#fff; ' +
+              'background:' + DELIB_BADGE[blk] + ';">' + blk + ' Block</div>'
+          : '') +
         '<div class="delib-name">' + escapeHtml(r.name || '') +
           (r.year ? ' (' + escapeHtml(r.year) + ')' : '') +
           (r.major ? ' — ' + escapeHtml(r.major) : '') + '</div>' +
