@@ -6088,7 +6088,8 @@
   function renderUnlessTyping() {
     const el = document.activeElement;
     if (el && el.classList && (el.classList.contains('rate-comments') ||
-                                el.classList.contains('iv-import-text'))) return;
+                                el.classList.contains('iv-import-text') ||
+                                el.classList.contains('delib-input'))) return;
     render();
   }
 
@@ -6112,6 +6113,10 @@
     }
     if (!state.currentUser) {
       root.innerHTML = renderLogin();
+      return;
+    }
+    if (state.delibMode) {
+      root.innerHTML = renderDelib();
       return;
     }
     if (state.presentMode) {
@@ -6801,6 +6806,7 @@
 
       '<div style="display:flex; justify-content:flex-end; margin-bottom:12px;">' +
         '<button class="btn" onclick="openInterviewImport()">Import interview scores</button>' +
+        '<button class="btn primary" onclick="startDelib()" style="margin-left:8px;">Deliberation slides</button>' +
       '</div>' +
 
       '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;">' +
@@ -7095,6 +7101,267 @@
         body +
       '</div></div>';
   }
+
+  // ---------- deliberation slides ----------
+  // One slide per Cut 2 survivor, sorted by rush week score
+  // (final_score_available x 100). Blocks come from two cutpoints in
+  // score_config (block_a_min, block_b_min) set from the slide toolbar;
+  // with either unset there are no blocks. The Comments page shows comment
+  // text only: no names, no rater tier, sorted so order says nothing about
+  // who wrote what.
+
+  const DELIB_CSS = '' +
+    '<style id="delibCss">' +
+    '.delib-wrap{position:fixed; inset:0; z-index:900; background:var(--bg); display:flex; flex-direction:column;}' +
+    '.delib-bar{display:flex; align-items:center; gap:12px; padding:10px 18px; flex-wrap:wrap;' +
+      'border-bottom:1px solid var(--line-strong); background:var(--surface);}' +
+    '.delib-pos{font-family:\'JetBrains Mono\',monospace; font-size:13px; color:var(--fg-muted);}' +
+    '.delib-bar input{width:70px; padding:5px 7px; border:1px solid var(--line-strong); border-radius:6px;' +
+      'background:var(--bg); color:var(--fg); font-family:\'JetBrains Mono\',monospace;}' +
+    '.delib-slide{flex:1; overflow:auto; padding:28px 36px;}' +
+    '.delib-grid{display:grid; grid-template-columns:minmax(240px,32%) 1fr; gap:34px; align-items:start;}' +
+    '.delib-photo{width:100%; max-height:72vh; object-fit:cover; border-radius:12px;}' +
+    '.delib-name{font-size:34px; font-weight:600; line-height:1.15; margin-bottom:22px;}' +
+    '.delib-stats{display:grid; grid-template-columns:1fr 1fr; gap:14px 30px; margin-bottom:22px;}' +
+    '.delib-k{color:var(--fg-muted); font-size:12px; text-transform:uppercase; letter-spacing:0.08em;}' +
+    '.delib-v{font-size:22px; font-family:\'JetBrains Mono\',monospace;}' +
+    '.delib-text{font-size:18px; line-height:1.5; margin-bottom:16px;}' +
+    '.delib-links a{font-size:18px; margin-right:26px;}' +
+    '.delib-divider{display:flex; flex-direction:column; align-items:center; justify-content:center;' +
+      'min-height:70vh; text-align:center;}' +
+    '.delib-comment{font-size:18px; line-height:1.5; padding:12px 16px; border-radius:10px;' +
+      'border:1px solid var(--line); background:var(--surface); margin-bottom:10px;}' +
+    '</style>';
+
+  const DELIB_TINT = { A: 'rgba(72,160,90,0.16)', B: 'transparent', C: 'rgba(214,120,160,0.16)' };
+
+  function delibScore(r) {
+    return r.final_score_available === null || r.final_score_available === undefined
+      ? null : Number(r.final_score_available) * 100;
+  }
+  function delibBlock(score) {
+    const a = state.ratingsConfig.block_a_min, b = state.ratingsConfig.block_b_min;
+    if (!isFinite(a) || !isFinite(b)) return null;
+    if (score !== null && score >= a) return 'A';
+    if (score !== null && score >= b) return 'B';
+    return 'C';
+  }
+  function delibSlides() {
+    const rows = state.ratings.filter(function (r) { return !r.is_cut; }).slice()
+      .sort(function (x, y) {
+        const sx = delibScore(x), sy = delibScore(y);
+        return (sy === null ? -1 : sy) - (sx === null ? -1 : sx);
+      });
+    const counts = {};
+    rows.forEach(function (r) { const b = delibBlock(delibScore(r)); if (b) counts[b] = (counts[b] || 0) + 1; });
+    const out = [];
+    let last = null, n = 0;
+    rows.forEach(function (r) {
+      const blk = delibBlock(delibScore(r));
+      if (blk && blk !== last) { out.push({ kind: 'divider', block: blk, count: counts[blk] }); last = blk; }
+      n += 1;
+      out.push({ kind: 'rush', row: r, block: blk, n: n });
+    });
+    return { slides: out, total: rows.length };
+  }
+  function delibBrotherName(psu) {
+    const b = state.brothers.find(function (x) { return x.psu_id === psu; });
+    return b ? ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim() : psu;
+  }
+  function delibComments(pnmId) {
+    const list = state.ratingsComments
+      .filter(function (c) { return c.pnm_id === pnmId; })
+      .map(function (c) { return { text: c.text, src: null }; });
+    const iv = state.delibIv ? state.delibIv[pnmId] : null;
+    if (iv && iv.comment && iv.comment.trim()) list.push({ text: iv.comment.trim(), src: 'Interview' });
+    return list.sort(function (a, b) { return a.text.localeCompare(b.text); });
+  }
+
+  function delibRushSlide(s) {
+    const r = s.row;
+    const prof = state.pnmProfiles[r.pnm_id] || null;
+    const iv = state.delibIv ? state.delibIv[r.pnm_id] : null;
+    const url = ratingPhotoUrl(r.pnm_id);
+    const num = function (v) { return v === null || v === undefined ? '—' : String(Number(v)); };
+    const score = delibScore(r);
+
+    let ivText;
+    if (!state.delibIv) ivText = '…';
+    else if (!iv) ivText = '—';
+    else if (iv.exempt) ivText = 'Exempt';
+    else if (iv.missed_interview) ivText = 'Missed · 0';
+    else if (iv.score_raw === null) ivText = 'Not entered';
+    else ivText = num(iv.score_raw) +
+      (iv.interviewer_psu_id ? ' (' + escapeHtml(delibBrotherName(iv.interviewer_psu_id)) + ')' : '') +
+      ' · adj ' + num(iv.score_adjusted);
+
+    const stat = function (k, v) {
+      return '<div><div class="delib-k">' + k + '</div><div class="delib-v">' + v + '</div></div>';
+    };
+    const text = function (k, v) {
+      return '<div class="delib-text"><span class="delib-k">' + k + '</span><br>' +
+        escapeHtml(v || (prof ? '—' : 'no rush profile')) + '</div>';
+    };
+    const gpa = prof && prof.gpa !== null && prof.gpa !== undefined && prof.gpa !== ''
+      ? escapeHtml(String(prof.gpa)) + (prof.gpa_basis ? ' (' + escapeHtml(prof.gpa_basis) + ')' : '')
+      : '—';
+    const nComments = delibComments(r.pnm_id).length;
+
+    return '<div class="delib-grid">' +
+      (url ? '<img class="delib-photo" src="' + url + '" alt="">'
+           : '<div class="delib-photo" style="height:50vh; display:flex; align-items:center; ' +
+               'justify-content:center; border:1px dashed var(--line-strong); color:var(--fg-muted);">' +
+               'no headshot</div>') +
+      '<div>' +
+        '<div class="delib-name">' + escapeHtml(r.name || '') +
+          (r.year ? ' (' + escapeHtml(r.year) + ')' : '') +
+          (r.major ? ' — ' + escapeHtml(r.major) : '') + '</div>' +
+        '<div class="delib-stats">' +
+          stat('Rush week score', score === null ? '—' : score.toFixed(2)) +
+          stat('DB score', r.db_norm === null ? '—' : (Number(r.db_norm) * 100).toFixed(2)) +
+          stat('Interview', ivText) +
+          stat('GPA', gpa) +
+          stat('PM', num(r.pm_norm)) +
+          stat('Rush', num(r.rush_norm)) +
+        '</div>' +
+        text('Involvements', prof ? prof.clubs : null) +
+        text('Previously knowns', prof ? prof.previously_knowns : null) +
+        '<div class="delib-links">' +
+          (prof && prof.resume_path && tierRank(state.currentTier) >= 2
+            ? '<a href="#" onclick="event.preventDefault(); openPnmDoc(\'' + escapeHtml(prof.resume_path) +
+                '\')">Resume ↗</a>'
+            : '<span style="font-size:18px; color:var(--fg-muted); margin-right:26px;">No resume</span>') +
+          '<a href="#" onclick="event.preventDefault(); openDelibComments(\'' + r.pnm_id + '\')">' +
+            'Comments (' + nComments + ')</a>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function delibCommentsPage(pnmId) {
+    const r = state.ratings.find(function (x) { return x.pnm_id === pnmId; }) || {};
+    const list = delibComments(pnmId);
+    return '<div style="max-width:900px; margin:0 auto;">' +
+      '<div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">' +
+        '<button class="btn" onclick="closeDelibComments()">‹ Back to slide</button>' +
+        '<div style="font-size:26px; font-weight:600;">' + escapeHtml(r.name || '') + '</div>' +
+        '<div style="color:var(--fg-muted);">' + list.length + ' anonymous comment' +
+          (list.length === 1 ? '' : 's') + '</div>' +
+      '</div>' +
+      (list.length
+        ? list.map(function (c) {
+            return '<div class="delib-comment">' +
+              (c.src ? '<div class="delib-k" style="margin-bottom:4px;">' + c.src + '</div>' : '') +
+              escapeHtml(c.text) + '</div>';
+          }).join('')
+        : '<div style="color:var(--fg-muted); font-size:18px;">No comments this week.</div>') +
+    '</div>';
+  }
+
+  function renderDelib() {
+    const d = delibSlides();
+    if (!d.slides.length) { state.delibMode = false; return ''; }
+    const i = Math.max(0, Math.min(state.delibIndex, d.slides.length - 1));
+    state.delibIndex = i;
+    const s = d.slides[i];
+    const a = state.ratingsConfig.block_a_min, b = state.ratingsConfig.block_b_min;
+    const pos = s.kind === 'rush' ? s.n + ' of ' + d.total : s.block + ' block';
+
+    let body;
+    if (state.delibCommentsFor) {
+      body = delibCommentsPage(state.delibCommentsFor);
+    } else if (s.kind === 'divider') {
+      const lo = s.block === 'A' ? '≥ ' + a : s.block === 'B' ? b + ' – ' + a : '&lt; ' + b;
+      body = '<div class="delib-divider">' +
+        '<div style="font-size:72px; font-weight:700;">' + s.block + ' Block</div>' +
+        '<div style="font-size:22px; color:var(--fg-muted); margin-top:10px;">' +
+          s.count + ' rush' + (s.count === 1 ? '' : 'es') + ' · rush week score ' + lo + '</div>' +
+      '</div>';
+    } else {
+      body = delibRushSlide(s);
+    }
+
+    return DELIB_CSS +
+      '<div class="delib-wrap">' +
+        '<div class="delib-bar">' +
+          '<button class="btn" onclick="endDelib()">‹ Exit</button>' +
+          '<div class="delib-pos">' + pos + '</div>' +
+          (state.delibIvError
+            ? '<div style="font-size:12px; color:' + BAND_EDGE.red + ';">Interview data failed to load: ' +
+                escapeHtml(state.delibIvError) + '</div>'
+            : '') +
+          '<div style="flex:1;"></div>' +
+          '<span class="delib-k">A ≥</span>' +
+          '<input class="delib-input" id="delibA" value="' + (isFinite(a) ? a : '') + '">' +
+          '<span class="delib-k">B ≥</span>' +
+          '<input class="delib-input" id="delibB" value="' + (isFinite(b) ? b : '') + '">' +
+          '<button class="btn" onclick="saveDelibBlocks()">Set blocks</button>' +
+          '<button class="btn" onclick="delibStep(-1)"' + (i === 0 ? ' disabled' : '') + '>Back</button>' +
+          '<button class="btn primary" onclick="delibStep(1)"' +
+            (i === d.slides.length - 1 ? ' disabled' : '') + '>Next</button>' +
+        '</div>' +
+        '<div class="delib-slide" style="background:' +
+          (s.block && !state.delibCommentsFor ? DELIB_TINT[s.block] : 'transparent') + ';">' +
+          body + '</div>' +
+      '</div>';
+  }
+
+  window.startDelib = async function () {
+    state.delibMode = true;
+    state.delibIndex = 0;
+    state.delibCommentsFor = null;
+    state.delibIv = null;
+    state.delibIvError = null;
+    render();
+    const { data, error } = await sb.from('v_interview_board')
+      .select('pnm_id, interviewer_psu_id, score_raw, score_adjusted, exempt, missed_interview, comment');
+    const m = {};
+    (data || []).forEach(function (row) { m[row.pnm_id] = row; });
+    state.delibIv = m;
+    state.delibIvError = error ? error.message : null;
+    render();
+  };
+  window.endDelib = function () { state.delibMode = false; state.delibCommentsFor = null; render(); };
+  window.delibStep = function (dir) {
+    const n = delibSlides().slides.length;
+    const next = state.delibIndex + dir;
+    if (next < 0 || next >= n) return;
+    state.delibIndex = next;
+    state.delibCommentsFor = null;
+    render();
+  };
+  window.openDelibComments = function (pnmId) { state.delibCommentsFor = pnmId; render(); };
+  window.closeDelibComments = function () { state.delibCommentsFor = null; render(); };
+
+  // Cutpoints are rush week scores (0–100). Saved to score_config so every
+  // laptop on deliberation night sees the same blocks.
+  window.saveDelibBlocks = async function () {
+    const a = Number(document.getElementById('delibA').value);
+    const b = Number(document.getElementById('delibB').value);
+    if (!isFinite(a) || !isFinite(b) || a <= b || b < 0 || a > 100) {
+      toast('A must be higher than B, both between 0 and 100', 'error');
+      return;
+    }
+    // Keep the current rush on screen while dividers shift around it.
+    const cur = delibSlides().slides[state.delibIndex];
+    const now = new Date().toISOString();
+    const note = 'Deliberation block cutpoint (rush week score, 0-100)';
+    const { error } = await sb.from('score_config').upsert([
+      { key: 'block_a_min', value: String(a), note: note, updated_at: now, updated_by: null },
+      { key: 'block_b_min', value: String(b), note: note, updated_at: now, updated_by: null }
+    ], { onConflict: 'key' });
+    if (error) { toast('Blocks not saved: ' + error.message, 'error'); return; }
+    state.ratingsConfig.block_a_min = a;
+    state.ratingsConfig.block_b_min = b;
+    if (cur && cur.kind === 'rush') {
+      const idx = delibSlides().slides.findIndex(function (x) {
+        return x.kind === 'rush' && x.row.pnm_id === cur.row.pnm_id;
+      });
+      if (idx >= 0) state.delibIndex = idx;
+    }
+    toast('Blocks set: A ≥ ' + a + ', B ≥ ' + b);
+    render();
+  };
 
   function ratingCard(r) {
     const url = ratingPhotoUrl(r.pnm_id);
@@ -11546,6 +11813,17 @@
 
   // keyboard shortcuts
   document.addEventListener('keydown', (e) => {
+    if (state.delibMode) {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'textarea' || tag === 'input' || tag === 'select') return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); window.delibStep(1);  return; }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); window.delibStep(-1); return; }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (state.delibCommentsFor) window.closeDelibComments(); else window.endDelib();
+        return;
+      }
+    }
     if (state.presentMode) {
       const tag = (e.target.tagName || '').toLowerCase();
       if (tag === 'textarea' || tag === 'input' || tag === 'select') return;
