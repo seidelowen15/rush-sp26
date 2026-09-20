@@ -7219,6 +7219,7 @@
       : prof && has(prof.hs_gpa) ? escapeHtml(String(prof.hs_gpa)) + ' (hs)'
       : '—';
     const nComments = delibComments(r.pnm_id).length;
+    const dec = (state.delibDecisions || {})[r.pnm_id] || null;
 
     return '<div class="delib-grid">' +
       (url ? '<img class="delib-photo" src="' + url + '" alt="">'
@@ -7231,12 +7232,14 @@
           (r.major ? ' — ' + escapeHtml(r.major) : '') + '</div>' +
         '<div class="delib-stats">' +
           stat('Rush week score', score === null ? '—' : score.toFixed(2)) +
-          stat('DB score', r.db_norm === null ? '—' : (Number(r.db_norm) * 100).toFixed(2)) +
+          stat('Brotherhood score', r.db_norm === null ? '—' : (Number(r.db_norm) * 100).toFixed(2)) +
           stat('Interview', ivText) +
           stat('Adjusted interview', adjText) +
           stat('PM', num(r.pm_norm)) +
           stat('Rush', num(r.rush_norm)) +
           stat('GPA', gpa) +
+          (dec && dec.redelib_yes_pct !== null && dec.redelib_yes_pct !== undefined
+            ? stat('Redelib vote', Number(dec.redelib_yes_pct) + '% yes') : '') +
         '</div>' +
         text('Involvements', prof ? prof.clubs : null) +
         text('Previously knowns', prof ? prof.previously_knowns : null) +
@@ -7313,11 +7316,8 @@
                 escapeHtml(state.delibIvError) + '</div>'
             : '') +
           '<div style="flex:1;"></div>' +
-          (s.kind === 'rush' && !state.delibCommentsFor ? delibDecisionButtons(s.row.pnm_id) : '') +
-          '<button class="btn" onclick="exportBidSlides()">Export bid slides (' +
-            Object.keys(state.delibDecisions || {}).filter(function (k) {
-              return state.delibDecisions[k].decision === 'accepted';
-            }).length + ')</button>' +
+          (s.kind === 'rush' && !state.delibCommentsFor ? delibDecisionSelect(s.row.pnm_id) : '') +
+          '<button class="btn" onclick="exportBidSlides()">Export bid slides</button>' +
           '<span class="delib-k">A ≥</span>' +
           '<input class="delib-input" id="delibA" value="' + (isFinite(a) ? a : '') + '">' +
           '<span class="delib-k">B ≥</span>' +
@@ -7330,6 +7330,7 @@
         '<div class="delib-slide" style="background:' +
           (s.block && !state.delibCommentsFor ? DELIB_TINT[s.block] : 'transparent') + ';">' +
           body + '</div>' +
+        (state.delibRedelibFor ? delibRedelibModal() : '') +
       '</div>';
   }
 
@@ -7341,10 +7342,11 @@
     state.delibIvError = null;
     render();
     state.delibDecisions = {};
+    state.delibRedelibFor = null;
     const [ivRes, decRes] = await Promise.all([
       sb.from('v_interview_board')
         .select('pnm_id, interviewer_psu_id, score_raw, score_adjusted, exempt, missed_interview, comment'),
-      sb.from('delib_decisions').select('pnm_id, decision, redelib_at, decided_at')
+      sb.from('delib_decisions').select('pnm_id, decision, redelib_at, redelib_yes_pct, decided_at')
     ]);
     const m = {};
     (ivRes.data || []).forEach(function (row) { m[row.pnm_id] = row; });
@@ -7574,31 +7576,78 @@
   // cleared, so the redelib section at the end of the deck keeps a stable
   // order even after those rushes are decided.
 
-  window.setDelibDecision = async function (pnmId, decision) {
+  // The deck is on a projector, so nothing on screen may reveal a decision:
+  // the dropdown always reads "Record decision…", and the toast is neutral.
+  async function saveDelibDecision(pnmId, decision, pct) {
     const cur = (state.delibDecisions || {})[pnmId] || null;
-    const next = cur && cur.decision === decision ? null : decision;   // click again to clear
     const row = {
       pnm_id: pnmId,
-      decision: next,
+      decision: decision,
       redelib_at: cur && cur.redelib_at ? cur.redelib_at
-                : (next === 'redelib' ? new Date().toISOString() : null),
+                : (decision === 'redelib' ? new Date().toISOString() : null),
+      redelib_yes_pct: pct !== undefined ? pct : (cur ? cur.redelib_yes_pct : null),
       decided_at: new Date().toISOString()
     };
     const { error } = await sb.from('delib_decisions').upsert(row, { onConflict: 'pnm_id' });
-    if (error) { toast('Decision not saved: ' + error.message, 'error'); return; }
+    if (error) { toast('Not saved: ' + error.message, 'error'); return false; }
     state.delibDecisions[pnmId] = row;
+    toast('Saved');
+    render();
+    return true;
+  }
+
+  window.pickDelibDecision = function (pnmId, v) {
+    if (!v) return;
+    if (v === 'redelib') { state.delibRedelibFor = pnmId; render(); return; }
+    saveDelibDecision(pnmId, v === 'clear' ? null : v);
+  };
+
+  window.cancelDelibRedelib = function () { state.delibRedelibFor = null; render(); };
+  window.saveDelibRedelib = async function () {
+    const pnmId = state.delibRedelibFor; if (!pnmId) return;
+    const raw = (document.getElementById('delibPct').value || '').trim().replace('%', '');
+    let pct = null;
+    if (raw !== '') {
+      pct = Number(raw);
+      if (!isFinite(pct) || pct < 0 || pct > 100) { toast('Enter a percentage from 0 to 100, or leave it blank', 'error'); return; }
+    }
+    if (await saveDelibDecision(pnmId, 'redelib', pct)) state.delibRedelibFor = null;
     render();
   };
 
-  function delibDecisionButtons(pnmId) {
-    const cur = ((state.delibDecisions || {})[pnmId] || {}).decision || null;
-    const btn = function (key, label, color) {
-      const on = cur === key;
-      return '<button class="btn" onclick="setDelibDecision(\'' + pnmId + '\', \'' + key + '\')" ' +
-        'style="' + (on ? 'background:' + color + '; border-color:' + color + '; color:#fff; font-weight:600;' : '') + '">' +
-        label + '</button>';
-    };
-    return btn('accepted', 'Accept', '#2f8f4e') + btn('denied', 'Deny', '#b23a3a') + btn('redelib', 'Redelib', '#b8860b');
+  function delibDecisionSelect(pnmId) {
+    return '<select class="delib-input" style="width:auto; padding:7px 10px; font-family:inherit;" ' +
+        'onchange="pickDelibDecision(\'' + pnmId + '\', this.value); this.value=\'\'; this.blur();">' +
+      '<option value="">Record decision…</option>' +
+      '<option value="accepted">Accept</option>' +
+      '<option value="denied">Deny</option>' +
+      '<option value="redelib">Redelib…</option>' +
+      '<option value="clear">Clear decision</option>' +
+    '</select>';
+  }
+
+  function delibRedelibModal() {
+    const cur = (state.delibDecisions || {})[state.delibRedelibFor] || {};
+    const r = state.ratings.find(function (x) { return x.pnm_id === state.delibRedelibFor; }) || {};
+    const v = cur.redelib_yes_pct !== null && cur.redelib_yes_pct !== undefined ? cur.redelib_yes_pct : '';
+    return '<div style="position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.55); ' +
+        'display:flex; align-items:center; justify-content:center;" onclick="cancelDelibRedelib()">' +
+      '<div onclick="event.stopPropagation()" style="background:var(--bg); border:1px solid var(--line-strong); ' +
+        'border-radius:14px; padding:22px; width:420px; max-width:92vw;">' +
+        '<div style="font-size:20px; font-weight:600; margin-bottom:4px;">Send to redelib</div>' +
+        '<div style="color:var(--fg-muted); margin-bottom:16px;">' + escapeHtml(r.name || '') + '</div>' +
+        '<label class="delib-k" for="delibPct">Redelib vote · % of brothers voting yes</label>' +
+        '<input id="delibPct" class="delib-input" inputmode="decimal" value="' + escapeHtml(String(v)) + '" ' +
+          'placeholder="e.g. 62" style="display:block; width:100%; margin:6px 0 4px; padding:9px 11px; ' +
+          'font-size:18px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface); ' +
+          'color:var(--fg); font-family:\'JetBrains Mono\',monospace;" ' +
+          'onkeydown="if(event.key===\'Enter\'){saveDelibRedelib();} if(event.key===\'Escape\'){cancelDelibRedelib();}">' +
+        '<div style="font-size:12px; color:var(--fg-muted); margin-bottom:16px;">Optional. Shows on the slide as the redelib vote.</div>' +
+        '<div style="display:flex; justify-content:flex-end; gap:8px;">' +
+          '<button class="btn" onclick="cancelDelibRedelib()">Cancel</button>' +
+          '<button class="btn primary" onclick="saveDelibRedelib()">Send to redelib</button>' +
+        '</div>' +
+      '</div></div>';
   }
 
   function delibLastName(name) {
@@ -7641,7 +7690,7 @@
                String(a.name).localeCompare(String(b.name));
       });
     if (!rows.length) { toast('No accepted rushes yet', 'error'); return; }
-    toast('Building ' + rows.length + ' bid slides…');
+    toast('Building bid slides…');
 
     const W = 960, H = 540, PX = 330, PY = 405;
     const doc = new jsPDF({ unit: 'pt', format: [W, H], orientation: 'landscape' });
@@ -7674,7 +7723,7 @@
       if (sub) doc.text(doc.splitTextToSize(sub, tw), tx, 230 + nameLines.length * 44 + 10);
     }
     doc.save('Bid_Slides.pdf');
-    toast(rows.length + ' bid slides exported' + (missing ? ' · ' + missing + ' without a headshot' : ''));
+    toast('Bid slides exported' + (missing ? ' · ' + missing + ' without a headshot' : ''));
   };
 
   function ratingCard(r) {
@@ -12134,7 +12183,9 @@
       if (e.key === 'ArrowLeft')  { e.preventDefault(); window.delibStep(-1); return; }
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (state.delibCommentsFor) window.closeDelibComments(); else window.endDelib();
+        if (state.delibRedelibFor) window.cancelDelibRedelib();
+        else if (state.delibCommentsFor) window.closeDelibComments();
+        else window.endDelib();
         return;
       }
     }
