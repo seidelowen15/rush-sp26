@@ -7142,29 +7142,41 @@
     return r.final_score_available === null || r.final_score_available === undefined
       ? null : Number(r.final_score_available) * 100;
   }
-  function delibBlock(score) {
+  function delibBlock(score, pnmId) {
+    const dec = pnmId ? (state.delibDecisions || {})[pnmId] : null;
+    if (dec && dec.block_override) return dec.block_override;   // manual move wins
     const a = state.ratingsConfig.block_a_min, b = state.ratingsConfig.block_b_min;
     if (!isFinite(a) || !isFinite(b)) return null;
     if (score !== null && score >= a) return 'A';
     if (score !== null && score >= b) return 'B';
     return 'C';
   }
+  // Deliberations open in C block, so sections run C -> B -> A, each by score.
+  // With no cutpoints set the deck is one list, highest score first.
+  const DELIB_ORDER = ['C', 'B', 'A'];
   function delibSlides() {
-    const rows = state.ratings.filter(function (r) { return !r.is_cut; }).slice()
-      .sort(function (x, y) {
-        const sx = delibScore(x), sy = delibScore(y);
-        return (sy === null ? -1 : sy) - (sx === null ? -1 : sx);
-      });
-    const counts = {};
-    rows.forEach(function (r) { const b = delibBlock(delibScore(r)); if (b) counts[b] = (counts[b] || 0) + 1; });
+    const byScore = function (x, y) {
+      const sx = delibScore(x), sy = delibScore(y);
+      return (sy === null ? -1 : sy) - (sx === null ? -1 : sx);
+    };
+    const rows = state.ratings.filter(function (r) { return !r.is_cut; }).slice().sort(byScore);
+    const blocked = rows.filter(function (r) { return delibBlock(delibScore(r), r.pnm_id); });
     const out = [];
-    let last = null, n = 0;
-    rows.forEach(function (r) {
-      const blk = delibBlock(delibScore(r));
-      if (blk && blk !== last) { out.push({ kind: 'divider', block: blk, count: counts[blk] }); last = blk; }
+    let n = 0;
+    const push = function (r, blk) {
       n += 1;
       out.push({ kind: 'rush', row: r, block: blk, n: n });
-    });
+    };
+    if (blocked.length === rows.length && rows.length) {
+      DELIB_ORDER.forEach(function (blk) {
+        const group = rows.filter(function (r) { return delibBlock(delibScore(r), r.pnm_id) === blk; });
+        if (!group.length) return;
+        out.push({ kind: 'divider', block: blk, count: group.length });
+        group.forEach(function (r) { push(r, blk); });
+      });
+    } else {
+      rows.forEach(function (r) { push(r, null); });
+    }
     const dec = state.delibDecisions || {};
     const redelib = rows.filter(function (r) { return dec[r.pnm_id] && dec[r.pnm_id].redelib_at; })
       .sort(function (x, y) { return String(dec[x.pnm_id].redelib_at).localeCompare(String(dec[y.pnm_id].redelib_at)); });
@@ -7176,6 +7188,7 @@
     }
     return { slides: out, total: rows.length };
   }
+
   function delibBrotherName(psu) {
     const b = state.brothers.find(function (x) { return x.psu_id === psu; });
     return b ? ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim() : psu;
@@ -7219,9 +7232,8 @@
       ? escapeHtml(String(prof.gpa)) + (prof.gpa_basis ? ' (' + escapeHtml(prof.gpa_basis) + ')' : '')
       : prof && has(prof.hs_gpa) ? escapeHtml(String(prof.hs_gpa)) + ' (hs)'
       : '—';
-    const nComments = delibComments(r.pnm_id).length;
     const dec = (state.delibDecisions || {})[r.pnm_id] || null;
-    const blk = s.block || delibBlock(score);   // redelib slides carry no block; derive it
+    const blk = s.block || delibBlock(score, r.pnm_id);   // redelib slides carry no block; derive it
 
     return '<div class="delib-grid">' +
       (url ? '<img class="delib-photo" src="' + url + '" alt="">'
@@ -7237,8 +7249,13 @@
         '<div class="delib-name">' + escapeHtml(r.name || '') +
           (r.year ? ' (' + escapeHtml(r.year) + ')' : '') +
           (r.major ? ' — ' + escapeHtml(r.major) : '') + '</div>' +
+        '<div style="margin:0 0 22px;">' +
+          '<div class="delib-k">Rush week score</div>' +
+          '<div style="font-family:\'JetBrains Mono\',monospace; font-size:72px; font-weight:700; ' +
+            'line-height:1.05; color:var(--accent, #d4a64a);">' +
+            (score === null ? '—' : score.toFixed(2)) + '</div>' +
+        '</div>' +
         '<div class="delib-stats">' +
-          stat('Rush week score', score === null ? '—' : score.toFixed(2)) +
           stat('Brotherhood score', r.db_norm === null ? '—' : (Number(r.db_norm) * 100).toFixed(2)) +
           stat('Interview', ivText) +
           stat('Adjusted interview', adjText) +
@@ -7255,8 +7272,6 @@
             ? '<a href="#" onclick="event.preventDefault(); openPnmDoc(\'' + escapeHtml(prof.resume_path) +
                 '\')">Resume ↗</a>'
             : '<span style="font-size:18px; color:var(--fg-muted); margin-right:26px;">No resume</span>') +
-          '<a href="#" onclick="event.preventDefault(); openDelibComments(\'' + r.pnm_id + '\')">' +
-            'Comments (' + nComments + ')</a>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -7323,6 +7338,7 @@
                 escapeHtml(state.delibIvError) + '</div>'
             : '') +
           '<div style="flex:1;"></div>' +
+          (s.kind === 'rush' && !state.delibCommentsFor ? delibBlockSelect(s.row.pnm_id) : '') +
           (s.kind === 'rush' && !state.delibCommentsFor ? delibDecisionSelect(s.row.pnm_id) : '') +
           '<button class="btn" onclick="exportBidSlides()">Export bid slides</button>' +
           '<span class="delib-k">A ≥</span>' +
@@ -7353,7 +7369,7 @@
     const [ivRes, decRes] = await Promise.all([
       sb.from('v_interview_board')
         .select('pnm_id, interviewer_psu_id, score_raw, score_adjusted, exempt, missed_interview, comment'),
-      sb.from('delib_decisions').select('pnm_id, decision, redelib_at, redelib_yes_pct, decided_at')
+      sb.from('delib_decisions').select('pnm_id, decision, redelib_at, redelib_yes_pct, block_override, decided_at')
     ]);
     const m = {};
     (ivRes.data || []).forEach(function (row) { m[row.pnm_id] = row; });
@@ -7621,6 +7637,42 @@
     if (await saveDelibDecision(pnmId, 'redelib', pct)) state.delibRedelibFor = null;
     render();
   };
+
+  // Moving a rush between blocks is public, so this control shows its state.
+  window.setDelibBlockOverride = async function (pnmId, v) {
+    const cur = (state.delibDecisions || {})[pnmId] || null;
+    const keep = delibSlides().slides.find(function (x) { return x.kind === 'rush' && x.row.pnm_id === pnmId; });
+    const row = {
+      pnm_id: pnmId,
+      decision: cur ? cur.decision : null,
+      redelib_at: cur ? cur.redelib_at : null,
+      redelib_yes_pct: cur ? cur.redelib_yes_pct : null,
+      block_override: v || null,
+      decided_at: new Date().toISOString()
+    };
+    const { error } = await sb.from('delib_decisions').upsert(row, { onConflict: 'pnm_id' });
+    if (error) { toast('Block not changed: ' + error.message, 'error'); return; }
+    state.delibDecisions[pnmId] = row;
+    // the rush just moved sections: follow it
+    const slides = delibSlides().slides;
+    const idx = slides.findIndex(function (x) {
+      return x.kind === 'rush' && x.row.pnm_id === pnmId && (!keep || !keep.redelib) === !x.redelib;
+    });
+    if (idx >= 0) state.delibIndex = idx;
+    toast(v ? 'Moved to ' + v + ' block' : 'Block set back to automatic');
+    render();
+  };
+
+  function delibBlockSelect(pnmId) {
+    const cur = ((state.delibDecisions || {})[pnmId] || {}).block_override || '';
+    const opt = function (v, label) {
+      return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + label + '</option>';
+    };
+    return '<select class="delib-input" style="width:auto; padding:7px 10px; font-family:inherit;" ' +
+        'onchange="setDelibBlockOverride(\'' + pnmId + '\', this.value); this.blur();">' +
+      opt('', 'Block: auto') + opt('A', 'Block: A') + opt('B', 'Block: B') + opt('C', 'Block: C') +
+    '</select>';
+  }
 
   function delibDecisionSelect(pnmId) {
     return '<select class="delib-input" style="width:auto; padding:7px 10px; font-family:inherit;" ' +
