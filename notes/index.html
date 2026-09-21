@@ -7792,11 +7792,30 @@
     toast('Building bid slides…');
 
     const W = 960, H = 540, PX = 330, PY = 405;
+    // No PNM gender is stored anywhere, so the two counts are entered by hand.
+    // Blank or cancel prints "—".
+    const askCount = function (label) {
+      const v = window.prompt(label + ' receiving bids (' + rows.length + ' total). Leave blank to skip.', '');
+      const n = v === null ? NaN : parseInt(String(v).trim(), 10);
+      return Number.isFinite(n) && n >= 0 ? String(n) : '—';
+    };
+    const nGuys = askCount('Guys');
+    const nGirls = askCount('Girls');
+
     const doc = new jsPDF({ unit: 'pt', format: [W, H], orientation: 'landscape' });
     let missing = 0;
+
+    // Title slide
+    doc.setFillColor(10, 36, 99); doc.rect(0, 0, W, H, 'F');
+    doc.setFillColor(212, 166, 74); doc.rect(0, H - 10, W, 10, 'F');
+    doc.setTextColor(212, 166, 74); doc.setFont('helvetica', 'bold'); doc.setFontSize(72);
+    doc.text('Zeta Upsilon', W / 2, H / 2 - 10, { align: 'center' });
+    doc.setTextColor(246, 247, 250); doc.setFont('helvetica', 'normal'); doc.setFontSize(32);
+    doc.text('Fall 2026', W / 2, H / 2 + 45, { align: 'center' });
+
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      if (i > 0) doc.addPage([W, H], 'landscape');
+      doc.addPage([W, H], 'landscape');
       doc.setFillColor(10, 36, 99); doc.rect(0, 0, W, H, 'F');
       doc.setFillColor(212, 166, 74); doc.rect(0, H - 10, W, 10, 'F');
 
@@ -7821,6 +7840,29 @@
       const sub = [r.year, r.major].filter(Boolean).join(' — ');
       if (sub) doc.text(doc.splitTextToSize(sub, tw), tx, 230 + nameLines.length * 44 + 10);
     }
+    // Stats slide
+    const yr = function (r) { return String(r.year || '').trim().toLowerCase(); };
+    const stats = [
+      ['Guys', nGuys],
+      ['Girls', nGirls],
+      ['Freshmen', String(rows.filter(function (r) { return yr(r).startsWith('fr'); }).length)],
+      ['Sophomores', String(rows.filter(function (r) { return yr(r).startsWith('so'); }).length)],
+      ['Total bids', String(rows.length)]
+    ];
+    doc.addPage([W, H], 'landscape');
+    doc.setFillColor(10, 36, 99); doc.rect(0, 0, W, H, 'F');
+    doc.setFillColor(212, 166, 74); doc.rect(0, H - 10, W, 10, 'F');
+    doc.setTextColor(212, 166, 74); doc.setFont('helvetica', 'bold'); doc.setFontSize(40);
+    doc.text('Zeta Upsilon by the numbers', W / 2, 130, { align: 'center' });
+    const colW = W / stats.length;
+    stats.forEach(function (st, k) {
+      const cx = colW * k + colW / 2;
+      doc.setTextColor(212, 166, 74); doc.setFont('helvetica', 'bold'); doc.setFontSize(72);
+      doc.text(st[1], cx, 300, { align: 'center' });
+      doc.setTextColor(246, 247, 250); doc.setFont('helvetica', 'normal'); doc.setFontSize(18);
+      doc.text(st[0], cx, 340, { align: 'center' });
+    });
+
     doc.save('Bid_Slides.pdf');
     toast('Bid slides exported' + (missing ? ' · ' + missing + ' without a headshot' : ''));
   };
