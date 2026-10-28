@@ -4178,11 +4178,112 @@
     letter-spacing: 0.05em;
   }
 
+  /* ── Rush cycle: lead-in phase bars + rush stepper ─────────────── */
+  .rush-cycle {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 5fr);
+    gap: 28px;
+    align-items: start;
+    padding: 0 4px;
+  }
+  .rush-leadin {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .rush-leadin .rush-segment-bar { margin-top: 30px; }
+  .rush-leadin .seg-label, .rush-leadin .seg-meta-current { white-space: nowrap; }
+  .rush-cycle > *, .rush-leadin .rush-segment { min-width: 0; }
+  .rush-stepper-head {
+    padding-bottom: 6px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .rush-stepper.in-rush .rush-stepper-head .seg-label { color: var(--navy); }
+  .rush-steps {
+    display: flex;
+    align-items: flex-start;
+  }
+  .rush-step {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-top: 2px;
+  }
+  .rush-step[data-mkey] { cursor: pointer; }
+  /* connector to the next step */
+  .rush-step::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: calc(50% + 9px);
+    right: calc(-50% + 9px);
+    height: 2px;
+    background: var(--line);
+  }
+  .rush-step:last-child::after { display: none; }
+  .rush-step.st-done::after { background: var(--navy); opacity: 0.55; }
+  /* "a little bit of space" after BFC Mixer: dashed, longer connector */
+  .rush-step.gap-after { margin-right: 22px; }
+  .rush-step.gap-after::after {
+    right: calc(-50% - 13px);
+    background: none;
+    border-top: 2px dashed var(--line);
+    height: 0;
+  }
+  .rush-step.gap-after + .rush-step::before { content: none; }
+  .rush-step-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--line);
+    position: relative;
+    z-index: 1;
+    transition: transform 0.15s ease;
+  }
+  .rush-step[data-mkey]:hover .rush-step-dot { transform: scale(1.2); }
+  .rush-step.st-done .rush-step-dot { background: var(--navy); border-color: var(--navy); opacity: 0.6; }
+  .rush-step.st-next .rush-step-dot { border-color: var(--navy); }
+  .rush-step.st-today .rush-step-dot {
+    background: var(--gold); border-color: var(--gold-dark);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 28%, transparent);
+  }
+  .rush-step.st-tbd .rush-step-dot { border-style: dashed; }
+  .rush-step-label {
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: var(--fg-muted);
+    line-height: 1.3;
+  }
+  .rush-step.st-next .rush-step-label,
+  .rush-step.st-today .rush-step-label { color: var(--navy); }
+  .rush-step.st-done .rush-step-label { opacity: 0.6; }
+  .rush-step-date {
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--fg-soft);
+  }
+  .rush-step.st-today .rush-step-date { color: var(--gold-dark); font-weight: 600; }
+  .rush-step.st-tbd .rush-step-date { opacity: 0.55; }
+
   /* When a segment has no milestones, give it a low-key placeholder feel */
   .rush-segment.status-future .seg-label { opacity: 0.6; }
 
   @media (max-width: 900px) {
     .rush-segments { grid-template-columns: 1fr 1fr; gap: 20px 14px; }
+    .rush-cycle { grid-template-columns: 1fr; gap: 22px; }
+    .rush-leadin { grid-template-columns: 1fr; gap: 18px; }
+    .rush-cycle > *, .rush-leadin .rush-segment { min-width: 0; }
+    .rush-steps { overflow-x: auto; padding-bottom: 4px; }
+    .rush-step { min-width: 64px; }
     .rush-chip-row { grid-template-columns: repeat(2, 1fr); gap: 6px; }
     .rush-connectors { display: none; } /* connectors don't map sensibly across wrapped rows */
   }
@@ -8668,15 +8769,76 @@
     '</div>';
   }
 
-  function getRushPhase() {
-    const now = Date.now();
-    const sl  = new Date(DASHBOARD_DATES.softLaunch.iso   + 'T00:00:00').getTime();
-    const hd  = new Date(DASHBOARD_DATES.hardDeadline.iso + 'T00:00:00').getTime();
-    const bfc = new Date(DASHBOARD_DATES.bfcMixer.iso     + 'T00:00:00').getTime();
-    if (now < sl)  return { id: 'pre-launch',    label: 'Pre-launch',           sub: 'Building the roster and groundwork before the soft launch.' };
-    if (now < hd)  return { id: 'soft-launch',   label: 'Soft launch window',   sub: 'Open enrollment is live. Active outreach phase.' };
-    if (now < bfc) return { id: 'final-stretch', label: 'Final stretch to BFC', sub: 'Hard deadline closing. Logistics locking down.' };
-    return            { id: 'active-rush',  label: 'Active rush',          sub: 'Events underway. PNM evaluations in motion.' };
+  // ── Rush cycle model ─────────────────────────────────────────────
+  // Lead-in phases (bars) then the rush itself (stepper). All dates come from
+  // chapter_dates; a missing date shows as TBD and never breaks ordering.
+  const RUSH_STEPS = [
+    { key: 'bfc_mixer',     label: 'BFC Mixer',            short: 'BFC Mixer', gapAfter: true },
+    { key: 'prof_event_1',  label: 'Professional Event 1', short: 'Prof. 1' },
+    { key: 'prof_event_2',  label: 'Professional Event 2', short: 'Prof. 2' },
+    { key: 'social_1',      label: 'Social 1',             short: 'Social 1' },
+    { key: 'social_2',      label: 'Social 2',             short: 'Social 2' },
+    { key: 'interviews',    label: 'Interviews',           short: 'Interviews' },
+    { key: 'deliberations', label: 'Deliberations',        short: 'Delibs' },
+    { key: 'bid_delivery',  label: 'Bid Delivery',         short: 'Bids' },
+  ];
+  const DAY_MS = 86400000;
+  function cycleDayStart(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }
+
+  function getRushCycle() {
+    const byKey = getChapterDatesByKey();
+    const ms = function(k) { const r = byKey[k]; return (r && r.iso_date) ? new Date(r.iso_date + 'T00:00:00').getTime() : null; };
+    const today = cycleDayStart(Date.now());
+    const election = ms('chair_election');
+    const bfc = ms('bfc_mixer');
+    const prevBids = ms('prev_bid_delivery');
+
+    const steps = RUSH_STEPS.map(function(st) {
+      const t = ms(st.key);
+      let status = 'tbd';
+      if (t !== null) status = t < today ? 'done' : (t === today ? 'today' : 'upcoming');
+      return Object.assign({}, st, { t: t, status: status,
+        label: (byKey[st.key] && byKey[st.key].label) || st.label });
+    });
+    const firstUpcoming = steps.find(function(s) { return s.status === 'upcoming'; });
+    if (firstUpcoming) firstUpcoming.status = 'next';
+
+    // Lead-in phase bars. Between Cycles: last bids -> election. Build-up: election -> BFC.
+    const bcStart = prevBids || (election ? election - 60 * DAY_MS : today - 30 * DAY_MS);
+    const phases = [
+      { id: 'between_cycles', label: 'Between Cycles', start: bcStart, end: election },
+      { id: 'build_up',       label: 'Build-up',       start: election, end: bfc },
+    ];
+    phases.forEach(function(ph) {
+      if (ph.start === null || ph.end === null || ph.end <= ph.start) {
+        ph.status = (ph.end !== null && today >= ph.end) ? 'past' : (ph.start !== null && today >= ph.start ? 'current' : 'future');
+        ph.todayPct = ph.status === 'current' ? 50 : null; ph.daysRemaining = null; ph.tbd = true; return;
+      }
+      ph.status = today < ph.start ? 'future' : (today >= ph.end ? 'past' : 'current');
+      ph.todayPct = ph.status === 'current' ? Math.max(0, Math.min(100, (today - ph.start) / (ph.end - ph.start) * 100)) : null;
+      ph.daysRemaining = ph.status === 'current' ? Math.ceil((ph.end - today) / DAY_MS) : null;
+    });
+
+    // Headline: one source of truth for title + bar.
+    const lastBids = steps[steps.length - 1];
+    let head;
+    if (bfc !== null && today >= bfc && !(lastBids.t !== null && today > lastBids.t)) {
+      const todayStep = steps.find(function(s) { return s.status === 'today'; });
+      const nxt = steps.find(function(s) { return s.status === 'next'; });
+      const nxtTxt = nxt ? 'Next: ' + nxt.label + ' · ' + new Date(nxt.t).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Next step not yet dated.';
+      head = todayStep
+        ? { id: 'rush', label: todayStep.label + ' · Today', sub: nxtTxt }
+        : { id: 'rush', label: 'Rush underway', sub: nxtTxt };
+    } else if (lastBids.t !== null && today > lastBids.t) {
+      head = { id: 'between-cycles', label: 'Between Cycles', sub: 'Bids are out. Next rush chair not yet elected.' };
+    } else if (election !== null && today >= election) {
+      const d = bfc !== null ? Math.ceil((bfc - today) / DAY_MS) : null;
+      head = { id: 'build-up', label: 'Build-up', sub: 'New chair in seat. Planning, outreach, building the team.' + (d !== null ? ' BFC Mixer in ' + d + 'd.' : ' BFC Mixer date TBD.') };
+    } else {
+      const d = election !== null ? Math.ceil((election - today) / DAY_MS) : null;
+      head = { id: 'between-cycles', label: 'Between Cycles', sub: 'Last class is in. Next rush chair not yet elected.' + (d !== null ? ' Election in ' + d + 'd.' : ' Election date TBD.') };
+    }
+    return { phases: phases, steps: steps, head: head, inRush: head.id === 'rush' };
   }
 
   // §A dashboard polish: domain shifted from [bfc-180d, bfc] to [soft_launch, selection_start].
@@ -8714,210 +8876,50 @@
     return { id: tmpl.id, label: tmpl.title, iso: isoDate };
   }
 
-  // §C dashboard polish: full rewrite. 8 candidate milestones:
-  //   5 chapter_dates: soft_launch, hard_deadline, bfc_mixer, rush_week_start, selection_start
-  //   2 template-derived: Brother Mingle (BM), Run interviews (INT)
-  //   1 explicit omit: Bid Delivery (no template/chapter_date source yet)
-  // Short codes shown on bar; full label+date in title="" attribute for hover.
-  // Labels stagger: even index -> below, odd index -> above (§F).
-  // Returns the four rush-cycle phase segments with their boundaries and status.
-  // Each segment has equal visual weight in the bar regardless of actual calendar length.
-  function getRushPhaseSegments() {
-    const byKey = getChapterDatesByKey();
-    const now = Date.now();
-    const toMs = function(iso) { return iso ? new Date(iso + 'T00:00:00').getTime() : null; };
-
-    const slIso  = byKey.soft_launch     && byKey.soft_launch.iso_date;
-    const rwsIso = byKey.rush_week_start && byKey.rush_week_start.iso_date;
-    const ssIso  = byKey.selection_start && byKey.selection_start.iso_date;
-
-    // Fallbacks if chapter_dates haven't been pinned yet
-    const sl  = toMs(slIso)  || (now - 30 * 86400000);
-    const rws = toMs(rwsIso) || (sl + 120 * 86400000);
-    const ss  = toMs(ssIso)  || (rws + 14 * 86400000);
-    const cycleStart = sl - 120 * 86400000; // Pre-launch spans ~4 months before soft launch
-    const cycleEnd   = ss + 14 * 86400000;  // Selection wraps ~2 weeks after selection start
-
-    const segments = [
-      { id: 'pre_launch',  label: 'Pre-launch',  start: cycleStart, end: sl,  short: 'Pre-launch' },
-      { id: 'soft_launch', label: 'Soft launch', start: sl,         end: rws, short: 'Soft launch' },
-      { id: 'rush_week',   label: 'Rush week',   start: rws,        end: ss,  short: 'Rush week' },
-      { id: 'selection',   label: 'Selection',   start: ss,         end: cycleEnd, short: 'Selection' },
-    ];
-
-    segments.forEach(function(s) {
-      const dur = s.end - s.start;
-      s.durDays = Math.max(1, Math.round(dur / 86400000));
-      if (now < s.start)      s.status = 'future';
-      else if (now >= s.end)  s.status = 'past';
-      else                    s.status = 'current';
-      // Today's % within this segment (0..100). Only meaningful when current.
-      s.todayPct = (s.status === 'current') ? Math.max(0, Math.min(100, ((now - s.start) / dur) * 100)) : null;
-      // Days remaining if this is the current segment
-      s.daysRemaining = (s.status === 'current') ? Math.max(0, Math.ceil((s.end - now) / 86400000)) : null;
-    });
-
-    return segments;
-  }
-
-  // Place a milestone into the segment whose date range covers it.
-  // Returns { segmentIndex, pctWithinSegment } or null if outside cycle.
-  function placeMilestoneInSegments(isoDate, segments) {
-    const ms = new Date(isoDate + 'T00:00:00').getTime();
-    for (let i = 0; i < segments.length; i++) {
-      const s = segments[i];
-      if (ms >= s.start && ms <= s.end) {
-        const pct = ((ms - s.start) / (s.end - s.start)) * 100;
-        return { segmentIndex: i, pctWithinSegment: Math.max(0, Math.min(100, pct)) };
-      }
-    }
-    return null;
-  }
-
   function renderRushCenterpiece() {
-    const phase = getRushPhase();
-    const byKey = getChapterDatesByKey();
-    const segments = getRushPhaseSegments();
-    const now = Date.now();
+    const cyc = getRushCycle();
+    const fmt = function(t) { return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
 
-    // Build milestone list from chapter_dates + templates
-    const milestones = [];
-    ['soft_launch', 'hard_deadline', 'bfc_mixer', 'rush_week_start', 'selection_start'].forEach(function(k) {
-      const cd = byKey[k];
-      if (cd && cd.iso_date) {
-        milestones.push({ key: k, iso: cd.iso_date, label: cd.label });
-      }
-    });
-    const bm = getMilestoneFromTemplate('brother mingle', byKey);
-    if (bm) milestones.push({ key: 'tpl:' + bm.id, iso: bm.iso, label: bm.label });
-    const ri = getMilestoneFromTemplate('run interviews', byKey);
-    if (ri) milestones.push({ key: 'tpl:' + ri.id, iso: ri.iso, label: ri.label });
-
-    milestones.sort(function(a, b) { return new Date(a.iso) - new Date(b.iso); });
-
-    // Compute placement: each milestone gets a segment index, within-segment % (for the dot),
-    // and a chip index (its position in the chip row, 0..N-1 left-to-right by date)
-    const placed = [];
-    milestones.forEach(function(m) {
-      const placement = placeMilestoneInSegments(m.iso, segments);
-      if (!placement) return;
-      const ms = new Date(m.iso + 'T00:00:00').getTime();
-      placed.push({
-        milestone: m,
-        segmentIndex: placement.segmentIndex,
-        pctWithinSegment: placement.pctWithinSegment,
-        isPast: ms < now,
-      });
-    });
-    // Chip index = position in date-sorted list (already sorted)
-    placed.forEach(function(p, i) { p.chipIndex = i; });
-    const N = placed.length;
-
-    // ── Render segment row (bars + dots, no labels) ──
-    const segmentsHtml = segments.map(function(seg, segIdx) {
-      const segMilestones = placed.filter(function(p) { return p.segmentIndex === segIdx; });
-
-      const dotNodes = segMilestones.map(function(pm) {
-        const m = pm.milestone;
-        const dateStr = new Date(m.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const markerClasses = ['seg-milestone-marker'];
-        if (pm.isPast) markerClasses.push('past');
-        if (m.key === 'bfc_mixer') markerClasses.push('bfc');
-        return '<div class="seg-milestone" ' +
-                'style="left:' + pm.pctWithinSegment.toFixed(1) + '%" ' +
-                'data-mkey="' + escapeHtml(m.key) + '" ' +
-                'onclick="event.stopPropagation(); openMilestoneDetail(\'' + m.key + '\')" ' +
-                'title="' + escapeHtml(m.label + ' · ' + dateStr) + '">' +
-          '<div class="' + markerClasses.join(' ') + '"></div>' +
-        '</div>';
-      }).join('');
-
-      let headerMeta;
-      if (seg.status === 'current') {
-        headerMeta = '<span class="seg-meta-current">Now · ' + seg.daysRemaining + 'd left</span>';
-      } else if (seg.status === 'past') {
-        headerMeta = '<span class="seg-meta-past">Done</span>';
-      } else {
-        const daysUntil = Math.ceil((seg.start - now) / 86400000);
-        headerMeta = '<span class="seg-meta-future">in ' + daysUntil + 'd</span>';
-      }
-
-      const todayMarker = seg.status === 'current'
-        ? '<div class="seg-today-line" style="left:' + seg.todayPct.toFixed(1) + '%">' +
-            '<div class="seg-today-pill">TODAY</div>' +
-          '</div>'
-        : '';
-
-      let fillStyle = '';
-      if (seg.status === 'past') fillStyle = 'width:100%';
-      else if (seg.status === 'current') fillStyle = 'width:' + seg.todayPct.toFixed(1) + '%';
-      else fillStyle = 'width:0%';
-
-      return '<div class="rush-segment status-' + seg.status + '" data-segment="' + seg.id + '">' +
-        '<div class="rush-segment-header">' +
-          '<span class="seg-label">' + escapeHtml(seg.label) + '</span>' +
-          headerMeta +
-        '</div>' +
-        '<div class="rush-segment-bar">' +
-          '<div class="rush-segment-fill" style="' + fillStyle + '"></div>' +
-          dotNodes +
-          todayMarker +
-        '</div>' +
+    const phasesHtml = cyc.phases.map(function(ph) {
+      let meta;
+      if (ph.status === 'current') meta = '<span class="seg-meta-current">Now' + (ph.daysRemaining !== null ? ' · ' + ph.daysRemaining + 'd left' : '') + '</span>';
+      else if (ph.status === 'past') meta = '<span class="seg-meta-past">Done</span>';
+      else meta = '<span class="seg-meta-future">' + (ph.start !== null && !ph.tbd ? 'in ' + Math.ceil((ph.start - cycleDayStart(Date.now())) / DAY_MS) + 'd' : 'TBD') + '</span>';
+      const fill = ph.status === 'past' ? 100 : (ph.status === 'current' ? ph.todayPct : 0);
+      const today = ph.status === 'current'
+        ? '<div class="seg-today-line" style="left:' + ph.todayPct.toFixed(1) + '%"><div class="seg-today-pill">TODAY</div></div>' : '';
+      return '<div class="rush-segment status-' + ph.status + '" data-segment="' + ph.id + '">' +
+        '<div class="rush-segment-header"><span class="seg-label">' + escapeHtml(ph.label) + '</span>' + meta + '</div>' +
+        '<div class="rush-segment-bar"><div class="rush-segment-fill" style="width:' + fill.toFixed(1) + '%"></div>' + today + '</div>' +
       '</div>';
     }).join('');
 
-    // ── Render chip row (one chip per milestone, equal-width cells via grid) ──
-    const chipsHtml = placed.map(function(pm) {
-      const m = pm.milestone;
-      const dateStr = new Date(m.iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const classes = ['rush-chip'];
-      if (pm.isPast) classes.push('past');
-      if (m.key === 'bfc_mixer') classes.push('bfc');
-      return '<div class="' + classes.join(' ') + '" ' +
-              'data-mkey="' + escapeHtml(m.key) + '" ' +
-              'onclick="event.stopPropagation(); openMilestoneDetail(\'' + m.key + '\')">' +
-        '<div class="chip-dot"></div>' +
-        '<div class="chip-text">' +
-          '<div class="chip-label">' + escapeHtml(m.label) + '</div>' +
-          '<div class="chip-date">' + escapeHtml(dateStr) + '</div>' +
-        '</div>' +
+    const stepsHtml = cyc.steps.map(function(st) {
+      const clickable = st.t !== null;
+      return '<div class="rush-step st-' + st.status + (st.gapAfter ? ' gap-after' : '') + '"' +
+          (clickable ? ' data-mkey="' + escapeHtml(st.key) + '" onclick="event.stopPropagation(); openMilestoneDetail(\'' + st.key + '\')"' : '') +
+          ' title="' + escapeHtml(st.label + (st.t !== null ? ' · ' + fmt(st.t) : ' · date TBD')) + '">' +
+        '<div class="rush-step-dot"></div>' +
+        '<div class="rush-step-label">' + escapeHtml(st.short) + '</div>' +
+        '<div class="rush-step-date">' + (st.status === 'today' ? 'Today' : (st.t !== null ? escapeHtml(fmt(st.t)) : 'TBD')) + '</div>' +
       '</div>';
     }).join('');
 
-    // ── Render connector layer (SVG polylines from each dot to its chip) ──
-    // Connector geometry is computed at render time using known positions:
-    //   - Dot X = (segIdx + pctWithinSegment/100) * (100 / 4)   (% of full row width)
-    //   - Chip X = (chipIndex + 0.5) * (100 / N)                 (center of its grid cell, % of full row width)
-    // The connector zone is a fixed height (28px). We draw a polyline:
-    //   dotX,0 → dotX,8 → chipX,20 → chipX,28
-    const connectorsHtml = N > 0
-      ? '<svg class="rush-connectors" preserveAspectRatio="none" viewBox="0 0 1000 28">' +
-          placed.map(function(pm) {
-            const dotX = ((pm.segmentIndex + pm.pctWithinSegment / 100) / segments.length) * 1000;
-            const chipX = ((pm.chipIndex + 0.5) / N) * 1000;
-            const pts = dotX.toFixed(1) + ',0 ' +
-                        dotX.toFixed(1) + ',8 ' +
-                        chipX.toFixed(1) + ',20 ' +
-                        chipX.toFixed(1) + ',28';
-            const cls = 'connector' + (pm.isPast ? ' past' : '');
-            return '<polyline class="' + cls + '" data-mkey="' + escapeHtml(pm.milestone.key) + '" points="' + pts + '" />';
-          }).join('') +
-        '</svg>'
-      : '';
-
-    return '<div class="rush-centerpiece phase-' + phase.id + '">' +
+    return '<div class="rush-centerpiece phase-' + cyc.head.id + '">' +
       '<div class="centerpiece-head">' +
         '<div class="centerpiece-eyebrow">Rush Cycle Progress</div>' +
         '<div class="centerpiece-sync"><span class="sync-dot"></span><span class="sync-text">Live · synced</span></div>' +
       '</div>' +
       '<div class="centerpiece-phase">' +
-        '<div class="phase-name">' + escapeHtml(phase.label) + '</div>' +
-        '<div class="phase-sub">' + escapeHtml(phase.sub) + '</div>' +
+        '<div class="phase-name">' + escapeHtml(cyc.head.label) + '</div>' +
+        '<div class="phase-sub">' + escapeHtml(cyc.head.sub) + '</div>' +
       '</div>' +
-      '<div class="rush-bar-stack" onmouseover="handleMilestoneHover(event, true)" onmouseout="handleMilestoneHover(event, false)">' +
-        '<div class="rush-segments">' + segmentsHtml + '</div>' +
-        connectorsHtml +
-        '<div class="rush-chip-row">' + chipsHtml + '</div>' +
+      '<div class="rush-cycle">' +
+        '<div class="rush-leadin">' + phasesHtml + '</div>' +
+        '<div class="rush-stepper' + (cyc.inRush ? ' in-rush' : '') + '">' +
+          '<div class="rush-stepper-head"><span class="seg-label">Rush</span></div>' +
+          '<div class="rush-steps">' + stepsHtml + '</div>' +
+        '</div>' +
       '</div>' +
     '</div>';
   }
@@ -14473,7 +14475,7 @@
   function renderChapterDatesEditor() {
     const dates = (state.chapterDates || []).slice().sort(function(a, b) {
       // Order: by phase progression, fallback alphabetical
-      const order = ['soft_launch', 'hard_deadline', 'bfc_mixer', 'rush_week_start', 'selection_start'];
+      const order = ['prev_bid_delivery', 'chair_election', 'soft_launch', 'hard_deadline', 'bfc_mixer', 'rush_week_start', 'prof_event_1', 'prof_event_2', 'social_1', 'social_2', 'interviews', 'selection_start', 'deliberations', 'bid_delivery'];
       const ai = order.indexOf(a.key); const bi = order.indexOf(b.key);
       if (ai !== -1 && bi !== -1) return ai - bi;
       if (ai !== -1) return -1;
