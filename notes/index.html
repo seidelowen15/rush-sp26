@@ -841,6 +841,31 @@
   .rk-dot { color: var(--line-strong); }
   .rk-actions { display: flex; gap: 8px; align-items: center; }
 
+  .ct-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: -8px 0 20px; }
+  .ct-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px;
+    font-family: 'Inter', sans-serif; display: flex; flex-direction: column; gap: 8px;
+  }
+  .ct-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .ct-title { font-size: 15px; font-weight: 600; color: var(--fg); }
+  .ct-pill { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: rgba(72, 160, 90, 0.16); color: #2f7d45; }
+  .ct-pill.draft { background: var(--surface-2); color: var(--fg-muted); }
+  [data-theme="dark"] .ct-pill { color: #7ccf8f; }
+  .ct-keep { font-size: 14px; color: var(--fg-soft); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ct-num {
+    width: 64px; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--bg);
+    color: var(--fg); font-family: 'JetBrains Mono', monospace; font-size: 14px;
+  }
+  .ct-num:focus { outline: none; border-color: var(--fg-muted); }
+  .ct-num.bad { border-color: var(--danger); color: var(--danger); }
+  .ct-big { font-size: 15px; color: var(--fg-soft); }
+  .ct-big strong { font-size: 20px; color: var(--fg); }
+  .ct-dot { margin: 0 6px; color: var(--line-strong); }
+  .ct-note { font-size: 12.5px; color: var(--fg-muted); line-height: 1.5; }
+  .ct-bad { color: var(--danger); }
+  .ct-actions { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+  .ct-actions .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  @media (max-width: 760px) { .ct-strip { grid-template-columns: 1fr; } }
   .rk-chart-card {
     background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
     padding: 14px 20px 10px; margin-bottom: 24px;
@@ -6249,13 +6274,14 @@
     if (!sb) return;
     if (tierRank(state.currentTier) < 1) { state.ratingsLoaded = true; return; }
     try {
-      const [boardRes, cfgRes, cmtRes, usersRes] = await Promise.all([
+      const [boardRes, cfgRes, cmtRes, usersRes, cutsRes] = await Promise.all([
         sb.from('v_pnm_final_score').select('*'),
         sb.from('score_config').select('key, value'),
         sb.from('pnm_ratings')
           .select('pnm_id, rater_id, event_id, met, answered, raw_score, comments, updated_at')
           .not('comments', 'is', null),
-        sb.from('app_users').select('user_id, psu_id, tier')
+        sb.from('app_users').select('user_id, psu_id, tier'),
+        sb.from('cuts').select('pnm_id, stage, cut, decided_at, reason')
       ]);
 
       if (boardRes.error) throw boardRes.error;
@@ -6264,6 +6290,7 @@
       const cfg = {};
       (cfgRes.data || []).forEach(function (r) { cfg[r.key] = Number(r.value); });
       state.ratingsConfig = cfg;
+      state.cutRows = cutsRes && !cutsRes.error ? (cutsRes.data || []) : [];
 
       const byUid = {};
       (usersRes.data || []).forEach(function (u) { byUid[u.user_id] = u; });
@@ -6310,17 +6337,14 @@
     state.ratingsLoaded = true;
   }
 
-  // Rank band by the two targets in score_config. Bands are drawn off
-  // final_score_available, not final_score, because the interview block
-  // is 30% of the formula and has not happened yet — final_score
-  // coalesces that to zero and flattens everyone.
-  // Bands now key off the 64 target for the next cut. Anyone already cut
-  // is banded separately and never occupies a slot.
-  function ratingBand(rank) {
-    const target = state.ratingsConfig.cut2_target || 64;
+  // Card color by rank against the cut lines still pending (ties included):
+  // both pending -> green inside Cut 2, amber between, red past Cut 1;
+  // one pending -> green inside it, red past it; none -> green.
+  function ratingBand(rank, effs) {
     if (!rank) return 'none';
-    if (rank <= target) return 'green';
-    if (rank <= Math.round(target * 1.25)) return 'amber';
+    if (!effs || !effs.length) return 'green';
+    if (rank <= effs[0].eff) return 'green';
+    if (effs.length > 1 && rank <= effs[1].eff) return 'amber';
     return 'red';
   }
 
@@ -6345,11 +6369,12 @@
     cutRows.sort(function (a, b) {
       return Number(b.final_score_available || 0) - Number(a.final_score_available || 0);
     });
-    cutRows.forEach(function (r) { r._rank = null; r._band = 'red'; });
+    cutRows.forEach(function (r) { r._rank = null; r._band = 'none'; });
     scored.sort(function (a, b) {
       return Number(b.final_score_available) - Number(a.final_score_available);
     });
-    scored.forEach(function (r, i) { r._rank = i + 1; r._band = ratingBand(i + 1); });
+    const effs = cutEffs(scored);
+    scored.forEach(function (r, i) { r._rank = i + 1; r._band = ratingBand(i + 1, effs); });
 
     const unscored = state.ratings.filter(function (r) {
       return !(r.unique_raters > 0 && r.final_score_available !== null);
@@ -6369,11 +6394,10 @@
 
   // Cut targets that actually land inside the ranked list, low rank first.
   function ratingsCuts(n) {
-    const c1 = state.ratingsConfig.cut1_target || 64;
-    const c2 = state.ratingsConfig.cut2_target || 40;
-    return [[c2, 'Cut 2'], [c1, 'Cut 1']]
-      .filter(function (c) { return c[0] >= 1 && c[0] <= n; })
-      .sort(function (a, b) { return a[0] - b[0]; });
+    const scored = state.ratings.filter(function (r) { return cutScoreOk(r) && !r.is_cut; }).sort(cutByScore);
+    return cutEffs(scored)
+      .filter(function (e) { return e.eff >= 1 && e.eff <= n; })
+      .map(function (e) { return [e.eff, 'Cut ' + e.stage]; });
   }
 
   // Width of the chart's drawing area, read from the live layout so the SVG
@@ -6631,6 +6655,265 @@
       '</svg>';
   }
 
+  // ---------- cuts ----------
+  // Two headcount cuts. Each ranks the rushes still in (not cut at an earlier
+  // stage) on final_score_available: the most current score — brotherhood
+  // only until interviews and Rush/PM scores exist, the weighted score after.
+  // Ties at the line pass; rushes nobody rated are cut. Typing a Keep number
+  // previews the lines and colors for everyone; nothing is written to `cuts`
+  // until an admin applies the cut. Undo deletes that stage's rows.
+
+  function cutScoreOk(r) {
+    return r.unique_raters > 0 && r.final_score_available !== null && r.final_score_available !== undefined;
+  }
+  function cutByScore(a, b) { return Number(b.final_score_available) - Number(a.final_score_available); }
+
+  function cutTarget(stage) {
+    const d = state.cutDraft && state.cutDraft[stage];
+    if (d) return d;
+    const v = Number(state.ratingsConfig['cut' + stage + '_target']);
+    return isFinite(v) && v > 0 ? v : (stage === 1 ? 64 : 40);
+  }
+
+  // Saved result of a stage, or null if it hasn't been applied.
+  function cutApplied(stage) {
+    const rows = (state.cutRows || []).filter(function (r) { return Number(r.stage) === stage; });
+    if (!rows.length) return null;
+    let at = '';
+    rows.forEach(function (r) { if (String(r.decided_at || '') > at) at = String(r.decided_at); });
+    const reason = String(rows[0].reason || '');
+    const by = (reason.match(/by (.+)$/) || [])[1] || null;
+    const keepN = Number((reason.match(/keep_n=(\d+)/) || [])[1]) || null;
+    return {
+      kept: rows.filter(function (r) { return !r.cut; }).length,
+      cut: rows.filter(function (r) { return r.cut; }).length,
+      at: at, by: by, keepN: keepN
+    };
+  }
+
+  // Effective line for a ranked list: keep n, plus anyone tied with #n.
+  function cutLine(ranked, n) {
+    if (!(n >= 1) || n >= ranked.length) return null;
+    const boundary = Number(ranked[n - 1].final_score_available);
+    let eff = n;
+    while (eff < ranked.length && Number(ranked[eff].final_score_available) === boundary) eff++;
+    return { n: n, eff: eff, tied: eff - n, boundary: boundary };
+  }
+
+  // Lines for the stages not yet applied, measured on the board's ranked list.
+  function cutEffs(scored) {
+    const out = [];
+    [1, 2].forEach(function (stage) {
+      if (cutApplied(stage)) return;
+      const line = cutLine(scored, cutTarget(stage));
+      if (line && line.eff < scored.length) out.push({ stage: stage, eff: line.eff });
+    });
+    return out.sort(function (a, b) { return a.eff - b.eff; });
+  }
+
+  // What applying a stage would do right now.
+  function cutPlan(stage) {
+    const earlier = {};
+    (state.cutRows || []).forEach(function (r) { if (r.cut && Number(r.stage) < stage) earlier[r.pnm_id] = 1; });
+    const pool = state.ratings.filter(function (r) { return !earlier[r.pnm_id]; });
+    const ranked = pool.filter(cutScoreOk).sort(cutByScore);
+    const unrated = pool.filter(function (r) { return !cutScoreOk(r); });
+    const n = cutTarget(stage);
+    const line = cutLine(ranked, n);
+    const decisions = pool.map(function (r) {
+      return { pnm_id: r.pnm_id,
+               cut: !cutScoreOk(r) || (line ? Number(r.final_score_available) < line.boundary : false) };
+    });
+    return {
+      stage: stage, n: n, ranked: ranked.length, unrated: unrated.length, line: line,
+      keep: line ? line.eff : ranked.length,
+      cut: (line ? ranked.length - line.eff : 0) + unrated.length,
+      decisions: decisions
+    };
+  }
+
+  // Why a stage can't be applied yet, or null.
+  function cutProblem(stage) {
+    if (state.cutRaw && state.cutRaw[stage] !== undefined && state.cutRaw[stage] !== null) {
+      const v = Number(state.cutRaw[stage]);
+      if (!(Number.isInteger(v) && v >= 1)) return 'Enter a whole number of rushes to keep.';
+    }
+    const plan = cutPlan(stage);
+    if (stage === 2 && !cutApplied(1)) {
+      const p1 = cutPlan(1);
+      if (plan.n >= p1.n) return 'Cut 2 must keep fewer rushes than Cut 1.';
+      return 'Apply Cut 1 first.';
+    }
+    if (!plan.line) return 'Only ' + plan.ranked + ' rushes are ranked, so nobody ranked would be cut.';
+    return null;
+  }
+
+  function cutWhen(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
+      d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function renderCutStrip() {
+    const admin = tierRank(state.currentTier) >= 2;
+    const card = function (stage) {
+      const done = cutApplied(stage);
+      const later = stage === 1 && cutApplied(2);
+      if (done) {
+        return '<section class="ct-card applied">' +
+          '<div class="ct-top"><span class="ct-title">Cut ' + stage + '</span><span class="ct-pill">Applied</span></div>' +
+          '<div class="ct-big"><strong>' + done.kept + '</strong> kept <span class="ct-dot">·</span> <strong>' + done.cut + '</strong> cut</div>' +
+          '<div class="ct-note">' + (done.keepN ? 'Keep ' + done.keepN + ' · ' : '') + cutWhen(done.at) +
+            (done.by ? ' · by ' + escapeHtml(done.by) : '') + '</div>' +
+          (admin
+            ? '<div class="ct-actions"><button type="button" class="btn small" onclick="cutUndo(' + stage + ')"' +
+                (later ? ' disabled title="Undo Cut 2 first"' : '') + '>Undo Cut ' + stage + '</button>' +
+                (later ? '<span class="ct-note">Undo Cut 2 first</span>' : '') + '</div>'
+            : '') +
+        '</section>';
+      }
+      const plan = cutPlan(stage);
+      const problem = cutProblem(stage);
+      const raw = state.cutRaw && state.cutRaw[stage] !== undefined && state.cutRaw[stage] !== null
+        ? state.cutRaw[stage] : String(cutTarget(stage));
+      const bad = problem && /whole number|fewer/.test(problem);
+      const input = admin
+        ? '<input id="cutIn' + stage + '" class="ct-num' + (bad ? ' bad' : '') + '" inputmode="numeric" value="' + escapeHtml(raw) + '" ' +
+            'oninput="cutInput(' + stage + ', this)" onchange="cutSaveTarget(' + stage + ')" ' +
+            'onkeydown="if(event.key===\'Enter\'){this.blur();}">'
+        : '<strong>' + cutTarget(stage) + '</strong>';
+      let detail;
+      if (plan.line && !bad) {
+        detail = 'Line at score ' + plan.line.boundary.toFixed(3) +
+          (plan.line.tied ? ' · ' + plan.line.tied + ' tied at the line, ' + (plan.line.tied === 1 ? 'passes' : 'all pass') : '') +
+          '<br>Keeps ' + plan.keep + ' · cuts ' + plan.cut +
+          (plan.unrated ? ' (' + plan.unrated + ' not rated)' : '');
+      } else {
+        detail = '';
+      }
+      return '<section class="ct-card">' +
+        '<div class="ct-top"><span class="ct-title">Cut ' + stage + '</span><span class="ct-pill draft">Not applied</span></div>' +
+        '<div class="ct-keep">Keep ' + input + ' of ' + plan.ranked + ' ranked</div>' +
+        (detail ? '<div class="ct-note">' + detail + '</div>' : '') +
+        (problem ? '<div class="ct-note' + (bad ? ' ct-bad' : '') + '">' + problem + '</div>' : '') +
+        (admin
+          ? '<div class="ct-actions"><button type="button" class="btn primary small" onclick="cutApply(' + stage + ')"' +
+              (problem ? ' disabled' : '') + '>Apply Cut ' + stage + '</button></div>'
+          : '') +
+      '</section>';
+    };
+    return '<div class="ct-strip">' + card(1) + card(2) + '</div>';
+  }
+
+  // Typing previews the lines and colors; the caret stays put across the redraw.
+  window.cutInput = function (stage, el) {
+    state.cutRaw = state.cutRaw || {};
+    state.cutDraft = state.cutDraft || {};
+    state.cutRaw[stage] = el.value;
+    const v = Number(el.value);
+    state.cutDraft[stage] = Number.isInteger(v) && v >= 1 ? v : null;
+    const pos = el.selectionStart;
+    render();
+    const again = document.getElementById('cutIn' + stage);
+    if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) {} }
+  };
+
+  window.cutSaveTarget = async function (stage) {
+    const raw = state.cutRaw ? state.cutRaw[stage] : undefined;
+    if (raw === undefined || raw === null) return;
+    const v = Number(raw);
+    if (!(Number.isInteger(v) && v >= 1)) { render(); return; }   // leave it flagged, don't save
+    const key = 'cut' + stage + '_target';
+    const { error } = await sb.from('score_config').upsert([
+      { key: key, value: String(v), note: 'Cut ' + stage + ' headcount (keep N), set in the app',
+        updated_at: new Date().toISOString(), updated_by: null }
+    ], { onConflict: 'key' });
+    if (error) { toast('Cut ' + stage + ' target not saved: ' + error.message, 'error'); return; }
+    state.ratingsConfig[key] = v;
+    if (state.cutRaw) delete state.cutRaw[stage];
+    if (state.cutDraft) delete state.cutDraft[stage];
+    render();
+  };
+
+  // Centered confirm, same pattern as the score import.
+  function cutConfirm(title, lines, goLabel, onGo) {
+    const old = document.getElementById('cutDialog');
+    if (old) old.remove();
+    const el = document.createElement('div');
+    el.id = 'cutDialog';
+    el.className = 'si-dlg-back';
+    el.innerHTML =
+      '<div class="si-dlg" role="alertdialog" aria-modal="true" aria-labelledby="cutDlgTitle">' +
+        '<div class="si-dlg-title" id="cutDlgTitle">' + title + '</div>' +
+        '<ul class="si-dlg-list">' + lines.map(function (m) { return '<li>' + m + '</li>'; }).join('') + '</ul>' +
+        '<div class="si-dlg-q">Do you want to proceed?</div>' +
+        '<div class="si-dlg-btns">' +
+          '<button type="button" class="btn" id="cutDlgBack">Go back</button>' +
+          '<button type="button" class="btn primary" id="cutDlgGo">' + goLabel + '</button>' +
+        '</div>' +
+      '</div>';
+    const close = function () { el.remove(); document.removeEventListener('keydown', onKey, true); };
+    const onKey = function (e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+    el.addEventListener('mousedown', function (e) { if (e.target === el) close(); });
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(el);
+    el.querySelector('#cutDlgBack').onclick = close;
+    const go = el.querySelector('#cutDlgGo');
+    go.onclick = async function () {
+      go.disabled = true; el.querySelector('#cutDlgBack').disabled = true; go.textContent = 'Saving…';
+      await onGo();
+      close();
+    };
+    go.focus();
+  }
+
+  window.cutApply = function (stage) {
+    if (tierRank(state.currentTier) < 2 || cutApplied(stage) || cutProblem(stage)) return;
+    const plan = cutPlan(stage);
+    const lines = [
+      'Keeps <strong>' + plan.keep + '</strong>' +
+        (plan.line.tied ? ': the top ' + plan.n + ' plus ' + plan.line.tied + ' tied at the line.' : '.'),
+      'Cuts <strong>' + plan.cut + '</strong>' +
+        (plan.unrated ? ', including ' + plan.unrated + ' nobody rated.' : '.'),
+      'Cut rushes move to the bottom of the board, greyed out. You can undo this.'
+    ];
+    cutConfirm('Apply Cut ' + stage + '?', lines, 'Apply Cut ' + stage, async function () {
+      const me = MEMBERS.find(function (m) { return m.id === state.currentUser; });
+      const reason = 'keep_n=' + plan.n + '; boundary=' + plan.line.boundary + '; by ' + (me ? me.name : state.currentUser);
+      const now = new Date().toISOString();
+      const rows = plan.decisions.map(function (d) {
+        return { pnm_id: d.pnm_id, stage: stage, cut: d.cut, decided_by: null, reason: reason, decided_at: now };
+      });
+      await sb.from('score_config').upsert([
+        { key: 'cut' + stage + '_target', value: String(plan.n), note: 'Cut ' + stage + ' headcount (keep N), set in the app',
+          updated_at: now, updated_by: null }
+      ], { onConflict: 'key' });
+      const { error } = await sb.from('cuts').upsert(rows, { onConflict: 'pnm_id,stage' });
+      if (error) { toast('Cut ' + stage + ' not applied: ' + error.message, 'error'); return; }
+      if (state.cutRaw) delete state.cutRaw[stage];
+      if (state.cutDraft) delete state.cutDraft[stage];
+      await loadRatingsBoard();
+      toast('Cut ' + stage + ' applied: ' + plan.keep + ' kept, ' + plan.cut + ' cut', 'success');
+      render();
+    });
+  };
+
+  window.cutUndo = function (stage) {
+    const done = cutApplied(stage);
+    if (tierRank(state.currentTier) < 2 || !done || (stage === 1 && cutApplied(2))) return;
+    cutConfirm('Undo Cut ' + stage + '?', [
+      'The <strong>' + done.cut + '</strong> rushes cut at Cut ' + stage + ' return to the board.',
+      'Scores and ratings are not affected. You can apply the cut again afterward.'
+    ], 'Undo Cut ' + stage, async function () {
+      const { error } = await sb.from('cuts').delete().eq('stage', stage);
+      if (error) { toast('Undo failed: ' + error.message, 'error'); return; }
+      await loadRatingsBoard();
+      toast('Cut ' + stage + ' undone', 'success');
+      render();
+    });
+  };
+
   // ---------- page ----------
 
   function renderRatings() {
@@ -6648,9 +6931,6 @@
 
     const groups = ratingRows();
     const rows = groups.scored;
-    const c1 = state.ratingsConfig.cut1_target || 64;
-    const c2 = state.ratingsConfig.cut2_target || 40;
-
     const thin = rows.filter(function (r) { return r.unique_raters <= 2; }).length;
     const noProfile = state.ratings.filter(function (r) {
       return !state.pnmProfiles[r.pnm_id];
@@ -6676,8 +6956,7 @@
         '<span class="rk-pop" role="tooltip">' +
           '<strong>Ranked on available components only.</strong> Interviews are 30% of the final formula ' +
           'and have not happened yet, so scores renormalize across the components that exist today. ' +
-          'Ranks will move once interview scores land. Cut targets (' + c1 + ' / ' + c2 + ') come from ' +
-          'score_config and are provisional until confirmed.' +
+          'Ranks will move once interview scores land. Cut lines come from the Keep numbers in Cut 1 and Cut 2.' +
         '</span>' +
       '</span>';
 
@@ -6756,6 +7035,7 @@
           '<button type="button" class="btn" onclick="event.stopPropagation(); openRatingsManage(this)">Manage ▾</button>' +
         '</div>' +
       '</div>' +
+      renderCutStrip() +
 
       '<section class="rk-chart-card">' +
         '<div class="rk-chart-bar">' +
