@@ -5467,15 +5467,6 @@
         <input type="text" class="field-input" id="eventLocation" placeholder="e.g. Business Building 101" />
       </div>
       <div>
-        <label class="field-label">Category</label>
-        <div class="chip-row" id="eventCategoryChips"></div>
-        <div class="chip-add-form">
-          <input type="text" class="field-input" id="newEventCatName" placeholder="New category name" maxlength="20" onkeydown="if(event.key==='Enter'){event.preventDefault();addEventCategory();}" />
-          <div class="color-mini-picker" id="newEventCatColors"></div>
-          <button class="btn small primary" onclick="addEventCategory()">+ Add</button>
-        </div>
-      </div>
-      <div>
         <label class="field-label">Notes</label>
         <textarea class="field-textarea" id="eventNotes" placeholder="Details, links, who's bringing what…"></textarea>
       </div>
@@ -5851,7 +5842,6 @@
       try { renderTaskCategoryChips(); } catch (e) {}
     }
     if (document.getElementById('eventModal').classList.contains('active')) {
-      try { renderEventCategoryChips(); } catch (e) {}
     }
   }
 
@@ -10632,9 +10622,6 @@
     }
 
     const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const filteredEvents = state.calendarFilterCategory === 'all'
-      ? state.events
-      : state.events.filter(e => e.categoryId === state.calendarFilterCategory);
 
     return '' +
       '<div class="calendar-header">' +
@@ -10646,20 +10633,11 @@
           '<button class="btn primary" onclick="openEventModal()" style="margin-left:6px">+ Event</button>' +
         '</div>' +
       '</div>' +
-      '<div class="legend">' +
-        '<span>Filter:</span>' +
-        '<button class="chip ' + (state.calendarFilterCategory === 'all' ? 'selected' : '') + '" onclick="setCalFilter(\'all\')">All</button>' +
-        state.eventCategories.map(c =>
-          '<button class="chip ' + (state.calendarFilterCategory === c.id ? 'selected' : '') + '" onclick="setCalFilter(\'' + c.id + '\')" style="' + (state.calendarFilterCategory === c.id ? 'background:' + c.color + '; border-color:' + c.color + '; color:var(--paper)' : '') + '">' +
-            '<span class="chip-dot" style="background:' + (state.calendarFilterCategory === c.id ? 'var(--paper)' : c.color) + '"></span>' + escapeHtml(c.name) +
-          '</button>'
-        ).join('') +
-      '</div>' +
       '<div class="calendar-grid">' +
         dayHeaders.map(h => '<div class="cal-day-header">' + h + '</div>').join('') +
         cells.map(c => {
           const dateKey = c.date.toDateString();
-          const dayEvents = filteredEvents.filter(e => new Date(e.startISO).toDateString() === dateKey)
+          const dayEvents = state.events.filter(e => new Date(e.startISO).toDateString() === dateKey)
                              .sort((a, b) => new Date(a.startISO) - new Date(b.startISO));
           // v2 (Diff 4): task chips on day cells; open tasks only.
           const dayTasks = state.tasks
@@ -10689,8 +10667,7 @@
           return '<div class="cal-cell ' + (c.otherMonth ? 'other-month' : '') + ' ' + (isToday ? 'today' : '') + '" onclick="' + cellOnClick + '">' +
             '<div class="cal-date">' + c.date.getDate() + '</div>' +
             visibleEvents.map(e => {
-              const cat = state.eventCategories.find(cc => cc.id === e.categoryId) || state.eventCategories[0];
-              return '<div class="cal-event" style="background:' + (cat ? cat.color : '#0A2463') + '" onclick="event.stopPropagation(); openEventModal(null, \'' + e.id + '\')">' + escapeHtml(formatEventShort(e)) + '</div>';
+              return '<div class="cal-event" style="background:' + eventColor(e) + '" onclick="event.stopPropagation(); openEventModal(null, \'' + e.id + '\')">' + escapeHtml(formatEventShort(e)) + '</div>';
             }).join('') +
             visibleTasks.map(t => {
               const isOverdue = new Date(t.dueISO).getTime() < Date.now();
@@ -10714,7 +10691,11 @@
       '<div style="margin-top: 14px; font-family:\'JetBrains Mono\',monospace; font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.12em;">Empty day click to add · populated day click to inspect · chip checkbox toggles done</div>';
   }
 
-  window.setCalFilter = function(id) { state.calendarFilterCategory = id; render(); };
+  // Events take the color of the committee member who created them.
+  function eventColor(e) {
+    const m = MEMBERS.find(function(x) { return x.id === e.createdBy; });
+    return m ? m.color : 'var(--navy)';
+  }
   window.calNav = function(dir) { state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() + dir, 1); render(); };
   window.calToday = function() { state.calendarDate = new Date(); render(); };
 
@@ -10744,11 +10725,10 @@
           (dayEvents.length === 0
             ? '<div style="font-size:13px; color:var(--fg-muted); padding:6px 0;">No events scheduled.</div>'
             : dayEvents.map(function(e) {
-                const cat = state.eventCategories.find(function(cc) { return cc.id === e.categoryId; });
                 const timeStr = new Date(e.startISO).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
                 return '<div class="cal-day-item" onclick="closeCalDayDetail(); openEventModal(null, \'' + e.id + '\')">' +
                   '<div class="cal-day-item-title">' +
-                    (cat ? '<span class="chip-dot" style="background:' + cat.color + '; margin-right:6px;"></span>' : '') +
+                    '<span class="chip-dot" style="background:' + eventColor(e) + '; margin-right:6px;"></span>' +
                     escapeHtml(e.title || e.name || '(untitled)') +
                   '</div>' +
                   '<div class="cal-day-item-time">' + escapeHtml(timeStr) + '</div>' +
@@ -10925,7 +10905,6 @@
       document.getElementById('eventEnd').value = existing.endISO && existing.hasTime ? toTimeInputValue(new Date(existing.endISO)) : '';
       document.getElementById('eventLocation').value = existing.location || '';
       document.getElementById('eventNotes').value = existing.notes || '';
-      state.editingEvent.categoryId = existing.categoryId || 'rush';
     } else {
       document.getElementById('eventTitle').value = '';
       const baseDate = dateIso ? new Date(dateIso) : new Date();
@@ -10934,12 +10913,8 @@
       document.getElementById('eventEnd').value = '';
       document.getElementById('eventLocation').value = '';
       document.getElementById('eventNotes').value = '';
-      state.editingEvent.categoryId = 'rush';
     }
 
-    renderEventCategoryChips();
-    renderNewEventCatColors();
-    document.getElementById('newEventCatName').value = '';
     renderConflictsArea();
     attachConflictListeners();
     renderEventRsvpArea();
@@ -10951,58 +10926,6 @@
   window.closeEventModal = function() {
     document.getElementById('eventModal').classList.remove('active');
     state.editingEventId = null;
-  };
-
-  function renderEventCategoryChips() {
-    const container = document.getElementById('eventCategoryChips');
-    container.innerHTML = state.eventCategories.map(c =>
-      '<button class="chip ' + (state.editingEvent.categoryId === c.id ? 'selected' : '') + '" ' +
-              'onclick="pickEventCategory(\'' + c.id + '\')" ' +
-              'style="' + (state.editingEvent.categoryId === c.id ? 'background:' + c.color + '; border-color:' + c.color : '') + '">' +
-        '<span class="chip-dot" style="background:' + (state.editingEvent.categoryId === c.id ? 'var(--paper)' : c.color) + '"></span>' +
-        escapeHtml(c.name) +
-        (!c.builtin ? '<span class="chip-remove" onclick="event.stopPropagation(); removeEventCategory(\'' + c.id + '\')">✕</span>' : '') +
-      '</button>'
-    ).join('');
-  }
-
-  function renderNewEventCatColors() {
-    const container = document.getElementById('newEventCatColors');
-    container.innerHTML = CAT_COLOR_OPTIONS.map(c =>
-      '<div class="color-mini ' + (state.newEventCatColor === c ? 'selected' : '') + '" style="background:' + c + '" onclick="pickNewEventCatColor(\'' + c + '\')"></div>'
-    ).join('');
-  }
-
-  window.pickNewEventCatColor = function(c) { state.newEventCatColor = c; renderNewEventCatColors(); };
-  window.pickEventCategory = function(id) { state.editingEvent.categoryId = id; renderEventCategoryChips(); };
-
-  window.addEventCategory = async function() {
-    const input = document.getElementById('newEventCatName');
-    const name = input.value.trim();
-    if (!name) { input.focus(); return; }
-    // Prevent duplicates (case-insensitive)
-    if (state.eventCategories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
-      toast('Category "' + name + '" already exists', 'error');
-      input.select();
-      return;
-    }
-    const newCat = { id: 'ec_' + Date.now(), name, color: state.newEventCatColor, builtin: false };
-    state.eventCategories.push(newCat);
-    state.editingEvent.categoryId = newCat.id;
-    await persist('event_cats', state.eventCategories);
-    input.value = '';
-    renderEventCategoryChips();
-    toast('Added "' + name + '"', 'success');
-  };
-
-  window.removeEventCategory = async function(id) {
-    if (!confirm('Remove this category? Events using it will move to "Rush".')) return;
-    state.eventCategories = state.eventCategories.filter(c => c.id !== id);
-    state.events.forEach(e => { if (e.categoryId === id) e.categoryId = 'rush'; });
-    if (state.editingEvent.categoryId === id) state.editingEvent.categoryId = 'rush';
-    await persist('event_cats', state.eventCategories);
-    await persist('events', state.events);
-    renderEventCategoryChips();
   };
 
   window.saveEvent = async function() {
@@ -11024,12 +10947,11 @@
 
     if (state.editingEventId) {
       const ev = state.events.find(e => e.id === state.editingEventId);
-      if (ev) Object.assign(ev, { title, startISO, endISO, hasTime, location, notes, categoryId: state.editingEvent.categoryId, updatedAt: Date.now() });
+      if (ev) Object.assign(ev, { title, startISO, endISO, hasTime, location, notes, updatedAt: Date.now() });
     } else {
       state.events.push({
         id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         title, startISO, endISO, hasTime, location, notes,
-        categoryId: state.editingEvent.categoryId,
         createdBy: state.currentUser,
         createdAt: Date.now(), updatedAt: Date.now(),
       });
