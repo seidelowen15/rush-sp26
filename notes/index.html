@@ -5313,21 +5313,6 @@
   [data-theme="dark"] .kpi-value, [data-theme="dark"] .phase-name,
   [data-theme="dark"] .section-title, [data-theme="dark"] .view-dashboard .section-title { color: var(--gold); }
   [data-theme="dark"] .kpi-icon { color: var(--gold); }
-  /* ========== RSVP (Phase 0 #7) ========== */
-  .rsvp-card { max-width: 420px; }
-  .rsvp-event-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--fg); margin: 18px 0 4px; }
-  .rsvp-event-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 18px; }
-  .rsvp-field { text-align: left; margin: 14px 0; }
-  .rsvp-actions { display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
-  .rsvp-confirm { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--fg); margin-top: 16px; }
-  .rsvp-block { margin-top: 4px; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
-  .rsvp-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin-bottom: 8px; }
-  .rsvp-counts { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
-  .rsvp-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 8px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); color: var(--fg-soft); }
-  .rsvp-count.yes { color: var(--success); border-color: var(--line-strong); }
-  .rsvp-count.no { color: var(--danger); }
-  .rsvp-note { font-size: 12px; color: var(--fg-muted); line-height: 1.5; }
-  .rsvp-note code { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -5470,7 +5455,6 @@
         <label class="field-label">Notes</label>
         <textarea class="field-textarea" id="eventNotes" placeholder="Details, links, who's bringing what…"></textarea>
       </div>
-      <div id="eventRsvpArea"></div>
     </div>
     <div class="modal-footer">
       <button class="btn danger" id="deleteEventBtn" onclick="deleteCurrentEvent()" style="display:none">Delete</button>
@@ -5800,15 +5784,6 @@
       clearTimeout(realtimeDebounce);
       realtimeDebounce = setTimeout(async () => { await loadExpenses(); render(); }, 250);
     });
-    // Phase 0 #7: RSVP responses — refresh the open event modal's RSVP block live.
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'event_rsvps' }, () => {
-      clearTimeout(realtimeDebounce);
-      realtimeDebounce = setTimeout(async () => {
-        await loadEventRsvps();
-        if (state.rsvpMode) { render(); return; }
-        renderEventRsvpArea();
-      }, 250);
-    });
     // Candidates page. pnms + attendance reload the roster; pnm_votes is
     // the hot path during deliberations so it reloads votes only.
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'pnms' }, () => {
@@ -6026,11 +6001,6 @@
     marketingPostsLoaded: false,
     marketingViewMode: 'calendar',     // 'calendar' | 'list'
     marketingStatusFilter: 'all',      // 'all' | 'draft' | 'published'
-    // Phase 0 #7 — RSVP
-    eventRsvps: [],
-    eventRsvpsLoaded: false,
-    rsvpMode: null,                    // { eventId, key, event, valid, submitted } when ?rsvp= is present
-    rsvpBrothers: [],
     editingMarketingPostId: null,
     editingMarketingPost: {},
     // Phase 0 #6 — Budget Tracking
@@ -6113,8 +6083,6 @@
       await loadMarketingPosts();
       // Phase 0 #6
 
-      // Phase 0 #7 — RSVP responses (soft-fails until migration 0005 lands)
-      await loadEventRsvps();
       // Open PSU ID reviews filed by the kiosk. Rush chair and above only.
       await loadIdReviews();
       // Candidates is now a view over pnms + attendance + pnm_votes.
@@ -6303,10 +6271,6 @@
     const root = document.getElementById('root');
     if (state.loading) {
       root.innerHTML = renderLoadingScreen();
-      return;
-    }
-    if (state.rsvpMode) {
-      root.innerHTML = renderRsvpPage();
       return;
     }
     if (state.setPasswordMode) {
@@ -10917,7 +10881,6 @@
 
     renderConflictsArea();
     attachConflictListeners();
-    renderEventRsvpArea();
 
     document.getElementById('eventModal').classList.add('active');
     setTimeout(() => document.getElementById('eventTitle').focus(), 50);
@@ -15268,226 +15231,6 @@
       toast('Delete failed — check console.', 'error');
     }
   };
-
-
-
-  // ============================================================
-  // RSVP (Phase 0 #7) — brother attendance for rush events
-  //
-  // Data: public.event_rsvps (typed table, migration 0005). One row per
-  // (event_id, brother_id); status yes/no/maybe. Brother-facing page is
-  // reached via ?rsvp=<eventId>&k=<token> — token lives on the event blob
-  // (ev.rsvpToken), generated when a chair first creates the link. No
-  // brother auth (per spec): responders pick their name from the roster.
-  //
-  // Guardrail (plan review §2): this table is the per-event attendance
-  // primitive. PNM sign-in in Phase 1+ should extend this shape (attendee
-  // keyed by psu_id), not invent a parallel one.
-  //
-  // The RSVP page queries brothers with a NAME-ONLY select — demographics
-  // never leave the chair-facing loaders.
-  // ============================================================
-
-  async function loadEventRsvps() {
-    if (!sb) return;
-    try {
-      let q = sb.from('event_rsvps').select('*');
-      if (state.rsvpMode) q = q.eq('event_id', state.rsvpMode.eventId);
-      const { data, error } = await q;
-      if (error) throw error;
-      state.eventRsvps = data || [];
-      state.eventRsvpsLoaded = true;
-    } catch (e) {
-      // Most likely: migration 0005_event_rsvps.sql not applied yet.
-      console.error('loadEventRsvps failed (is migration 0005 applied?)', e);
-      state.eventRsvps = [];
-      state.eventRsvpsLoaded = false;
-    }
-  }
-
-  function rsvpDisplayName(b) {
-    if (!b) return 'Unknown';
-    return ((b.preferred_name || b.first_name || '') + ' ' + (b.last_name || '')).trim() || 'Unknown';
-  }
-
-  // Chair-facing block inside the event modal (existing events only)
-  function renderEventRsvpArea() {
-    const area = document.getElementById('eventRsvpArea');
-    if (!area) return;
-    const ev = state.editingEventId ? state.events.find(function(e) { return e.id === state.editingEventId; }) : null;
-    if (!ev) { area.innerHTML = ''; return; }
-    if (!state.eventRsvpsLoaded) {
-      area.innerHTML = '<div class="rsvp-block"><div class="rsvp-block-head">RSVPs</div>' +
-        '<div class="rsvp-note">Not enabled yet — apply <code>0005_event_rsvps.sql</code> in Supabase.</div></div>';
-      return;
-    }
-    const rows = (state.eventRsvps || []).filter(function(r) { return r.event_id === ev.id; });
-    const byId = {};
-    (state.brothers || []).forEach(function(b) { byId[b.id] = b; });
-    function names(st) {
-      return rows.filter(function(r) { return r.status === st; })
-                 .map(function(r) { return rsvpDisplayName(byId[r.brother_id]); });
-    }
-    const yes = names('yes'), maybe = names('maybe'), no = names('no');
-    area.innerHTML = '<div class="rsvp-block">' +
-      '<div class="rsvp-block-head"><span>RSVPs</span>' +
-        '<button type="button" class="btn small" onclick="copyEventRsvpLink()">' + (ev.rsvpToken ? 'Copy RSVP link' : 'Create RSVP link') + '</button>' +
-      '</div>' +
-      '<div class="rsvp-counts">' +
-        '<span class="rsvp-count yes">' + yes.length + ' yes</span>' +
-        '<span class="rsvp-count">' + maybe.length + ' maybe</span>' +
-        '<span class="rsvp-count no">' + no.length + ' no</span>' +
-      '</div>' +
-      (yes.length
-        ? '<div class="rsvp-note">Going: ' + escapeHtml(yes.join(', ')) + (maybe.length ? ' · Maybe: ' + escapeHtml(maybe.join(', ')) : '') + '</div>'
-        : '<div class="rsvp-note">No responses yet' + (ev.rsvpToken ? '' : ' — create a link and drop it in the group chat') + '.</div>') +
-    '</div>';
-  }
-
-  window.copyEventRsvpLink = async function() {
-    const ev = state.editingEventId ? state.events.find(function(e) { return e.id === state.editingEventId; }) : null;
-    if (!ev) return;
-    if (!ev.rsvpToken) {
-      ev.rsvpToken = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
-      const ok = await persist('events', state.events);
-      if (!ok) { delete ev.rsvpToken; return; }
-    }
-    const link = location.origin + location.pathname + '?rsvp=' + encodeURIComponent(ev.id) + '&k=' + ev.rsvpToken;
-    try {
-      await navigator.clipboard.writeText(link);
-      toast('RSVP link copied.', 'success');
-    } catch (_) {
-      prompt('Copy the RSVP link:', link);
-    }
-    renderEventRsvpArea();
-  };
-
-  // Brother-facing boot path (?rsvp=<eventId>&k=<token>)
-  async function initRsvpMode() {
-    const m = state.rsvpMode;
-    try {
-      const events = await Storage.get('events');
-      const ev = (events || []).find(function(e) { return e.id === m.eventId; });
-      m.event = ev || null;
-      m.valid = !!(ev && ev.rsvpToken && m.key && ev.rsvpToken === m.key);
-      if (m.valid) {
-        // Name-only select — never pull demographics onto a shared-link page.
-        const { data, error } = await sb.from('brothers')
-          .select('id, first_name, last_name, preferred_name')
-          .eq('status', 'active')
-          .order('first_name', { ascending: true });
-        if (error) throw error;
-        state.rsvpBrothers = data || [];
-      }
-    } catch (e) {
-      console.error('RSVP init failed', e);
-      m.error = true;
-    }
-    state.loading = false;
-    render();
-  }
-
-  function renderRsvpPage() {
-    const m = state.rsvpMode || {};
-    const ev = m.event;
-    let body;
-    if (m.error) {
-      body = '<div class="rsvp-note">Something went wrong loading this invite. Try again in a minute.</div>';
-    } else if (!ev || !m.valid) {
-      body = '<div class="rsvp-note">This RSVP link isn&#39;t valid. Ask your rush chair for a fresh one.</div>';
-    } else if (m.submitted) {
-      const label = m.submitted === 'yes' ? 'going' : (m.submitted === 'no' ? 'not going' : 'a maybe');
-      body = '<div class="rsvp-confirm">Got it — you&#39;re marked <strong>' + label + '</strong>.</div>' +
-        '<div class="rsvp-actions">' +
-          '<button class="btn primary" onclick="downloadEventIcs()">Add to calendar (.ics)</button>' +
-          '<button class="btn" onclick="state.rsvpMode.submitted = null; render();">Change response</button>' +
-        '</div>';
-    } else {
-      const opts = (state.rsvpBrothers || []).map(function(b) {
-        const sel = m.lastBrotherId === b.id ? ' selected' : '';
-        return '<option value="' + escapeHtml(b.id) + '"' + sel + '>' + escapeHtml(rsvpDisplayName(b)) + '</option>';
-      }).join('');
-      body =
-        '<div class="rsvp-field">' +
-          '<label class="field-label" for="rsvpBrotherSelect">Who are you?</label>' +
-          '<select id="rsvpBrotherSelect" class="field-select"><option value="">Select your name…</option>' + opts + '</select>' +
-        '</div>' +
-        '<div class="rsvp-actions">' +
-          '<button class="btn primary" onclick="submitRsvp(&#39;yes&#39;)">I&#39;m in</button>' +
-          '<button class="btn" onclick="submitRsvp(&#39;maybe&#39;)">Maybe</button>' +
-          '<button class="btn" onclick="submitRsvp(&#39;no&#39;)">Can&#39;t make it</button>' +
-        '</div>' +
-        '<div class="rsvp-actions"><button class="btn small" onclick="downloadEventIcs()">Add to calendar (.ics)</button></div>';
-    }
-    return '<div class="login-screen"><div class="login-card rsvp-card">' +
-      '<div class="big-shield">ΑΚΨ</div>' +
-      '<div class="brand-text">Rush <em>SP&#39;27</em></div>' +
-      (ev && m.valid
-        ? '<div class="rsvp-event-title">' + escapeHtml(ev.title) + '</div>' +
-          '<div class="rsvp-event-meta">' + escapeHtml(formatEventTime(ev)) + (ev.location ? ' · ' + escapeHtml(ev.location) : '') + '</div>'
-        : '') +
-      body +
-      '<div class="login-footer"><span class="greek">ΑΚΨ</span><span>·</span><span>Rush committee RSVP</span></div>' +
-    '</div></div>';
-  }
-
-  window.submitRsvp = async function(status) {
-    const sel = document.getElementById('rsvpBrotherSelect');
-    const bid = sel ? sel.value : '';
-    if (!bid) { toast('Pick your name first.', 'error'); return; }
-    const m = state.rsvpMode;
-    try {
-      const { error } = await sb.from('event_rsvps').upsert({
-        event_id: m.eventId,
-        brother_id: bid,
-        status: status,
-        responded_at: new Date().toISOString()
-      }, { onConflict: 'event_id,brother_id' });
-      if (error) throw error;
-      m.submitted = status;
-      m.lastBrotherId = bid;
-      render();
-    } catch (e) {
-      console.error('submitRsvp failed', e);
-      toast('Could not save your RSVP — try again, or text the chairs.', 'error');
-    }
-  };
-
-  window.downloadEventIcs = function() {
-    const ev = (state.rsvpMode && state.rsvpMode.event) ||
-      (state.editingEventId ? state.events.find(function(e) { return e.id === state.editingEventId; }) : null);
-    if (!ev) return;
-    function pad(n) { return String(n).padStart(2, '0'); }
-    function stampUTC(iso) {
-      const d = new Date(iso);
-      return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) +
-        'T' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + '00Z';
-    }
-    function icsEscape(t) {
-      return String(t || '').replace(/\\/g, '\\\\').replace(/[,;]/g, function(c) { return '\\' + c; }).replace(/\r?\n/g, '\\n');
-    }
-    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AKPsi Rush SP26//EN', 'BEGIN:VEVENT',
-      'UID:' + ev.id + '@rush-sp26', 'DTSTAMP:' + stampUTC(new Date().toISOString())];
-    if (ev.hasTime) {
-      lines.push('DTSTART:' + stampUTC(ev.startISO));
-      lines.push('DTEND:' + stampUTC(ev.endISO || new Date(new Date(ev.startISO).getTime() + 3600000).toISOString()));
-    } else {
-      const d = new Date(ev.startISO);
-      lines.push('DTSTART;VALUE=DATE:' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()));
-    }
-    lines.push('SUMMARY:' + icsEscape(ev.title));
-    if (ev.location) lines.push('LOCATION:' + icsEscape(ev.location));
-    if (ev.notes) lines.push('DESCRIPTION:' + icsEscape(ev.notes));
-    lines.push('END:VEVENT', 'END:VCALENDAR');
-    const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = (ev.title || 'event').replace(/[^a-z0-9]+/gi, '_').toLowerCase() + '.ics';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 0);
-  };
-
 
   if (sb) init();
 </script>
