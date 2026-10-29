@@ -953,7 +953,21 @@
   .si-s.bad { color: #b23b35; font-weight: 600; }
   .si-dot { margin: 0 8px; color: var(--line-strong); }
   .si-err { color: var(--danger); margin-top: 4px; }
-  .si-confirm { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--fg); line-height: 1.5; max-width: 680px; }
+  .si-dlg-back {
+    position: fixed; inset: 0; z-index: 410; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: rgba(3, 16, 46, 0.35);
+  }
+  .si-dlg {
+    width: min(440px, 100%); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px;
+    box-shadow: 0 24px 64px rgba(3, 16, 46, 0.35); padding: 22px 24px 18px; font-family: 'Inter', sans-serif;
+  }
+  .si-dlg-title { font-size: 17px; font-weight: 600; color: var(--fg); }
+  .si-dlg-list { margin: 12px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.55; color: var(--fg); }
+  .si-dlg-list li + li { margin-top: 4px; }
+  .si-dlg-q { margin-top: 14px; font-size: 14px; color: var(--fg-muted); }
+  .si-dlg-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .si-dlg-btns .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  [data-theme="dark"] .si-dlg-back { background: rgba(0, 0, 0, 0.45); }
   .si-btns { display: flex; gap: 8px; margin-left: auto; }
   .si-btns .btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .si-grid td + td:not(.si-match):not(.si-del) { border-left: 1px solid var(--line); }
@@ -7246,19 +7260,40 @@
     if (c.repeat) parts.push('<span class="si-s bad">' + repeatPeople + ' repeat' + (repeatPeople === 1 ? '' : 's') + '</span>');
     if (c.bad) parts.push('<span class="si-s bad">' + c.bad + ' won’t save</span>');
     const summary = SI.loading ? 'Loading candidates…' : (parts.length ? parts.join('<span class="si-dot">·</span>') : 'Paste rows from your sheet, or type into the first row.');
-    if (SI.confirm) {
-      foot.innerHTML =
-        '<div class="si-confirm"><strong>Before saving:</strong> ' + SI.confirm + ' Do you want to proceed?</div>' +
-        '<div class="si-btns"><button type="button" class="btn" onclick="siConfirm(false)">Go back</button>' +
-        '<button type="button" class="btn primary" onclick="siConfirm(true)"' + (SI.saving ? ' disabled' : '') + '>' +
-          (SI.saving ? 'Saving…' : 'Save ' + c.save) + '</button></div>';
-      return;
-    }
+    siRenderDialog();
     foot.innerHTML =
       '<div class="si-summary">' + summary + (SI.error ? '<div class="si-err">' + escapeHtml(SI.error) + '</div>' : '') + '</div>' +
       '<div class="si-btns"><button type="button" class="btn" onclick="siClose()">Cancel</button>' +
       '<button type="button" class="btn primary" onclick="siSave()"' + (c.save && !SI.loading ? '' : ' disabled') + '>' +
         (c.save ? 'Save ' + c.save + ' score row' + (c.save === 1 ? '' : 's') : 'Save') + '</button></div>';
+  }
+
+  // Centered confirm dialog over the import grid: Proceed or Go back.
+  function siRenderDialog() {
+    const overlay = document.querySelector('.si-overlay');
+    if (!overlay) return;
+    let dlg = document.getElementById('siDialog');
+    if (!SI || !SI.confirm) { if (dlg) dlg.remove(); return; }
+    const fresh = !dlg;
+    if (fresh) {
+      dlg = document.createElement('div');
+      dlg.id = 'siDialog';
+      dlg.className = 'si-dlg-back';
+      dlg.addEventListener('mousedown', function (e) { if (e.target === dlg) { e.stopPropagation(); siConfirm(false); } });
+      overlay.appendChild(dlg);
+    }
+    dlg.innerHTML =
+      '<div class="si-dlg" role="alertdialog" aria-modal="true" aria-labelledby="siDlgTitle">' +
+        '<div class="si-dlg-title" id="siDlgTitle">Before you save</div>' +
+        '<ul class="si-dlg-list">' + SI.confirm.map(function (m) { return '<li>' + m + '</li>'; }).join('') + '</ul>' +
+        '<div class="si-dlg-q">Do you want to proceed?</div>' +
+        '<div class="si-dlg-btns">' +
+          '<button type="button" class="btn" onclick="siConfirm(false)"' + (SI.saving ? ' disabled' : '') + '>Go back</button>' +
+          '<button type="button" class="btn primary" id="siDlgGo" onclick="siConfirm(true)"' + (SI.saving ? ' disabled' : '') + '>' +
+            (SI.saving ? 'Saving…' : 'Proceed') + '</button>' +
+        '</div>' +
+      '</div>';
+    if (fresh) { const go = document.getElementById('siDlgGo'); if (go) go.focus(); }
   }
 
   function siRefresh(focus) {
@@ -7342,11 +7377,12 @@
     if (c.existing) msgs.push(c.existing + ' saved score' + (c.existing === 1 ? '' : 's') + ' will be overwritten.');
     if (repeatPeople) msgs.push(repeatPeople + ' rush' + (repeatPeople === 1 ? ' is' : 'es are') + ' entered more than once; only the last row for each is saved.');
     if (c.bad) msgs.push(c.bad + ' row' + (c.bad === 1 ? '' : 's') + ' with errors will be skipped.');
-    if (msgs.length) { SI.confirm = msgs.join(' '); siRenderFoot(); return; }
+    if (msgs.length) { SI.confirm = msgs; siRenderFoot(); return; }
     siCommit();
   };
   window.siConfirm = function (go) {
     if (!SI) return;
+    if (SI.saving) return;
     if (!go) { SI.confirm = null; siRenderFoot(); return; }
     siCommit();
   };
