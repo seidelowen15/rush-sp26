@@ -341,6 +341,7 @@
 
   .view { display: none; animation: fadeIn 0.3s ease; }
   .view.active { display: block; }
+  .app.settled .view { animation: none; }
 
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(4px); }
@@ -5911,8 +5912,12 @@
       root.innerHTML = renderPresent();
       return;
     }
+    const settled = state._lastView === state.currentView;
+    state._lastView = state.currentView;
+    const rdKeep = document.getElementById('rdOverlay');
+    const rdScroll = rdKeep ? rdKeep.scrollTop : 0;
     root.innerHTML = '' +
-      '<div class="app">' +
+      '<div class="app' + (settled ? ' settled' : '') + '">' +
         renderSidebar() +
         '<main class="main">' +
           renderHeader() +
@@ -5929,8 +5934,13 @@
 
         '</main>' +
       '</div>' +
+      (state.currentView === 'ratings' && state.ratingsSelected ? ratingDetailModal(state.ratingsSelected) : '') +
       (state.delibFs ? delibStage(true) : '') +
       (state.delibRedelibFor ? delibRedelibModal() : '');
+    if (rdScroll) {
+      const rdNow = document.getElementById('rdOverlay');
+      if (rdNow) rdNow.scrollTop = rdScroll;
+    }
 
     fitBrandSub();
   }
@@ -7079,9 +7089,7 @@
         '<button type="button" class="' + (tab === 'insights' ? 'active' : '') + '" onclick="setRatingsTab(\'insights\')">Insights</button>' +
       '</div>' +
 
-      (tab === 'board' ? board : insights) +
-
-      (state.ratingsSelected ? ratingDetailModal(state.ratingsSelected) : '');
+      (tab === 'board' ? board : insights);
   }
 
   window.setRatingsTab = function (t) { state.ratingsTab = t; render(); };
@@ -9034,7 +9042,7 @@
       '</div>';
     };
 
-    return '<div onclick="closeRatingDetail()" style="position:fixed; inset:0; ' +
+    return '<div id="rdOverlay" onclick="closeRatingDetail()" style="position:fixed; inset:0; ' +
       'background:rgba(3,16,46,0.55); z-index:400; display:flex; align-items:flex-start; ' +
       'justify-content:center; padding:40px 20px; overflow-y:auto;">' +
       '<div onclick="event.stopPropagation()" style="background:var(--bg); border-radius:14px; ' +
