@@ -85,6 +85,10 @@
     flex-direction: column;
   }
 
+  /* Playfair Display defaults to old-style figures (numbers dip below the
+     baseline, e.g. "SP'27"). Lining figures sit level with capitals app-wide. */
+  html { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }
+
   .brand-block {
     padding: 0 6px 20px;
     border-bottom: 1px solid var(--line);
