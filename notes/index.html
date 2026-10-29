@@ -704,12 +704,130 @@
     color: var(--fg-soft);
   }
 
+  /* ── Notes list (reference layout) ───────────────────────────── */
+  .nl-search {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--line-strong);
+    border-radius: 10px; padding: 0 14px; height: 46px; margin-bottom: 18px;
+  }
+  .nl-search:focus-within { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(10,36,99,0.08); }
+  .nl-search svg { width: 18px; height: 18px; color: var(--fg-muted); flex-shrink: 0; }
+  .nl-search input {
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+    font-family: 'Inter', sans-serif; font-size: 14px; color: var(--fg);
+  }
+  .nl-search input::placeholder { color: var(--fg-muted); }
+  .nl-search kbd {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--fg-muted);
+    border: 1px solid var(--line-strong); border-radius: 5px; padding: 2px 6px; background: var(--surface-2);
+  }
+  .nl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+  .nl-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .nl-tab {
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+    border: 1px solid transparent; background: var(--surface-2); color: var(--fg-soft);
+    border-radius: 999px; padding: 7px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .nl-tab:hover { color: var(--fg); }
+  .nl-tab.active { background: var(--navy); color: var(--paper); }
+  .nl-tab-count { font-size: 11px; font-weight: 600; opacity: 0.6; }
+  .nl-tab.active .nl-tab-count { opacity: 0.9; background: rgba(255,255,255,0.16); border-radius: 999px; padding: 0 7px; }
+  .nl-section-label {
+    font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--fg); margin: 6px 0 10px;
+  }
+  .nl-section-label span { color: var(--fg-muted); font-weight: 500; margin-left: 4px; }
+  .nl-list {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    margin-bottom: 26px; overflow: hidden;
+  }
+  .nl-row {
+    display: grid; grid-template-columns: 28px minmax(0, 1fr) auto 190px 28px;
+    align-items: center; gap: 16px; padding: 14px 18px;
+    border-bottom: 1px solid var(--line); cursor: pointer;
+    transition: background 0.12s ease;
+  }
+  .nl-row:last-child { border-bottom: none; }
+  .nl-row:hover { background: color-mix(in srgb, var(--navy) 4%, var(--surface)); }
+  .nl-icon { display: flex; align-items: center; justify-content: center; color: var(--fg-soft); }
+  .nl-icon svg { width: 20px; height: 20px; }
+  .nl-star { color: var(--gold); font-size: 18px; line-height: 1; }
+  .nl-main { min-width: 0; }
+  .nl-title {
+    font-family: 'Playfair Display', serif; font-weight: 700; font-size: 15.5px; color: var(--fg);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .nl-preview {
+    font-family: 'Inter', sans-serif; font-size: 13px; color: var(--fg-muted); margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .nl-empty { font-style: italic; }
+  .nl-chip {
+    font-family: 'Inter', sans-serif; font-size: 12px; color: var(--fg-soft);
+    background: var(--surface-2); border-radius: 6px; padding: 4px 10px; white-space: nowrap;
+  }
+  .nl-meta { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .nl-avatar {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-family: 'Inter', sans-serif; font-size: 10.5px; font-weight: 700;
+  }
+  .nl-meta-text { font-family: 'Inter', sans-serif; font-size: 12.5px; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nl-more {
+    border: none; background: transparent; color: var(--fg-muted); font-size: 18px; line-height: 1;
+    width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+  }
+  .nl-more:hover { background: var(--surface-2); color: var(--fg); }
+  .nl-empty-state {
+    padding: 48px 20px; text-align: center; color: var(--fg-muted);
+    font-family: 'Inter', sans-serif; font-size: 14px;
+    border: 1px dashed var(--line-strong); border-radius: 10px;
+  }
+  .nl-menu {
+    position: absolute; z-index: 300; min-width: 150px; padding: 4px;
+    background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(3,16,46,0.18);
+  }
+  .nl-menu button {
+    display: block; width: 100%; text-align: left; border: none; background: transparent;
+    font-family: 'Inter', sans-serif; font-size: 13px; color: var(--fg); padding: 8px 10px; border-radius: 5px; cursor: pointer;
+  }
+  .nl-menu button:hover { background: var(--surface-2); }
+  .nl-menu button.danger { color: var(--danger); }
+  @media (max-width: 760px) {
+    .nl-row { grid-template-columns: 24px minmax(0, 1fr) 28px; gap: 12px; padding: 12px 14px; }
+    .nl-chip-cell, .nl-meta { display: none; }
+    .nl-search kbd { display: none; }
+  }
+
   /* ── Note editor modal: refined editorial layout ─────────────── */
   #noteModalInner {
     --author-color: var(--navy);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: min(86vh, 860px);
   }
+  #noteModalInner > * { flex-shrink: 0; }
+  #noteModalInner .editor-surface { flex: 1 1 auto; min-height: 0; display: flex; }
+  #noteModalInner .editor-body {
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    resize: none;
+  }
+  .note-save-status {
+    align-self: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fg-muted);
+    margin-right: 6px;
+  }
+  .note-save-status.err { color: var(--danger); }
   .editor-accent-strip {
     position: absolute;
     top: 0; left: 0; right: 0;
@@ -5297,26 +5415,18 @@
   <div class="modal wide" id="noteModalInner">
     <button class="modal-close" onclick="closeNoteEditor()">✕</button>
     <div class="editor-accent-strip" id="editorAccentStrip"></div>
-    <input type="text" class="editor-title-input" id="editorTitle" placeholder="Untitled note…" />
+    <input type="text" class="editor-title-input" id="editorTitle" placeholder="Untitled note…" oninput="scheduleNoteSave()" />
     <div class="editor-meta-rail" id="editorMetaRail"></div>
-    <div class="editor-mode-bar">
-      <div class="editor-mode-toggle">
-        <button class="mode-btn" data-mode="read" onclick="setEditorMode('read')">Read</button>
-        <button class="mode-btn" data-mode="edit" onclick="setEditorMode('edit')">Edit</button>
-      </div>
-      <div class="editor-mode-hint" id="editorModeHint"></div>
-    </div>
     <div class="editor-surface" id="editorSurface">
-      <textarea class="editor-body" id="editorBody" placeholder="Start writing… use # for headings, - for bullets"></textarea>
-      <div class="editor-read" id="editorRead"></div>
+      <textarea class="editor-body" id="editorBody" placeholder="Start writing…" oninput="scheduleNoteSave()"></textarea>
     </div>
     <div class="editor-tag-row" id="editorTagRow"></div>
     <div class="tag-suggestions-row" id="editorTagSuggest" style="display:none;"></div>
     <div class="modal-footer">
       <button class="btn danger" onclick="deleteCurrentNote()" id="deleteNoteBtn" style="display:none">Delete</button>
       <div class="right">
-        <button class="btn" onclick="closeNoteEditor()">Cancel</button>
-        <button class="btn primary" onclick="saveNote()">Save note</button>
+        <span class="note-save-status" id="noteSaveStatus"></span>
+        <button class="btn primary" onclick="closeNoteEditor()">Done</button>
       </div>
     </div>
   </div>
@@ -5876,6 +5986,7 @@
     notesHelpOpen: false,
     candidateFilter: 'all',
     notesSearchQuery: '',
+    notesTab: 'all',
 
     // Brothers view (chair-facing only). Demographics live on the row
     // objects but are only surfaced in the profile modal, never in any
@@ -8651,7 +8762,7 @@
   function renderHeader() {
     const titles = {
       dashboard: ['Home', ''],
-      notes: ['Notes', '& ideas'],
+      notes: ['Notes', ''],
       calendar: ['Calendar', ''],
       schedule: ['Schedule', '& events'],
       tasks: ['Tasks', '& to-dos'],
@@ -8676,6 +8787,7 @@
       subHtml = '<div class="page-sub">Here\'s your rush overview.</div>';
     } else {
       titleHtml = main + (em ? ' <em>' + em + '</em>' : '');
+      if (state.currentView === 'notes') subHtml = '<div class="page-sub">Store and organize important information for your chapter.</div>';
     }
 
     const calIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:18px;height:18px;vertical-align:middle;margin-right:8px;color:var(--fg-muted)"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>';
@@ -10144,62 +10256,197 @@
     toast('PDF exported: ' + filename, 'success');
   };
 
-  function renderNotesView() {
-    const query = state.notesSearchQuery.toLowerCase().trim();
-    let filtered = state.notes;
-    if (query) {
-      filtered = filtered.filter(n =>
-        (n.title || '').toLowerCase().includes(query) ||
-        (n.body || '').toLowerCase().includes(query) ||
-        (n.tags || []).some(t => t.toLowerCase().includes(query))
-      );
-    }
-    filtered = filtered.slice().sort((a, b) => {
-      if (!!b.pinned - !!a.pinned !== 0) return !!b.pinned - !!a.pinned;
-      return b.updatedAt - a.updatedAt;
-    });
-
-    return '' +
-      '<div class="toolbar">' +
-        '<input type="text" class="search-input" id="searchInput" placeholder="Search notes, tags, content…" value="' + escapeHtml(state.notesSearchQuery) + '" oninput="handleNoteSearch(this.value)" />' +
-        '<div class="view-switcher">' +
-          '<button class="view-switch-btn ' + (state.notesViewMode === 'grid' ? 'active' : '') + '" onclick="setNoteView(\'grid\')">Grid</button>' +
-          '<button class="view-switch-btn ' + (state.notesViewMode === 'list' ? 'active' : '') + '" onclick="setNoteView(\'list\')">List</button>' +
-        '</div>' +
-        '<button class="tag-help-btn ' + (state.notesHelpOpen ? 'active' : '') + '" onclick="toggleTagHelp()" title="What do these tags mean?" aria-label="Tag guide">?</button>' +
-        '<button class="btn primary" onclick="openNoteEditor()">+ New note</button>' +
-      '</div>' +
-      (state.notesHelpOpen ? renderTagHelpPanel() : '') +
-      (state.notesViewMode === 'grid'
-        ? '<div class="notes-grid-wrap">' + renderNotesGrid(filtered) + '</div>'
-        : '<div class="notes-list">' + renderNotesList(filtered) + '</div>');
+  // ── Notes list: one chronological list, pinned on top, filtered by tab + search ──
+  const NOTE_TABS = [
+    { id: 'all',       label: 'All notes' },
+    { id: 'pinned',    label: 'Pinned' },
+    { id: 'meetings',  label: 'Meetings' },
+    { id: 'pr',        label: 'PR' },
+    { id: 'logistics', label: 'Logistics' },
+    { id: 'archive',   label: 'Archived' },
+  ];
+  function noteTagList(n) { return (n.tags || []).map(function(t) { return String(t).toLowerCase().trim(); }); }
+  function noteIsArchived(n) { const t = noteTagList(n); return t.indexOf('archive') !== -1 || t.indexOf('archived') !== -1; }
+  function notesForTab(tab) {
+    const all = state.notes || [];
+    if (tab === 'archive') return all.filter(noteIsArchived);
+    const live = all.filter(function(n) { return !noteIsArchived(n); });
+    if (tab === 'all') return live;
+    if (tab === 'pinned') return live.filter(function(n) { return n.pinned; });
+    return live.filter(function(n) { return noteTagList(n).indexOf(tab) !== -1; });
   }
+  function noteMatchesQuery(n, q) {
+    if (!q) return true;
+    const a = MEMBERS.find(function(m) { return m.id === n.authorId; });
+    return [n.title, n.body, (n.tags || []).join(' '), a ? a.name : ''].some(function(v) {
+      return String(v || '').toLowerCase().indexOf(q) !== -1;
+    });
+  }
+  function noteInitials(name) {
+    const parts = String(name || '?').trim().split(/\s+/);
+    return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  }
+  function noteShortDate(ms) {
+    if (!ms) return '';
+    const d = new Date(ms);
+    const sameYear = d.getFullYear() === new Date().getFullYear();
+    return d.toLocaleDateString('en-US', sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function notePreview(body) {
+    return String(body || '').split(/\r?\n/)
+      .map(function(l) { return l.replace(/^\s*(#{1,6}|[-*•]|\d+[.)])\s+/, '').trim(); })
+      .filter(Boolean).join(' · ');
+  }
+  function noteChipLabel(n) {
+    const tags = noteTagList(n).filter(function(t) { return t !== 'archive' && t !== 'archived'; });
+    for (let i = 0; i < tags.length; i++) {
+      const p = NOTE_PRIMARY_TAGS.find(function(x) { return x.id === tags[i]; });
+      if (p) return p.label;
+    }
+    if (!tags.length) return '';
+    const raw = (n.tags || []).find(function(t) { return String(t).toLowerCase().trim() === tags[0]; });
+    return raw || tags[0];
+  }
+  const NOTE_DOC_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>';
 
-  function renderTagHelpPanel() {
-    return '<div class="tag-help-panel">' +
-      '<div class="tag-help-panel-header">' +
-        '<div class="tag-help-panel-title">Tag <em>guide</em></div>' +
-        '<button class="tag-help-panel-close" onclick="toggleTagHelp()" aria-label="Close">✕</button>' +
+  function renderNoteRow(n) {
+    const author = MEMBERS.find(function(m) { return m.id === n.authorId; });
+    const chip = noteChipLabel(n);
+    const preview = notePreview(n.body);
+    return '<div class="nl-row' + (n.pinned ? ' is-pinned' : '') + '" onclick="openNoteEditor(\'' + n.id + '\')">' +
+      '<div class="nl-icon">' + (n.pinned ? '<span class="nl-star">★</span>' : NOTE_DOC_ICON) + '</div>' +
+      '<div class="nl-main">' +
+        '<div class="nl-title">' + escapeHtml(n.title || 'Untitled') + '</div>' +
+        '<div class="nl-preview">' + (preview ? escapeHtml(preview) : '<span class="nl-empty">No content</span>') + '</div>' +
       '</div>' +
-      '<div class="tag-help-grid">' +
-        NOTE_PRIMARY_TAGS.map(t =>
-          '<div class="tag-help-item">' +
-            '<div class="help-tag-label">' + escapeHtml(t.label) + '</div>' +
-            '<div class="help-tag-desc">' + escapeHtml(t.desc) + '</div>' +
-            '<div class="help-tag-example">' + escapeHtml(t.example) + '</div>' +
-          '</div>'
-        ).join('') +
+      '<div class="nl-chip-cell">' + (chip ? '<span class="nl-chip">' + escapeHtml(chip) + '</span>' : '') + '</div>' +
+      '<div class="nl-meta">' +
+        '<span class="nl-avatar" style="background:' + (author ? author.color : 'var(--navy)') + '">' + escapeHtml(noteInitials(author ? author.name : '?')) + '</span>' +
+        '<span class="nl-meta-text">' + escapeHtml(author ? author.name : 'Unknown') + ' · ' + escapeHtml(noteShortDate(n.updatedAt || n.createdAt)) + '</span>' +
       '</div>' +
-      '<div class="tag-help-panel-footer">' +
-        'A note\'s <strong>first matching primary tag</strong> decides its section. Other tags (like <code>draft</code>, <code>decision</code>, <code>week-of-rush</code>, or a person\'s name) are extra metadata — searchable, but they don\'t affect grouping.' +
-      '</div>' +
+      '<button class="nl-more" title="More" onclick="event.stopPropagation(); openNoteMenu(\'' + n.id + '\', this)">⋯</button>' +
     '</div>';
   }
 
-  window.toggleTagHelp = function() {
-    state.notesHelpOpen = !state.notesHelpOpen;
-    render();
+  function renderNotesListBody() {
+    const q = state.notesSearchQuery.toLowerCase().trim();
+    const tab = state.notesTab || 'all';
+    const notes = notesForTab(tab).filter(function(n) { return noteMatchesQuery(n, q); })
+      .sort(function(a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+    if (notes.length === 0) {
+      return '<div class="nl-empty-state">' + (q ? 'No notes match “' + escapeHtml(state.notesSearchQuery.trim()) + '”.' : 'No notes here yet.') + '</div>';
+    }
+    const section = function(label, list) {
+      if (!list.length) return '';
+      return '<div class="nl-section-label">' + label + ' <span>' + list.length + '</span></div>' +
+        '<div class="nl-list">' + list.map(renderNoteRow).join('') + '</div>';
+    };
+    if (tab === 'pinned' || tab === 'archive') {
+      return section(tab === 'pinned' ? 'Pinned' : 'Archived', notes);
+    }
+    return section('Pinned', notes.filter(function(n) { return n.pinned; })) +
+           section('Recent notes', notes.filter(function(n) { return !n.pinned; }));
+  }
+
+  function renderNotesView() {
+    const tab = state.notesTab || 'all';
+    const kbd = /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ K' : 'Ctrl K';
+    const tabsHtml = NOTE_TABS.map(function(t) {
+      const count = notesForTab(t.id).length;
+      return '<button class="nl-tab' + (tab === t.id ? ' active' : '') + '" onclick="setNotesTab(\'' + t.id + '\')">' +
+        escapeHtml(t.label) + (count ? ' <span class="nl-tab-count">' + count + '</span>' : '') + '</button>';
+    }).join('');
+    return '' +
+      '<div class="nl-search">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>' +
+        '<input type="text" id="searchInput" placeholder="Search notes, tags, or content…" value="' + escapeHtml(state.notesSearchQuery) + '" oninput="handleNoteSearch(this.value)" />' +
+        '<kbd>' + kbd + '</kbd>' +
+      '</div>' +
+      '<div class="nl-toolbar">' +
+        '<div class="nl-tabs">' + tabsHtml + '</div>' +
+        '<button class="btn primary" onclick="openNoteEditor()">+ New note</button>' +
+      '</div>' +
+      '<div id="notesListWrap">' + renderNotesListBody() + '</div>';
+  }
+
+  window.setNotesTab = function(tab) { state.notesTab = tab; render(); };
+
+  window.handleNoteSearch = function(q) {
+    state.notesSearchQuery = q;
+    const wrap = document.getElementById('notesListWrap');
+    if (wrap) wrap.innerHTML = renderNotesListBody();
   };
+
+  // Row "⋯" menu: pin, archive, delete
+  window.openNoteMenu = function(id, btn) {
+    closeNoteMenu();
+    const n = state.notes.find(function(x) { return x.id === id; });
+    if (!n) return;
+    const menu = document.createElement('div');
+    menu.className = 'nl-menu';
+    menu.id = 'noteRowMenu';
+    menu.innerHTML =
+      '<button onclick="noteMenuAction(\'' + id + '\', \'pin\')">' + (n.pinned ? 'Unpin' : 'Pin to top') + '</button>' +
+      '<button onclick="noteMenuAction(\'' + id + '\', \'archive\')">' + (noteIsArchived(n) ? 'Unarchive' : 'Archive') + '</button>' +
+      '<button class="danger" onclick="noteMenuAction(\'' + id + '\', \'delete\')">Delete</button>';
+    document.body.appendChild(menu);
+    const r = btn.getBoundingClientRect();
+    menu.style.top = (window.scrollY + r.bottom + 4) + 'px';
+    menu.style.left = Math.max(8, window.scrollX + r.right - menu.offsetWidth) + 'px';
+    setTimeout(function() { document.addEventListener('click', closeNoteMenu, { once: true }); }, 0);
+  };
+  function closeNoteMenu() { const m = document.getElementById('noteRowMenu'); if (m) m.remove(); }
+
+  window.noteMenuAction = async function(id, action) {
+    closeNoteMenu();
+    const n = state.notes.find(function(x) { return x.id === id; });
+    if (!n) return;
+    if (action === 'delete') {
+      if (!confirm('Delete this note? It will be removed for the committee.')) return;
+      state.notes = state.notes.filter(function(x) { return x.id !== id; });
+      render();
+      const ok = await deleteNoteRow(id);
+      toast(ok ? 'Note deleted' : 'Delete failed — check connection', ok ? 'default' : 'error');
+      return;
+    }
+    if (action === 'pin') n.pinned = !n.pinned;
+    if (action === 'archive') {
+      if (noteIsArchived(n)) {
+        n.tags = (n.tags || []).filter(function(t) { const k = String(t).toLowerCase().trim(); return k !== 'archive' && k !== 'archived'; });
+      } else {
+        n.tags = (n.tags || []).concat(['archive']);
+      }
+    }
+    render();
+    const ok = await persistNote(n);
+    if (!ok) toast('Save failed — check connection', 'error');
+  };
+
+  // Single-row writes. Storage.set() rewrites the whole notes table and deletes rows
+  // it doesn't know about, which can drop a teammate's brand-new note. Autosave and
+  // row actions only ever touch the one row they changed.
+  async function persistNote(note) {
+    try {
+      const { error } = await sb.from('notes').upsert({ id: note.id, data: note }, { onConflict: 'id' });
+      if (error) throw error;
+      connectionOK = true;
+      return true;
+    } catch (e) {
+      console.error('persistNote failed', e);
+      connectionOK = false;
+      return false;
+    }
+  }
+  async function deleteNoteRow(id) {
+    try {
+      const { error } = await sb.from('notes').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('deleteNoteRow failed', e);
+      return false;
+    }
+  }
 
   // Primary tag taxonomy. First match (in this order) wins as a note's section.
   const NOTE_PRIMARY_TAGS = [
@@ -10211,216 +10458,6 @@
     { id: 'logistics',   label: 'Logistics',  desc: 'Stuff supporting rush but not rush itself — budgets, vendors, merch, food, supplies, transport.', example: 'e.g. T-shirt order, food vendor list' },
     { id: 'archive',     label: 'Archive',    desc: 'Done, superseded, or inactive. Kept for reference. Collapsed by default.', example: 'e.g. last semester\'s schedule, old policy draft' },
   ];
-  const NOTE_PRIMARY_TAG_IDS = NOTE_PRIMARY_TAGS.map(t => t.id);
-
-  function getNoteSection(note) {
-    const tags = (note.tags || []).map(t => String(t).toLowerCase().trim());
-    for (const tag of tags) {
-      if (NOTE_PRIMARY_TAG_IDS.includes(tag)) return tag;
-    }
-    return 'untagged';
-  }
-
-  function groupNotesBySection(notes) {
-    const buckets = { pinned: [] };
-    NOTE_PRIMARY_TAG_IDS.forEach(id => { buckets[id] = []; });
-    buckets.untagged = [];
-
-    notes.forEach(n => {
-      if (n.pinned) { buckets.pinned.push(n); return; }
-      buckets[getNoteSection(n)].push(n);
-    });
-
-    Object.keys(buckets).forEach(k => buckets[k].sort((a, b) => b.updatedAt - a.updatedAt));
-
-    const order = [
-      { id: 'pinned',     label: 'Pinned',     cls: 'pinned' },
-      { id: 'rush-ops',   label: 'Rush Ops',   cls: '' },
-      { id: 'candidates', label: 'Candidates', cls: '' },
-      { id: 'meetings',   label: 'Meetings',   cls: '' },
-      { id: 'pr',         label: 'PR',         cls: '' },
-      { id: 'exec',       label: 'Exec',       cls: '' },
-      { id: 'logistics',  label: 'Logistics',  cls: '' },
-      { id: 'untagged',   label: 'Untagged',   cls: 'untagged' },
-      { id: 'archive',    label: 'Archive',    cls: 'archive' },
-    ];
-    return order
-      .map(s => Object.assign({}, s, { notes: buckets[s.id] }))
-      .filter(s => s.notes.length > 0);
-  }
-
-  function renderNoteCard(n) {
-    const author = MEMBERS.find(m => m.id === n.authorId);
-    const authorColor = author ? author.color : 'var(--navy)';
-    const tags = (n.tags || []).slice(0, 3);
-    return '<div class="note-card" style="--author-color: ' + authorColor + '" onclick="openNoteEditor(\'' + n.id + '\')">' +
-      '<button class="note-pin ' + (n.pinned ? 'pinned' : '') + '" onclick="event.stopPropagation(); togglePin(\'' + n.id + '\')" title="' + (n.pinned ? 'Unpin' : 'Pin') + '">' + (n.pinned ? '★' : '☆') + '</button>' +
-      '<div class="note-title">' + escapeHtml(n.title || 'Untitled') + '</div>' +
-      '<div class="note-preview">' + escapeHtml(n.body || 'No content…') + '</div>' +
-      (tags.length > 0 ? '<div class="note-tags">' + tags.map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('') + ((n.tags || []).length > 3 ? '<span class="tag">+' + (n.tags.length - 3) + '</span>' : '') + '</div>' : '') +
-      '<div class="note-footer">' +
-        '<div class="note-author">' +
-          (author ? '<div class="mini-avatar" style="background:' + author.color + '">' + author.name[0] + '</div>' + escapeHtml(author.name) : '—') +
-        '</div>' +
-        '<div>' + timeAgo(n.updatedAt) + '</div>' +
-      '</div>' +
-    '</div>';
-  }
-
-  function renderNotesGrid(notes) {
-    if (notes.length === 0) {
-      return '<div class="empty-state" style="grid-column: 1/-1;">' +
-        '<div class="ornament">✎</div>' +
-        '<div style="font-family:\'Playfair Display\',serif; font-size:22px; font-style:italic; margin-bottom:8px;">No notes yet</div>' +
-        '<div style="font-size:13px;">Create the first one — it\'ll show up for the whole committee.</div>' +
-      '</div>';
-    }
-
-    // Search active → flat grid, no sectioning
-    if (state.notesSearchQuery.trim()) {
-      return '<div class="notes-grid">' + notes.map(renderNoteCard).join('') + '</div>';
-    }
-
-    const sections = groupNotesBySection(notes);
-    return sections.map(section => {
-      const isArchive = section.id === 'archive';
-      const collapsedCls = (isArchive && state.notesArchiveCollapsed) ? ' collapsed' : '';
-      const headerClick = isArchive ? ' onclick="toggleArchiveSection()"' : '';
-      const chevron = isArchive ? '<span class="chevron">▾</span>' : '';
-      return '<div class="notes-section ' + section.cls + collapsedCls + '">' +
-        '<div class="notes-section-header"' + headerClick + '>' +
-          chevron +
-          '<span class="section-label">' + section.label + '</span>' +
-          '<span class="section-count">' + section.notes.length + '</span>' +
-        '</div>' +
-        '<div class="notes-grid">' + section.notes.map(renderNoteCard).join('') + '</div>' +
-      '</div>';
-    }).join('');
-  }
-
-  function renderNotesList(notes) {
-    if (notes.length === 0) {
-      return '<div class="empty-state"><div class="ornament">✎</div><div>No notes yet</div></div>';
-    }
-    return '<div class="list-row header"><div></div><div>Title</div><div>Tags</div><div>Author</div><div>Updated</div><div></div></div>' +
-      notes.map(n => {
-        const author = MEMBERS.find(m => m.id === n.authorId);
-        const color = author ? author.color : 'var(--navy)';
-        const tags = (n.tags || []).slice(0, 2);
-        return '<div class="list-row" onclick="openNoteEditor(\'' + n.id + '\')">' +
-          '<div class="list-color-dot" style="background:' + color + '"></div>' +
-          '<div><div class="list-title">' + (n.pinned ? '★ ' : '') + escapeHtml(n.title || 'Untitled') + '</div></div>' +
-          '<div style="display:flex; gap:4px; flex-wrap:wrap;">' + tags.map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('') + '</div>' +
-          '<div style="font-family:\'JetBrains Mono\',monospace; font-size:11px; color:var(--fg-muted);">' + (author ? escapeHtml(author.name) : '—') + '</div>' +
-          '<div style="font-family:\'JetBrains Mono\',monospace; font-size:10px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.08em;">' + timeAgo(n.updatedAt) + '</div>' +
-          '<div style="color:var(--fg-muted); text-align:right;">→</div>' +
-        '</div>';
-      }).join('');
-  }
-
-  window.setNoteView = function(mode) { state.notesViewMode = mode; render(); };
-
-  window.handleNoteSearch = function(q) {
-    state.notesSearchQuery = q;
-    const qLow = q.toLowerCase().trim();
-    const notes = state.notes
-      .filter(n => !qLow || (n.title || '').toLowerCase().includes(qLow) || (n.body || '').toLowerCase().includes(qLow) || (n.tags || []).some(t => t.toLowerCase().includes(qLow)))
-      .sort((a, b) => (!!b.pinned - !!a.pinned) || (b.updatedAt - a.updatedAt));
-    const wrap = document.querySelector('.notes-grid-wrap');
-    const list = document.querySelector('.notes-list');
-    if (wrap) wrap.innerHTML = renderNotesGrid(notes);
-    if (list) list.innerHTML = renderNotesList(notes);
-  };
-
-  window.toggleArchiveSection = function() {
-    state.notesArchiveCollapsed = !state.notesArchiveCollapsed;
-    const wrap = document.querySelector('.notes-grid-wrap');
-    if (wrap) {
-      const qLow = state.notesSearchQuery.toLowerCase().trim();
-      const notes = state.notes
-        .filter(n => !qLow || (n.title || '').toLowerCase().includes(qLow) || (n.body || '').toLowerCase().includes(qLow) || (n.tags || []).some(t => t.toLowerCase().includes(qLow)))
-        .sort((a, b) => (!!b.pinned - !!a.pinned) || (b.updatedAt - a.updatedAt));
-      wrap.innerHTML = renderNotesGrid(notes);
-    }
-  };
-
-  window.togglePin = async function(id) {
-    const n = state.notes.find(x => x.id === id);
-    if (!n) return;
-    n.pinned = !n.pinned;
-    await persist('notes', state.notes);
-    render();
-  };
-
-  // ── Lightweight markdown: # / ## headings, - or * bullets, blank lines = paragraphs ──
-  function renderNoteMarkdown(src) {
-    const raw = (src || '').trim();
-    if (!raw) return '<em class="empty-doc">No content yet. Switch to Edit to write.</em>';
-
-    const lines = raw.split(/\r?\n/);
-    const out = [];
-    let listOpen = false;
-    let paraBuf = [];
-
-    function flushPara() {
-      if (paraBuf.length === 0) return;
-      out.push('<p>' + paraBuf.map(escapeHtml).join('<br/>') + '</p>');
-      paraBuf = [];
-    }
-    function closeList() {
-      if (listOpen) { out.push('</ul>'); listOpen = false; }
-    }
-
-    for (const rawLine of lines) {
-      const line = rawLine.trimEnd();
-      if (!line.trim()) { flushPara(); closeList(); continue; }
-
-      const h1 = line.match(/^#\s+(.+)$/);
-      const h2 = line.match(/^##\s+(.+)$/);
-      const bullet = line.match(/^\s*[-*]\s+(.+)$/);
-
-      if (h2) { flushPara(); closeList(); out.push('<h2>' + escapeHtml(h2[1]) + '</h2>'); continue; }
-      if (h1) { flushPara(); closeList(); out.push('<h1>' + escapeHtml(h1[1]) + '</h1>'); continue; }
-      if (bullet) {
-        flushPara();
-        if (!listOpen) { out.push('<ul>'); listOpen = true; }
-        out.push('<li>' + escapeHtml(bullet[1]) + '</li>');
-        continue;
-      }
-      closeList();
-      paraBuf.push(line);
-    }
-    flushPara();
-    closeList();
-    return out.join('');
-  }
-
-  window.setEditorMode = function(mode) {
-    state.editorMode = mode;
-    applyEditorMode();
-  };
-
-  function applyEditorMode() {
-    const inner = document.getElementById('noteModalInner');
-    if (!inner) return;
-    inner.setAttribute('data-mode', state.editorMode);
-    document.querySelectorAll('#noteModalInner .mode-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.mode === state.editorMode);
-    });
-    const hint = document.getElementById('editorModeHint');
-    if (hint) {
-      hint.textContent = state.editorMode === 'edit'
-        ? 'Use # heading · ## section · - bullet'
-        : '';
-    }
-    if (state.editorMode === 'read') {
-      const body = document.getElementById('editorBody').value;
-      document.getElementById('editorRead').innerHTML = renderNoteMarkdown(body);
-    } else {
-      setTimeout(() => document.getElementById('editorBody')?.focus(), 30);
-    }
-  }
-
   function renderEditorMetaRail(note) {
     const rail = document.getElementById('editorMetaRail');
     if (!rail) return;
@@ -10451,31 +10488,88 @@
   }
 
   window.openNoteEditor = function(id) {
+    clearTimeout(noteSaveTimer);
     state.editingNoteId = id || null;
     const note = id ? state.notes.find(n => n.id === id) : null;
     document.getElementById('editorTitle').value = note?.title || '';
     document.getElementById('editorBody').value = note?.body || '';
     state.editingNoteTags = (note?.tags || []).slice();
 
-    // Author-color: existing note → original author; new note → current user
     const authorId = note ? note.authorId : state.currentUser;
     const author = MEMBERS.find(m => m.id === authorId);
-    const authorColor = author ? author.color : 'var(--navy)';
     const inner = document.getElementById('noteModalInner');
-    if (inner) inner.style.setProperty('--author-color', authorColor);
-
-    // Smart mode default: Read for existing, Edit for new
-    state.editorMode = note ? 'read' : 'edit';
+    if (inner) inner.style.setProperty('--author-color', author ? author.color : 'var(--navy)');
 
     renderEditorMetaRail(note);
     renderEditorTags();
+    setNoteSaveStatus('');
     document.getElementById('deleteNoteBtn').style.display = id ? 'inline-flex' : 'none';
     document.getElementById('noteModal').classList.add('active');
-    applyEditorMode();
-    if (state.editorMode === 'edit') {
-      setTimeout(() => document.getElementById('editorTitle').focus(), 50);
-    }
+    setTimeout(() => {
+      if (note) {
+        const b = document.getElementById('editorBody');
+        b.focus();
+        b.setSelectionRange(b.value.length, b.value.length);
+        b.scrollTop = 0;
+      } else {
+        document.getElementById('editorTitle').focus();
+      }
+    }, 50);
   };
+
+  // ── Autosave: ~0.8s after the last change, and on close ──
+  let noteSaveTimer = null;
+  function setNoteSaveStatus(text, isErr) {
+    const el = document.getElementById('noteSaveStatus');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.toggle('err', !!isErr);
+  }
+  window.scheduleNoteSave = function() {
+    setNoteSaveStatus('Editing…');
+    clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(flushNoteSave, 800);
+  };
+  async function flushNoteSave() {
+    clearTimeout(noteSaveTimer);
+    noteSaveTimer = null;
+    const title = document.getElementById('editorTitle').value.trim();
+    const body = document.getElementById('editorBody').value.trim();
+    const tags = state.editingNoteTags.slice();
+    let note = state.editingNoteId ? state.notes.find(n => n.id === state.editingNoteId) : null;
+    if (!note) {
+      if (!title && !body) { setNoteSaveStatus(''); return true; }
+      note = {
+        id: state.editingNoteId || ('n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+        title, body, tags,
+        pinned: false,
+        authorId: state.currentUser,
+        lastEditedBy: state.currentUser,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      state.notes.unshift(note);
+      state.editingNoteId = note.id;
+      const del = document.getElementById('deleteNoteBtn');
+      if (del) del.style.display = 'inline-flex';
+    } else {
+      if (note.title === title && note.body === body &&
+          JSON.stringify(note.tags || []) === JSON.stringify(tags)) {
+        setNoteSaveStatus('Saved');
+        return true;
+      }
+      note.title = title;
+      note.body = body;
+      note.tags = tags;
+      note.updatedAt = Date.now();
+      note.lastEditedBy = state.currentUser;
+    }
+    setNoteSaveStatus('Saving…');
+    const ok = await persistNote(note);
+    setNoteSaveStatus(ok ? 'Saved' : 'Not saved — check connection', !ok);
+    return ok;
+  }
+  window.saveNote = flushNoteSave;  // Ctrl/Cmd+S
 
   function renderEditorTags() {
     const row = document.getElementById('editorTagRow');
@@ -10505,6 +10599,7 @@
     if (state.editingNoteTags.includes(tagId)) return;
     state.editingNoteTags.push(tagId);
     renderEditorTags();
+    scheduleNoteSave();
   };
 
   window.addNoteTag = function() {
@@ -10519,59 +10614,36 @@
     state.editingNoteTags.push(val);
     input.value = '';
     renderEditorTags();
+    scheduleNoteSave();
     setTimeout(() => document.getElementById('newTagInput')?.focus(), 10);
   };
 
   window.removeNoteTag = function(i) {
     state.editingNoteTags.splice(i, 1);
     renderEditorTags();
+    scheduleNoteSave();
   };
 
-  window.closeNoteEditor = function() {
+  window.closeNoteEditor = async function() {
+    const pending = flushNoteSave();   // reads the inputs synchronously before state is cleared
     document.getElementById('noteModal').classList.remove('active');
     state.editingNoteId = null;
-  };
-
-  window.saveNote = async function() {
-    const title = document.getElementById('editorTitle').value.trim();
-    const body = document.getElementById('editorBody').value.trim();
-    if (!title && !body) { closeNoteEditor(); return; }
-
-    if (state.editingNoteId) {
-      const note = state.notes.find(n => n.id === state.editingNoteId);
-      if (note) {
-        note.title = title;
-        note.body = body;
-        note.tags = state.editingNoteTags.slice();
-        note.updatedAt = Date.now();
-        note.lastEditedBy = state.currentUser;
-      }
-    } else {
-      state.notes.unshift({
-        id: 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        title, body,
-        tags: state.editingNoteTags.slice(),
-        pinned: false,
-        authorId: state.currentUser,
-        lastEditedBy: state.currentUser,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-    }
-    await persist('notes', state.notes);
-    toast('Note saved', 'success');
-    closeNoteEditor();
+    const ok = await pending;
+    if (!ok) toast('Last change not saved — check connection', 'error');
     render();
   };
 
   window.deleteCurrentNote = async function() {
     if (!state.editingNoteId) return;
     if (!confirm('Delete this note? It will be removed for the committee.')) return;
-    state.notes = state.notes.filter(n => n.id !== state.editingNoteId);
-    await persist('notes', state.notes);
-    toast('Note deleted', 'default');
-    closeNoteEditor();
+    clearTimeout(noteSaveTimer);
+    const id = state.editingNoteId;
+    state.notes = state.notes.filter(n => n.id !== id);
+    document.getElementById('noteModal').classList.remove('active');
+    state.editingNoteId = null;
     render();
+    const ok = await deleteNoteRow(id);
+    toast(ok ? 'Note deleted' : 'Delete failed — check connection', ok ? 'default' : 'error');
   };
 
   // ============================================================
@@ -12491,7 +12563,18 @@
       if (e.key === 'ArrowLeft')  { e.preventDefault(); window.presentStep(-1); return; }
       if (e.key === 'Escape')     { e.preventDefault(); window.endPresent();    return; }
     }
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K') && state.currentView === 'notes') {
+      const si = document.getElementById('searchInput');
+      if (si) { e.preventDefault(); si.focus(); si.select(); return; }
+    }
+    if (e.key === 'Escape' && document.getElementById('noteModal').classList.contains('active')) {
+      e.preventDefault();
+      closeNoteMenu();
+      window.closeNoteEditor();
+      return;
+    }
     if (e.key === 'Escape') {
+      closeNoteMenu();
       document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
       state.editingNoteId = null;
       state.editingEventId = null;
