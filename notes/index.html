@@ -8800,7 +8800,6 @@
         '<div><h1 class="page-title">' + titleHtml + '</h1>' + subHtml + '</div>' +
         '<div class="page-meta">' +
           '<div>' + calIcon + dateStr + '</div>' +
-          '<div class="live"><span class="live-dot"></span> live · synced</div>' +
         '</div>' +
       '</div>';
   }
@@ -9024,7 +9023,6 @@
     return '<div class="rush-centerpiece phase-' + cyc.head.id + '">' +
       '<div class="centerpiece-head">' +
         '<div class="centerpiece-eyebrow">Rush Cycle Progress</div>' +
-        '<div class="centerpiece-sync"><span class="sync-dot"></span><span class="sync-text">Live · synced</span></div>' +
       '</div>' +
       '<div class="centerpiece-phase">' +
         '<div class="phase-name">' + escapeHtml(cyc.head.label) + '</div>' +
@@ -9090,19 +9088,6 @@
     const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
     const now = Date.now();
 
-    // ----- Pinned notes (preserved) -----
-    const pinnedNotes = state.notes.filter(n => n.pinned).slice(0, 2);
-    const pinnedBanner = pinnedNotes.length > 0
-      ? '<div class="pinned-banner">' +
-          '<div class="pinned-banner-title">✦ Pinned · ' + pinnedNotes.length + ' note' + (pinnedNotes.length > 1 ? 's' : '') + '</div>' +
-          pinnedNotes.map(n =>
-            '<div style="cursor:pointer; padding:4px 0;" onclick="openNoteEditor(\'' + n.id + '\')">' +
-              '<h3>' + escapeHtml(n.title || 'Untitled') + '</h3>' +
-              '<p>' + escapeHtml((n.body || '').slice(0, 120)) + ((n.body || '').length > 120 ? '…' : '') + '</p>' +
-            '</div>'
-          ).join('') +
-        '</div>'
-      : '';
 
     // ----- Hero: timeline centerpiece (countdown row removed — timeline shows same data) -----
     const centerpiece = renderRushCenterpiece();
@@ -9242,7 +9227,6 @@
     const activityGrid = '';
 
     return '<div class="view-dashboard">' +
-      pinnedBanner +
       centerpiece +
       kpiRow +
       attentionGrid +
