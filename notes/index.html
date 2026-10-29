@@ -818,6 +818,7 @@
     overflow-y: auto;
     resize: none;
   }
+  .editor-tag-row .editor-tag-toggle { padding: 6px 13px; font-size: 12.5px; }
   .note-save-status {
     align-self: center;
     font-family: 'JetBrains Mono', monospace;
@@ -5421,7 +5422,6 @@
       <textarea class="editor-body" id="editorBody" placeholder="Start writing…" oninput="scheduleNoteSave()"></textarea>
     </div>
     <div class="editor-tag-row" id="editorTagRow"></div>
-    <div class="tag-suggestions-row" id="editorTagSuggest" style="display:none;"></div>
     <div class="modal-footer">
       <button class="btn danger" onclick="deleteCurrentNote()" id="deleteNoteBtn" style="display:none">Delete</button>
       <div class="right">
@@ -10494,6 +10494,7 @@
     document.getElementById('editorTitle').value = note?.title || '';
     document.getElementById('editorBody').value = note?.body || '';
     state.editingNoteTags = (note?.tags || []).slice();
+    state.editingNotePinned = !!note?.pinned;
 
     const authorId = note ? note.authorId : state.currentUser;
     const author = MEMBERS.find(m => m.id === authorId);
@@ -10536,13 +10537,14 @@
     const title = document.getElementById('editorTitle').value.trim();
     const body = document.getElementById('editorBody').value.trim();
     const tags = state.editingNoteTags.slice();
+    const pinned = !!state.editingNotePinned;
     let note = state.editingNoteId ? state.notes.find(n => n.id === state.editingNoteId) : null;
     if (!note) {
       if (!title && !body) { setNoteSaveStatus(''); return true; }
       note = {
         id: state.editingNoteId || ('n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
         title, body, tags,
-        pinned: false,
+        pinned,
         authorId: state.currentUser,
         lastEditedBy: state.currentUser,
         createdAt: Date.now(),
@@ -10553,7 +10555,7 @@
       const del = document.getElementById('deleteNoteBtn');
       if (del) del.style.display = 'inline-flex';
     } else {
-      if (note.title === title && note.body === body &&
+      if (note.title === title && note.body === body && !!note.pinned === pinned &&
           JSON.stringify(note.tags || []) === JSON.stringify(tags)) {
         setNoteSaveStatus('Saved');
         return true;
@@ -10561,6 +10563,7 @@
       note.title = title;
       note.body = body;
       note.tags = tags;
+      note.pinned = pinned;
       note.updatedAt = Date.now();
       note.lastEditedBy = state.currentUser;
     }
@@ -10571,55 +10574,31 @@
   }
   window.saveNote = flushNoteSave;  // Ctrl/Cmd+S
 
+  // Editor tags = the list tabs (minus "All notes"). Pinned is the note's pinned flag;
+  // the rest are tags. Any older free-form tags on a note are kept, just not shown here.
+  const EDITOR_TAG_TOGGLES = NOTE_TABS.filter(function(t) { return t.id !== 'all'; });
+  function editorTagOn(id) {
+    if (id === 'pinned') return !!state.editingNotePinned;
+    const tags = state.editingNoteTags.map(function(t) { return String(t).toLowerCase().trim(); });
+    if (id === 'archive') return tags.indexOf('archive') !== -1 || tags.indexOf('archived') !== -1;
+    return tags.indexOf(id) !== -1;
+  }
   function renderEditorTags() {
     const row = document.getElementById('editorTagRow');
     row.innerHTML = '<span class="toolbar-label">Tags:</span>' +
-      state.editingNoteTags.map((t, i) =>
-        '<span class="tag removable" onclick="removeNoteTag(' + i + ')">' + escapeHtml(t) + '<span class="chip-remove">✕</span></span>'
-      ).join('') +
-      '<input type="text" class="tag-input" id="newTagInput" placeholder="+ tag" maxlength="20" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addNoteTag();}" />' +
-      '<button class="btn small" onclick="addNoteTag()">Add</button>';
-
-    const suggestEl = document.getElementById('editorTagSuggest');
-    if (suggestEl) {
-      if (state.editingNoteTags.length === 0) {
-        suggestEl.innerHTML = '<span class="suggest-label">Suggest:</span>' +
-          NOTE_PRIMARY_TAGS.map(t =>
-            '<span class="tag-suggest-chip" onclick="addSuggestedTag(\'' + t.id + '\')">' + escapeHtml(t.label) + '</span>'
-          ).join('');
-        suggestEl.style.display = 'flex';
-      } else {
-        suggestEl.style.display = 'none';
-        suggestEl.innerHTML = '';
-      }
-    }
+      EDITOR_TAG_TOGGLES.map(function(t) {
+        return '<button type="button" class="nl-tab editor-tag-toggle' + (editorTagOn(t.id) ? ' active' : '') + '" onclick="toggleEditorTag(\'' + t.id + '\')">' + escapeHtml(t.label) + '</button>';
+      }).join('');
   }
-
-  window.addSuggestedTag = function(tagId) {
-    if (state.editingNoteTags.includes(tagId)) return;
-    state.editingNoteTags.push(tagId);
-    renderEditorTags();
-    scheduleNoteSave();
-  };
-
-  window.addNoteTag = function() {
-    const input = document.getElementById('newTagInput');
-    const val = input.value.trim();
-    if (!val) { input.focus(); return; }
-    if (state.editingNoteTags.includes(val)) {
-      toast('Tag already added', 'default');
-      input.value = '';
-      return;
+  window.toggleEditorTag = function(id) {
+    if (id === 'pinned') {
+      state.editingNotePinned = !state.editingNotePinned;
+    } else if (editorTagOn(id)) {
+      const drop = id === 'archive' ? ['archive', 'archived'] : [id];
+      state.editingNoteTags = state.editingNoteTags.filter(function(t) { return drop.indexOf(String(t).toLowerCase().trim()) === -1; });
+    } else {
+      state.editingNoteTags.push(id);
     }
-    state.editingNoteTags.push(val);
-    input.value = '';
-    renderEditorTags();
-    scheduleNoteSave();
-    setTimeout(() => document.getElementById('newTagInput')?.focus(), 10);
-  };
-
-  window.removeNoteTag = function(i) {
-    state.editingNoteTags.splice(i, 1);
     renderEditorTags();
     scheduleNoteSave();
   };
