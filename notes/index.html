@@ -902,6 +902,64 @@
     .page-title.page-title-compact { font-size: 32px; }
   }
 
+  /* ── Score import grid ─────────────────────────────────────────── */
+  .si-overlay {
+    position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: rgba(3, 16, 46, 0.5);
+  }
+  .si-modal {
+    width: min(1100px, 100%); max-height: min(88vh, 900px); display: flex; flex-direction: column;
+    background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(3, 16, 46, 0.3); overflow: hidden;
+  }
+  .si-head { display: flex; justify-content: space-between; gap: 16px; padding: 20px 24px 14px; border-bottom: 1px solid var(--line); }
+  .si-title { font-family: 'Inter', sans-serif; font-size: 18px; font-weight: 600; color: var(--fg); }
+  .si-help { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--fg-muted); margin-top: 4px; line-height: 1.5; max-width: 760px; }
+  .si-x { border: none; background: transparent; font-size: 16px; color: var(--fg-muted); cursor: pointer; width: 32px; height: 32px; border-radius: 6px; }
+  .si-x:hover { background: var(--surface-2); color: var(--fg); }
+  .si-body { overflow: auto; padding: 0 24px; flex: 1 1 auto; min-height: 120px; }
+  .si-grid { width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif; font-size: 13px; table-layout: fixed; }
+  .si-grid thead th {
+    position: sticky; top: 0; z-index: 1; background: var(--surface); text-align: left;
+    font-size: 12px; font-weight: 600; color: var(--fg-muted); padding: 12px 6px 8px; border-bottom: 1px solid var(--line-strong);
+  }
+  .si-grid td { border-bottom: 1px solid var(--line); padding: 0; vertical-align: top; }
+  .si-n { width: 34px; color: var(--fg-muted); font-size: 11px; text-align: right; padding: 9px 8px 0 0 !important; }
+  .si-del { width: 30px; }
+  .si-cell {
+    width: 100%; border: none; background: transparent; padding: 8px 6px; font: inherit; color: var(--fg);
+    outline: none; border-radius: 0;
+  }
+  .si-cell:focus { box-shadow: inset 0 0 0 2px var(--navy); background: var(--surface); }
+  .si-match { padding: 7px 6px !important; }
+  .si-who { font-weight: 600; color: var(--fg); }
+  .si-manual { font-weight: 500; font-size: 11px; color: var(--fg-muted); }
+  .si-note { font-size: 12px; color: var(--fg-muted); line-height: 1.4; }
+  .si-pick { margin-top: 4px; width: 100%; font: inherit; font-size: 12px; padding: 3px 4px; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--surface); color: var(--fg); }
+  .si-del button { border: none; background: transparent; color: var(--fg-muted); cursor: pointer; padding: 8px 6px; opacity: 0; }
+  .si-row:hover .si-del button { opacity: 1; }
+  .si-del button:hover { color: var(--danger); }
+  .si-row.check { background: rgba(224, 168, 40, 0.10); }
+  .si-row.check .si-note { color: #a8740f; }
+  .si-row.bad, .si-row.repeat { background: rgba(198, 74, 74, 0.10); }
+  .si-row.bad .si-note, .si-row.repeat .si-note { color: #b23b35; }
+  .si-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    padding: 14px 24px; border-top: 1px solid var(--line); background: var(--surface);
+  }
+  .si-summary { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--fg-muted); }
+  .si-s.ok { color: var(--fg); font-weight: 600; }
+  .si-s.check { color: #a8740f; font-weight: 600; }
+  .si-s.bad { color: #b23b35; font-weight: 600; }
+  .si-dot { margin: 0 8px; color: var(--line-strong); }
+  .si-err { color: var(--danger); margin-top: 4px; }
+  .si-confirm { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--fg); line-height: 1.5; max-width: 680px; }
+  .si-btns { display: flex; gap: 8px; margin-left: auto; }
+  .si-btns .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .si-grid td + td:not(.si-match):not(.si-del) { border-left: 1px solid var(--line); }
+  .si-grid tbody tr td:nth-child(2) { border-left: 1px solid var(--line); }
+  [data-theme="dark"] .si-overlay { background: rgba(0, 0, 0, 0.6); }
+
   /* ── Note editor modal: refined editorial layout ─────────────── */
   #noteModalInner {
     --author-color: var(--navy);
@@ -6730,9 +6788,7 @@
 
       (tab === 'board' ? board : insights) +
 
-      (state.ratingsSelected ? ratingDetailModal(state.ratingsSelected) : '') +
-      (state.ivImport ? interviewImportModal() : '') +
-      (state.csImport ? chairImportModal() : '');
+      (state.ratingsSelected ? ratingDetailModal(state.ratingsSelected) : '');
   }
 
   window.setRatingsTab = function (t) { state.ratingsTab = t; render(); };
@@ -6752,7 +6808,7 @@
     menu.id = 'ratingsManageMenu';
     menu.innerHTML =
       '<button onclick="closeRatingsManage(); openInterviewImport()">Import interview scores</button>' +
-      '<button onclick="closeRatingsManage(); openChairImport()">Import PM / Rush scores</button>';
+      '<button onclick="closeRatingsManage(); openChairImport()">Import Rush / PM scores</button>';
     document.body.appendChild(menu);
     const r = btn.getBoundingClientRect();
     menu.style.top = (window.scrollY + r.bottom + 4) + 'px';
@@ -6895,195 +6951,432 @@
     return (m2.sure || !m.hit) ? m2 : m;
   }
 
-  function ivRowState(row, imp) {
-    if (row.scoreTxt === '') return { kind: 'skip', note: 'no score yet' };
-    const score = Number(row.scoreTxt);
-    if (!isFinite(score) || score < 0 || score > 10) return { kind: 'bad', note: 'score must be 0–10' };
-    if (!row.pnmId) return { kind: 'bad', note: 'pick the rush' };
-    const dup = imp.rows.filter(function (r) { return r.pnmId === row.pnmId && r.scoreTxt !== ''; }).length > 1;
-    if (dup) return { kind: 'bad', note: 'rush appears twice' };
-    const s = imp.survivors.find(function (x) { return x.pnm_id === row.pnmId; });
-    if (s && s.exempt) return { kind: 'bad', note: 'rush is marked exempt' };
-    const notes = [];
-    if (!row.pnmSure) notes.push('check rush match');
-    if (!row.headPsu) notes.push('no head interviewer: left out of room offsets');
-    else if (!row.headSure) notes.push('check interviewer match');
-    if (s && s.score_raw !== null && Number(s.score_raw) !== score) notes.push('replaces ' + Number(s.score_raw));
-    return { kind: notes.length ? 'check' : 'ok', note: notes.join(' · '), score: score };
+  // ---------- score import grid (interview + PM/Rush) ----------
+  // One spreadsheet-style grid for both imports. Paste rows straight from
+  // Excel/Sheets; the grid grows to fit and always keeps one blank row.
+  // PSU ID is the primary match (exact), name is checked against it.
+  // Row tones: ok · check (amber: will save, look at it) · bad (red: won't
+  // save) · repeat (red: same person twice in this paste, last row wins).
+  // Lives outside the app's render() so typing never re-renders the page.
+
+  const SI_KINDS = {
+    interview: {
+      title: 'Import interview scores',
+      help: 'Paste rows from the interview sheet: Name, PSU ID, Head interviewer, Interview score (0–10). ' +
+        'A header row is ignored. Each rush gets one interview score; saving again replaces it.',
+      cols: [
+        { key: 'name', label: 'Name', w: '26%' },
+        { key: 'psu', label: 'PSU ID', w: '13%' },
+        { key: 'head', label: 'Head interviewer', w: '22%' },
+        { key: 'score', label: 'Score', w: '9%' }
+      ],
+      header: /^(rush\s*)?name$/i
+    },
+    chair: {
+      title: 'Import Rush / PM scores',
+      help: 'Paste rows: Name, PSU ID, Rush score, PM score. Each score is 0, 0.5 or 1. ' +
+        'A blank score leaves that score as it is. A header row is ignored.',
+      cols: [
+        { key: 'name', label: 'Name', w: '28%' },
+        { key: 'psu', label: 'PSU ID', w: '14%' },
+        { key: 'rush', label: 'Rush', w: '9%' },
+        { key: 'pm', label: 'PM', w: '9%' }
+      ],
+      header: /^(rush\s*)?name$/i
+    }
+  };
+
+  let SI = null;   // { kind, rows: [{cells:{}, pick:''}], pool: [...], loading, saving, confirm }
+
+  function siNormId(s) {
+    let v = String(s || '').toLowerCase().trim();
+    v = v.split('@')[0].replace(/[^a-z0-9]/g, '');
+    return v;
+  }
+  function siBlankRow() { return { cells: {}, pick: '' }; }
+  function siRowEmpty(r) {
+    return !Object.keys(r.cells).some(function (k) { return String(r.cells[k] || '').trim() !== ''; });
+  }
+  function siEnsureTail(noShrink) {
+    while (!noShrink && SI.rows.length > 1 && siRowEmpty(SI.rows[SI.rows.length - 1]) && siRowEmpty(SI.rows[SI.rows.length - 2])) SI.rows.pop();
+    if (!SI.rows.length || !siRowEmpty(SI.rows[SI.rows.length - 1])) SI.rows.push(siBlankRow());
   }
 
-  window.openInterviewImport = async function () {
-    state.ivImport = { text: '', rows: null, survivors: [], loading: true,
-                       saving: false, error: null, result: null };
-    render();
-    const { data, error } = await sb.from('v_interview_board')
-      .select('pnm_id, name, is_cut, score_raw, exempt');
-    if (!state.ivImport) return;
-    state.ivImport.loading = false;
-    if (error) {
-      state.ivImport.error = 'Could not load the interview board: ' + error.message;
+  window.openInterviewImport = async function () { await siOpen('interview'); };
+  window.openChairImport = async function () { await siOpen('chair'); };
+
+  async function siOpen(kind) {
+    SI = { kind: kind, rows: [siBlankRow()], pool: [], loading: true, saving: false, confirm: null, error: null };
+    siMount();
+    if (kind === 'interview') {
+      const { data, error } = await sb.from('v_interview_board').select('pnm_id, name, is_cut, score_raw, exempt');
+      if (!SI || SI.kind !== kind) return;
+      if (error) SI.error = 'Could not load the interview board: ' + error.message;
+      SI.pool = (data || []).map(function (r) {
+        const p = state.pnms.find(function (x) { return x.id === r.pnm_id; }) || {};
+        return { pnm_id: r.pnm_id, name: r.name, psu: siNormId(p.psu_id), is_cut: !!r.is_cut,
+                 exempt: !!r.exempt, existing: r.score_raw };
+      });
     } else {
-      state.ivImport.survivors = (data || [])
-        .filter(function (r) { return !r.is_cut; })
-        .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+      SI.pool = state.ratings.map(function (r) {
+        const p = state.pnms.find(function (x) { return x.id === r.pnm_id; }) || {};
+        return { pnm_id: r.pnm_id, name: r.name, psu: siNormId(p.psu_id || r.psu_id), is_cut: !!r.is_cut,
+                 existingRush: r.rush_norm, existingPm: r.pm_norm };
+      });
     }
-    render();
-  };
-  window.closeInterviewImport = function () { state.ivImport = null; render(); };
-  window.setIvText = function (v) { if (state.ivImport) state.ivImport.text = v; };
-  window.backInterviewImport = function () { if (state.ivImport) { state.ivImport.rows = null; render(); } };
-  window.setIvPnm = function (i, v) {
-    const row = state.ivImport && state.ivImport.rows[i]; if (!row) return;
-    row.pnmId = v; row.pnmSure = true; render();
-  };
-  window.setIvHead = function (i, v) {
-    const row = state.ivImport && state.ivImport.rows[i]; if (!row) return;
-    row.headPsu = v; row.headSure = true; render();
-  };
+    SI.loading = false;
+    siRefresh();
+  }
 
-  window.previewInterviewImport = function () {
-    const imp = state.ivImport; if (!imp) return;
-    const rows = [];
-    imp.text.split(/\r?\n/).forEach(function (line) {
-      const c = line.split('\t');
-      const name = (c[0] || '').trim();
-      if (!name || /^rush name$/i.test(name)) return;
-      const head = (c[2] || '').trim();
-      const pm = ivMatch(name, imp.survivors, function (s) { return s.name; });
-      const hm = head ? ivMatchBrother(head) : { hit: null, sure: false };
-      rows.push({
-        sheetName: name, sheetHead: head, scoreTxt: (c[3] || '').trim(),
-        pnmId: pm.hit ? pm.hit.pnm_id : '', pnmSure: pm.sure,
-        headPsu: hm.hit ? hm.hit.psu_id : '', headSure: hm.sure
-      });
+  function siMount() {
+    siUnmount();
+    const k = SI_KINDS[SI.kind];
+    const el = document.createElement('div');
+    el.className = 'si-overlay';
+    el.id = 'siOverlay';
+    el.innerHTML =
+      '<div class="si-modal" role="dialog" aria-modal="true" aria-label="' + escapeHtml(k.title) + '">' +
+        '<div class="si-head">' +
+          '<div><div class="si-title">' + escapeHtml(k.title) + '</div>' +
+          '<div class="si-help">' + escapeHtml(k.help) + '</div></div>' +
+          '<button type="button" class="si-x" onclick="siClose()" aria-label="Close">✕</button>' +
+        '</div>' +
+        '<div class="si-body"><table class="si-grid"><thead><tr><th class="si-n">#</th>' +
+          k.cols.map(function (c) { return '<th style="width:' + c.w + '">' + c.label + '</th>'; }).join('') +
+          '<th>Match</th><th class="si-del"></th></tr></thead><tbody id="siBody"></tbody></table></div>' +
+        '<div class="si-foot" id="siFoot"></div>' +
+      '</div>';
+    el.addEventListener('mousedown', function (e) { if (e.target === el) siClose(); });
+    document.body.appendChild(el);
+    document.body.style.overflow = 'hidden';
+    siRenderRows();
+    siRenderFoot();
+    setTimeout(function () { const f = el.querySelector('input.si-cell'); if (f) f.focus(); }, 30);
+  }
+  function siUnmount() {
+    const el = document.getElementById('siOverlay');
+    if (el) el.remove();
+    document.body.style.overflow = '';
+  }
+  window.siClose = function () { SI = null; siUnmount(); };
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && SI) { e.stopPropagation(); if (SI.confirm) { SI.confirm = null; siRenderFoot(); } else window.siClose(); }
+  }, true);
+
+  // ---- matching + validation ----
+  function siMatchRow(row) {
+    const pool = SI.pool;
+    if (row.pick) {
+      const p = pool.find(function (x) { return x.pnm_id === row.pick; });
+      return p ? { hit: p, sure: true, manual: true } : { hit: null };
+    }
+    const id = siNormId(row.cells.psu);
+    const name = String(row.cells.name || '').trim();
+    const byId = id ? pool.find(function (x) { return x.psu === id; }) : null;
+    const nm = name ? ivMatch(name, pool, function (x) { return x.name; }) : { hit: null, sure: false };
+    if (byId) {
+      if (nm.hit && nm.hit.pnm_id !== byId.pnm_id && nm.sure)
+        return { hit: null, conflict: 'ID is ' + byId.name + ' but name matches ' + nm.hit.name };
+      return { hit: byId, sure: !!(nm.hit && nm.hit.pnm_id === byId.pnm_id), nameOff: !nm.hit || nm.hit.pnm_id !== byId.pnm_id };
+    }
+    return { hit: null, idMissing: !id, idUnknown: !!id, nameHit: nm.hit };
+  }
+
+  function siScore(txt, kind) {
+    const t = String(txt || '').trim();
+    if (t === '') return { blank: true };
+    const v = Number(t);
+    if (kind === 'interview') return (isFinite(v) && v >= 0 && v <= 10) ? { value: v } : { bad: true };
+    return (v === 0 || v === 0.5 || v === 1) ? { value: v } : { bad: true };
+  }
+
+  // Compute every row's state (repeats depend on the other rows).
+  function siEvaluate() {
+    const out = SI.rows.map(function (row) {
+      if (siRowEmpty(row)) return { tone: 'empty' };
+      if (SI.loading) return { tone: 'empty', note: 'Loading…' };
+      const m = siMatchRow(row);
+      const notes = [];
+      let tone = 'ok';
+      const bad = function (n) { tone = 'bad'; notes.push(n); };
+      const check = function (n) { if (tone === 'ok') tone = 'check'; notes.push(n); };
+      if (m.conflict) bad(m.conflict);
+      else if (!m.hit) {
+        if (m.idMissing) bad('PSU ID required');
+        else bad('PSU ID not found' + (m.nameHit ? ' (name looks like ' + m.nameHit.name + ')' : ''));
+      }
+      const p = m.hit;
+      let save = null;
+      if (p) {
+        if (p.is_cut) bad(p.name + ' has been cut');
+        if (m.nameOff && !m.manual) check('Name doesn’t match ID — saving to ' + p.name);
+        if (SI.kind === 'interview') {
+          if (p.exempt) bad(p.name + ' is exempt from interviews');
+          const sc = siScore(row.cells.score, 'interview');
+          if (sc.blank) bad('Score required');
+          else if (sc.bad) bad('Score must be 0–10');
+          const head = String(row.cells.head || '').trim();
+          let headPsu = null;
+          if (!head) bad('Head interviewer required');
+          else {
+            const hm = ivMatchBrother(head);
+            if (hm.hit) { headPsu = hm.hit.psu_id; if (!hm.sure) check('Interviewer read as ' + ivBrotherPref(hm.hit)); }
+            else check('Interviewer not on roster — left out of room offsets');
+          }
+          if (sc.value !== undefined && p.existing !== null && p.existing !== undefined && Number(p.existing) !== sc.value)
+            check('Replaces saved ' + Number(p.existing));
+          if (sc.value !== undefined) save = { pnm_id: p.pnm_id, interviewer_psu_id: headPsu, score_raw: sc.value };
+        } else {
+          const ru = siScore(row.cells.rush, 'chair'), pm = siScore(row.cells.pm, 'chair');
+          if (ru.blank && pm.blank) bad('No scores');
+          if (ru.bad || pm.bad) bad('Scores must be 0, 0.5 or 1');
+          if (ru.value !== undefined && p.existingRush !== null && p.existingRush !== undefined && Number(p.existingRush) !== ru.value)
+            check('Rush replaces saved ' + Number(p.existingRush));
+          if (pm.value !== undefined && p.existingPm !== null && p.existingPm !== undefined && Number(p.existingPm) !== pm.value)
+            check('PM replaces saved ' + Number(p.existingPm));
+          save = { pnm_id: p.pnm_id, rush: ru, pm: pm };
+        }
+      }
+      return { tone: tone, note: notes.join(' · '), pnm: p, save: tone === 'bad' ? null : save };
     });
-    imp.rows = rows; imp.result = null; imp.error = null;
-    render();
+    // repeats: same person more than once; the lowest row wins
+    const last = {};
+    out.forEach(function (o, i) { if (o.pnm) last[o.pnm.pnm_id] = i; });
+    out.forEach(function (o, i) {
+      if (!o.pnm) return;
+      const count = out.filter(function (x) { return x.pnm && x.pnm.pnm_id === o.pnm.pnm_id; }).length;
+      if (count < 2) return;
+      o.repeat = true;
+      if (last[o.pnm.pnm_id] === i) {
+        o.note = 'Repeat — this row is the one saved' + (o.note ? ' · ' + o.note : '');
+      } else {
+        o.note = 'Repeat — replaced by row ' + (last[o.pnm.pnm_id] + 1);
+        o.save = null;
+      }
+    });
+    return out;
+  }
+
+  // ---- rendering (grid body + footer only) ----
+  function siRenderRows() {
+    const body = document.getElementById('siBody');
+    if (!body || !SI) return;
+    const k = SI_KINDS[SI.kind];
+    const ev = siEvaluate();
+    body.innerHTML = SI.rows.map(function (row, i) { return siRowHtml(row, i, ev[i], k); }).join('');
+    SI._ev = ev;
+  }
+
+  function siMatchHtml(row, i, e) {
+    let match = '';
+    if (e.tone !== 'empty') {
+      const pickable = !e.pnm || row.pick;
+      match = (e.pnm ? '<div class="si-who">' + escapeHtml(e.pnm.name) + (row.pick ? ' <span class="si-manual">picked</span>' : '') + '</div>' : '') +
+        (e.note ? '<div class="si-note">' + escapeHtml(e.note) + '</div>' : '') +
+        (pickable && !SI.loading
+          ? '<select class="si-pick" data-r="' + i + '"><option value="">' + (row.pick ? 'Clear pick' : 'Pick the rush…') + '</option>' +
+              SI.pool.filter(function (p) { return !p.is_cut; }).slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); })
+                .map(function (p) { return '<option value="' + p.pnm_id + '"' + (row.pick === p.pnm_id ? ' selected' : '') + '>' + escapeHtml(p.name) + '</option>'; }).join('') +
+            '</select>' : '');
+    } else if (e.note) match = '<div class="si-note">' + e.note + '</div>';
+    return match;
+  }
+  function siDelHtml(row, i) {
+    return siRowEmpty(row) ? '' : '<button type="button" tabindex="-1" data-del="' + i + '" aria-label="Remove row">✕</button>';
+  }
+  function siRowHtml(row, i, e, k) {
+      const cls = e.repeat ? 'repeat' : e.tone;
+      const cells = k.cols.map(function (c, j) {
+        return '<td><input class="si-cell" data-r="' + i + '" data-c="' + j + '" value="' +
+          escapeHtml(row.cells[c.key] || '') + '" autocomplete="off" spellcheck="false"></td>';
+      }).join('');
+      return '<tr class="si-row ' + cls + '" data-r="' + i + '"><td class="si-n">' + (siRowEmpty(row) ? '' : i + 1) + '</td>' + cells +
+        '<td class="si-match">' + siMatchHtml(row, i, e) + '</td>' +
+        '<td class="si-del">' + siDelHtml(row, i) + '</td></tr>';
+  }
+
+  // Update statuses in place (no input is rebuilt, so the caret never moves).
+  function siPatchRows() {
+    const body = document.getElementById('siBody');
+    if (!body || !SI) return;
+    const k = SI_KINDS[SI.kind];
+    const ev = siEvaluate();
+    const trs = body.querySelectorAll('tr.si-row');
+    if (trs.length > SI.rows.length) { siRenderRows(); return; }
+    SI.rows.forEach(function (row, i) {
+      const e = ev[i];
+      let tr = trs[i];
+      if (!tr) { body.insertAdjacentHTML('beforeend', siRowHtml(row, i, e, k)); return; }
+      tr.className = 'si-row ' + (e.repeat ? 'repeat' : e.tone);
+      tr.querySelector('.si-n').textContent = siRowEmpty(row) ? '' : String(i + 1);
+      const mh = siMatchHtml(row, i, e);
+      const mc = tr.querySelector('.si-match');
+      if (mc.innerHTML !== mh) mc.innerHTML = mh;
+      tr.querySelector('.si-del').innerHTML = siDelHtml(row, i);
+    });
+    SI._ev = ev;
+  }
+
+
+  function siCounts() {
+    const ev = SI._ev || [];
+    const c = { ok: 0, check: 0, bad: 0, repeat: 0, existing: 0, save: 0 };
+    ev.forEach(function (e) {
+      if (e.tone === 'empty') return;
+      if (e.repeat) c.repeat++;
+      else if (e.tone === 'bad') c.bad++;
+      else if (e.tone === 'check') c.check++;
+      else c.ok++;
+      if (e.save) c.save++;
+      if (e.save && /replaces saved/i.test(e.note || '')) c.existing++;
+    });
+    return c;
+  }
+
+  function siRenderFoot() {
+    const foot = document.getElementById('siFoot');
+    if (!foot || !SI) return;
+    const c = siCounts();
+    const repeatPeople = (function () {
+      const s = {}; (SI._ev || []).forEach(function (e) { if (e.repeat && e.pnm) s[e.pnm.pnm_id] = 1; }); return Object.keys(s).length;
+    })();
+    const parts = [];
+    if (c.ok) parts.push('<span class="si-s ok">' + c.ok + ' ready</span>');
+    if (c.check) parts.push('<span class="si-s check">' + c.check + ' to check</span>');
+    if (c.repeat) parts.push('<span class="si-s bad">' + repeatPeople + ' repeat' + (repeatPeople === 1 ? '' : 's') + '</span>');
+    if (c.bad) parts.push('<span class="si-s bad">' + c.bad + ' won’t save</span>');
+    const summary = SI.loading ? 'Loading candidates…' : (parts.length ? parts.join('<span class="si-dot">·</span>') : 'Paste rows from your sheet, or type into the first row.');
+    if (SI.confirm) {
+      foot.innerHTML =
+        '<div class="si-confirm"><strong>Before saving:</strong> ' + SI.confirm + ' Do you want to proceed?</div>' +
+        '<div class="si-btns"><button type="button" class="btn" onclick="siConfirm(false)">Go back</button>' +
+        '<button type="button" class="btn primary" onclick="siConfirm(true)"' + (SI.saving ? ' disabled' : '') + '>' +
+          (SI.saving ? 'Saving…' : 'Save ' + c.save) + '</button></div>';
+      return;
+    }
+    foot.innerHTML =
+      '<div class="si-summary">' + summary + (SI.error ? '<div class="si-err">' + escapeHtml(SI.error) + '</div>' : '') + '</div>' +
+      '<div class="si-btns"><button type="button" class="btn" onclick="siClose()">Cancel</button>' +
+      '<button type="button" class="btn primary" onclick="siSave()"' + (c.save && !SI.loading ? '' : ' disabled') + '>' +
+        (c.save ? 'Save ' + c.save + ' score row' + (c.save === 1 ? '' : 's') : 'Save') + '</button></div>';
+  }
+
+  function siRefresh(focus) {
+    siEnsureTail();
+    siRenderRows();
+    siRenderFoot();
+    if (focus) {
+      const el = document.querySelector('#siBody input.si-cell[data-r="' + focus[0] + '"][data-c="' + focus[1] + '"]');
+      if (el) { el.focus(); const v = el.value.length; try { el.setSelectionRange(v, v); } catch (e) {} }
+    }
+  }
+
+  // ---- input handling (delegated) ----
+  document.addEventListener('input', function (e) {
+    if (!SI || !e.target.classList || !e.target.classList.contains('si-cell')) return;
+    const r = +e.target.dataset.r, c = +e.target.dataset.c;
+    const col = SI_KINDS[SI.kind].cols[c];
+    SI.rows[r].cells[col.key] = e.target.value;
+    SI.rows[r].pick = SI.rows[r].pick && (col.key === 'name' || col.key === 'psu') ? '' : SI.rows[r].pick;
+    SI.confirm = null;
+    siEnsureTail(true);
+    siPatchRows();
+    siRenderFoot();
+  });
+  document.addEventListener('change', function (e) {
+    if (!SI || !e.target.classList || !e.target.classList.contains('si-pick')) return;
+    SI.rows[+e.target.dataset.r].pick = e.target.value;
+    SI.confirm = null;
+    siRefresh();
+  });
+  document.addEventListener('click', function (e) {
+    if (!SI || !e.target.dataset || e.target.dataset.del === undefined) return;
+    SI.rows.splice(+e.target.dataset.del, 1);
+    SI.confirm = null;
+    siRefresh();
+  });
+  document.addEventListener('paste', function (e) {
+    if (!SI || !e.target.classList || !e.target.classList.contains('si-cell')) return;
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (!/[\t\n]/.test(text.replace(/\r?\n$/, ''))) return;   // single cell: let the browser paste it
+    e.preventDefault();
+    const k = SI_KINDS[SI.kind];
+    let lines = text.replace(/\r/g, '').split('\n');
+    while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
+    if (lines.length && k.header.test((lines[0].split('\t')[0] || '').trim())) lines = lines.slice(1);
+    const r0 = +e.target.dataset.r, c0 = +e.target.dataset.c;
+    lines.forEach(function (line, i) {
+      const vals = line.split('\t');
+      const ri = r0 + i;
+      while (SI.rows.length <= ri) SI.rows.push(siBlankRow());
+      vals.forEach(function (v, j) {
+        const col = k.cols[c0 + j];
+        if (col) SI.rows[ri].cells[col.key] = v.trim();
+      });
+      SI.rows[ri].pick = '';
+    });
+    SI.confirm = null;
+    siRefresh([Math.min(r0 + lines.length, SI.rows.length - 1), c0]);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (!SI || !e.target.classList || !e.target.classList.contains('si-cell')) return;
+    const r = +e.target.dataset.r, c = +e.target.dataset.c;
+    let to = null;
+    if (e.key === 'Enter' || (e.key === 'ArrowDown')) to = [r + 1, c];
+    else if (e.key === 'ArrowUp') to = [r - 1, c];
+    if (!to) return;
+    e.preventDefault();
+    const el = document.querySelector('#siBody input.si-cell[data-r="' + to[0] + '"][data-c="' + to[1] + '"]');
+    if (el) el.focus();
+  });
+
+  // ---- save ----
+  window.siSave = function () {
+    if (!SI || SI.loading || SI.saving) return;
+    const c = siCounts();
+    if (!c.save) return;
+    const repeatPeople = (function () {
+      const s = {}; (SI._ev || []).forEach(function (e) { if (e.repeat && e.pnm) s[e.pnm.pnm_id] = 1; }); return Object.keys(s).length;
+    })();
+    const msgs = [];
+    if (c.existing) msgs.push(c.existing + ' saved score' + (c.existing === 1 ? '' : 's') + ' will be overwritten.');
+    if (repeatPeople) msgs.push(repeatPeople + ' rush' + (repeatPeople === 1 ? ' is' : 'es are') + ' entered more than once; only the last row for each is saved.');
+    if (c.bad) msgs.push(c.bad + ' row' + (c.bad === 1 ? '' : 's') + ' with errors will be skipped.');
+    if (msgs.length) { SI.confirm = msgs.join(' '); siRenderFoot(); return; }
+    siCommit();
+  };
+  window.siConfirm = function (go) {
+    if (!SI) return;
+    if (!go) { SI.confirm = null; siRenderFoot(); return; }
+    siCommit();
   };
 
-  window.saveInterviewImport = async function () {
-    const imp = state.ivImport; if (!imp || !imp.rows || imp.saving) return;
+  async function siCommit() {
+    const ev = SI._ev || [];
     const now = new Date().toISOString();
-    const payload = [];
-    imp.rows.forEach(function (row) {
-      const st = ivRowState(row, imp);
-      if (st.kind === 'ok' || st.kind === 'check') payload.push({
-        pnm_id: row.pnmId, interviewer_psu_id: row.headPsu || null,
-        score_raw: st.score, conducted_at: now
+    let payload = [], table, conflict;
+    if (SI.kind === 'interview') {
+      table = 'interviews'; conflict = 'pnm_id';
+      ev.forEach(function (e) { if (e.save) payload.push(Object.assign({ conducted_at: now }, e.save)); });
+    } else {
+      table = 'chair_scores'; conflict = 'pnm_id,kind';
+      ev.forEach(function (e) {
+        if (!e.save) return;
+        if (e.save.rush.value !== undefined) payload.push({ pnm_id: e.save.pnm_id, kind: 'rush', score: e.save.rush.value, scored_at: now });
+        if (e.save.pm.value !== undefined) payload.push({ pnm_id: e.save.pnm_id, kind: 'pm', score: e.save.pm.value, scored_at: now });
       });
-    });
+    }
     if (!payload.length) return;
-    imp.saving = true; imp.error = null; render();
-    const { error } = await sb.from('interviews').upsert(payload, { onConflict: 'pnm_id' });
-    imp.saving = false;
-    if (error) { imp.error = 'Nothing saved: ' + error.message; render(); return; }
-    imp.result = payload.length;
-    toast(payload.length + ' interview score' + (payload.length === 1 ? '' : 's') + ' saved');
+    SI.saving = true; SI.error = null; siRenderFoot();
+    const { error } = await sb.from(table).upsert(payload, { onConflict: conflict });
+    if (!SI) return;
+    SI.saving = false;
+    if (error) { SI.confirm = null; SI.error = 'Nothing saved: ' + error.message; siRenderFoot(); return; }
+    const kind = SI.kind, n = ev.filter(function (e) { return e.save; }).length;
+    window.siClose();
+    toast(n + (kind === 'interview' ? ' interview score' : ' Rush/PM score row') + (n === 1 ? '' : 's') + ' saved', 'success');
     await loadRatingsBoard();
     render();
-  };
-
-  function interviewImportModal() {
-    const imp = state.ivImport;
-    const TONE = { ok: 'var(--fg-muted)', check: BAND_EDGE.amber, bad: BAND_EDGE.red, skip: BAND_EDGE.none };
-    let body;
-
-    if (imp.loading) {
-      body = '<div style="color:var(--fg-muted);">Loading survivors…</div>';
-    } else if (!imp.rows) {
-      body =
-        '<div style="font-size:12.5px; color:var(--fg-muted); line-height:1.55; margin-bottom:10px;">' +
-          'In the interview scores sheet, select columns A–D (Rush Name, id, Head Interviewer, ' +
-          'Interview Score) for every row, copy, and paste below. The header row is fine to include.</div>' +
-        '<textarea class="iv-import-text" oninput="setIvText(this.value)" ' +
-          'style="width:100%; height:260px; font-family:JetBrains Mono,monospace; font-size:12px; ' +
-          'padding:10px; border:1px solid var(--line-strong); border-radius:8px; ' +
-          'background:var(--surface); color:var(--fg);">' + escapeHtml(imp.text) + '</textarea>' +
-        '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">' +
-          '<button class="btn" onclick="closeInterviewImport()">Cancel</button>' +
-          '<button class="btn primary" onclick="previewInterviewImport()">Preview</button>' +
-        '</div>';
-    } else {
-      const states = imp.rows.map(function (r) { return ivRowState(r, imp); });
-      const count = function (k) { return states.filter(function (s) { return s.kind === k; }).length; };
-      const toSave = count('ok') + count('check');
-      const brothers = state.brothers.filter(function (b) { return b.psu_id; })
-        .slice().sort(function (a, b) { return String(a.last_name).localeCompare(String(b.last_name)); });
-      const selStyle = 'width:100%; padding:4px 6px; font-size:12px; border:1px solid var(--line); ' +
-        'border-radius:6px; background:var(--surface); color:var(--fg);';
-
-      body =
-        '<div style="font-size:12.5px; margin-bottom:10px;">' +
-          '<strong>' + toSave + '</strong> will save · ' +
-          '<span style="color:' + BAND_EDGE.amber + ';">' + count('check') + ' to check</span> · ' +
-          '<span style="color:' + BAND_EDGE.red + ';">' + count('bad') + ' blocked</span> · ' +
-          '<span style="color:var(--fg-muted);">' + count('skip') + ' with no score (skipped)</span>' +
-        '</div>' +
-        '<div style="max-height:52vh; overflow:auto; border:1px solid var(--line); border-radius:8px;">' +
-        '<table style="width:100%; border-collapse:collapse; font-size:12px;">' +
-          '<thead><tr style="position:sticky; top:0; background:var(--bg);">' +
-            ['Sheet name', 'Rush', 'Head interviewer', 'Score', 'Status'].map(function (h) {
-              return '<th style="text-align:left; padding:7px 8px; border-bottom:1px solid var(--line);">' + h + '</th>';
-            }).join('') +
-          '</tr></thead><tbody>' +
-          imp.rows.map(function (row, i) {
-            const st = states[i];
-            return '<tr style="border-bottom:1px solid var(--line);' +
-                (st.kind === 'skip' ? ' opacity:0.5;' : '') + '">' +
-              '<td style="padding:6px 8px;">' + escapeHtml(row.sheetName) + '</td>' +
-              '<td style="padding:6px 8px; min-width:170px;">' +
-                '<select style="' + selStyle + '" onchange="setIvPnm(' + i + ', this.value)">' +
-                  '<option value="">— pick —</option>' +
-                  imp.survivors.map(function (s) {
-                    return '<option value="' + s.pnm_id + '"' + (s.pnm_id === row.pnmId ? ' selected' : '') +
-                      '>' + escapeHtml(s.name) + '</option>';
-                  }).join('') +
-                '</select></td>' +
-              '<td style="padding:6px 8px; min-width:170px;">' +
-                '<div style="font-size:10.5px; color:var(--fg-muted); margin-bottom:2px;">' +
-                  escapeHtml(row.sheetHead || '(blank)') + '</div>' +
-                '<select style="' + selStyle + '" onchange="setIvHead(' + i + ', this.value)">' +
-                  '<option value="">— none —</option>' +
-                  brothers.map(function (b) {
-                    return '<option value="' + escapeHtml(b.psu_id) + '"' + (b.psu_id === row.headPsu ? ' selected' : '') +
-                      '>' + escapeHtml(ivBrotherPref(b)) + '</option>';
-                  }).join('') +
-                '</select></td>' +
-              '<td style="padding:6px 8px; font-family:JetBrains Mono,monospace;">' +
-                escapeHtml(row.scoreTxt || '—') + '</td>' +
-              '<td style="padding:6px 8px; color:' + TONE[st.kind] + ';">' +
-                escapeHtml(st.kind === 'ok' ? 'ready' : st.note) + '</td>' +
-            '</tr>';
-          }).join('') +
-        '</tbody></table></div>' +
-        (imp.result !== null
-          ? '<div style="margin-top:10px; font-size:12.5px; color:' + BAND_EDGE.green + ';">' +
-              imp.result + ' saved. The board has been refreshed.</div>'
-          : '') +
-        '<div style="display:flex; justify-content:space-between; gap:8px; margin-top:12px;">' +
-          '<button class="btn" onclick="backInterviewImport()">Edit paste</button>' +
-          '<div style="display:flex; gap:8px;">' +
-            '<button class="btn" onclick="closeInterviewImport()">Close</button>' +
-            '<button class="btn primary" onclick="saveInterviewImport()"' +
-              (toSave && !imp.saving ? '' : ' disabled') + '>' +
-              (imp.saving ? 'Saving…' : 'Save ' + toSave + ' score' + (toSave === 1 ? '' : 's')) +
-            '</button>' +
-          '</div>' +
-        '</div>';
-    }
-
-    return '<div onclick="closeInterviewImport()" style="position:fixed; inset:0; z-index:1000; ' +
-        'background:rgba(0,0,0,0.55); display:flex; align-items:flex-start; justify-content:center; ' +
-        'padding:40px 20px; overflow-y:auto;">' +
-      '<div onclick="event.stopPropagation()" style="background:var(--bg); border-radius:14px; ' +
-        'max-width:980px; width:100%; border:1px solid var(--line-strong); padding:18px;">' +
-        '<div style="font-size:18px; font-weight:600; margin-bottom:12px;">Import interview scores</div>' +
-        (imp.error
-          ? '<div style="padding:9px 12px; border-radius:8px; margin-bottom:10px; font-size:12.5px; ' +
-              'background:rgba(198,74,74,0.12); color:' + BAND_EDGE.red + ';">' + escapeHtml(imp.error) + '</div>'
-          : '') +
-        body +
-      '</div></div>';
   }
 
   // ---------- deliberation slides ----------
@@ -7425,176 +7718,6 @@
     toast('Blocks set: A ≥ ' + a + ', B ≥ ' + b);
     render();
   };
-
-  // ---------- PM / Rush score import ----------
-  // Paste three columns: Rush Name, PM, Rush. Each score is 0, 0.5 or 1;
-  // a blank cell leaves that score alone. Save upserts on
-  // chair_scores (pnm_id, kind), so a re-paste updates instead of duplicating.
-  // Reuses ivMatch() from the interview import for name matching.
-
-  function csParse(txt) {
-    const t = String(txt || '').trim();
-    if (t === '') return { blank: true };
-    const v = Number(t);
-    return (v === 0 || v === 0.5 || v === 1) ? { value: v } : { bad: true };
-  }
-  function csSurvivors() {
-    return state.ratings.filter(function (r) { return !r.is_cut; }).slice()
-      .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
-  }
-  function csRowState(row, imp) {
-    const pm = csParse(row.pmTxt), ru = csParse(row.rushTxt);
-    if (pm.blank && ru.blank) return { kind: 'skip', note: 'no scores' };
-    if (pm.bad || ru.bad) return { kind: 'bad', note: 'scores must be 0, 0.5 or 1' };
-    if (!row.pnmId) return { kind: 'bad', note: 'pick the rush' };
-    if (imp.rows.filter(function (r) {
-          return r.pnmId === row.pnmId && (r.pmTxt !== '' || r.rushTxt !== '');
-        }).length > 1)
-      return { kind: 'bad', note: 'rush appears twice' };
-    const cur = state.ratings.find(function (r) { return r.pnm_id === row.pnmId; }) || {};
-    const notes = [];
-    if (!row.pnmSure) notes.push('check rush match');
-    if (!pm.blank && cur.pm_norm !== null && cur.pm_norm !== undefined && Number(cur.pm_norm) !== pm.value)
-      notes.push('PM replaces ' + Number(cur.pm_norm));
-    if (!ru.blank && cur.rush_norm !== null && cur.rush_norm !== undefined && Number(cur.rush_norm) !== ru.value)
-      notes.push('Rush replaces ' + Number(cur.rush_norm));
-    return { kind: notes.length ? 'check' : 'ok', note: notes.join(' · '), pm: pm, rush: ru };
-  }
-
-  window.openChairImport = function () {
-    state.csImport = { text: '', rows: null, saving: false, error: null, result: null };
-    render();
-  };
-  window.closeChairImport = function () { state.csImport = null; render(); };
-  window.setCsText = function (v) { if (state.csImport) state.csImport.text = v; };
-  window.backChairImport = function () { if (state.csImport) { state.csImport.rows = null; render(); } };
-  window.setCsPnm = function (i, v) {
-    const row = state.csImport && state.csImport.rows[i]; if (!row) return;
-    row.pnmId = v; row.pnmSure = true; render();
-  };
-
-  window.previewChairImport = function () {
-    const imp = state.csImport; if (!imp) return;
-    const surv = csSurvivors();
-    const rows = [];
-    imp.text.split(/\r?\n/).forEach(function (line) {
-      const c = line.split('\t');
-      const name = (c[0] || '').trim();
-      if (!name || /^(rush )?name$/i.test(name)) return;
-      const m = ivMatch(name, surv, function (s) { return s.name; });
-      rows.push({ sheetName: name, pmTxt: (c[1] || '').trim(), rushTxt: (c[2] || '').trim(),
-                  pnmId: m.hit ? m.hit.pnm_id : '', pnmSure: m.sure });
-    });
-    imp.rows = rows; imp.result = null; imp.error = null;
-    render();
-  };
-
-  window.saveChairImport = async function () {
-    const imp = state.csImport; if (!imp || !imp.rows || imp.saving) return;
-    const now = new Date().toISOString();
-    const payload = [];
-    imp.rows.forEach(function (row) {
-      const st = csRowState(row, imp);
-      if (st.kind !== 'ok' && st.kind !== 'check') return;
-      if (!st.pm.blank)   payload.push({ pnm_id: row.pnmId, kind: 'pm',   score: st.pm.value,   scored_at: now });
-      if (!st.rush.blank) payload.push({ pnm_id: row.pnmId, kind: 'rush', score: st.rush.value, scored_at: now });
-    });
-    if (!payload.length) return;
-    imp.saving = true; imp.error = null; render();
-    const { error } = await sb.from('chair_scores').upsert(payload, { onConflict: 'pnm_id,kind' });
-    imp.saving = false;
-    if (error) { imp.error = 'Nothing saved: ' + error.message; render(); return; }
-    imp.result = payload.length;
-    toast(payload.length + ' PM/Rush score' + (payload.length === 1 ? '' : 's') + ' saved');
-    await loadRatingsBoard();
-    render();
-  };
-
-  function chairImportModal() {
-    const imp = state.csImport;
-    const TONE = { ok: 'var(--fg-muted)', check: BAND_EDGE.amber, bad: BAND_EDGE.red, skip: BAND_EDGE.none };
-    let body;
-    if (!imp.rows) {
-      body =
-        '<div style="font-size:12.5px; color:var(--fg-muted); line-height:1.55; margin-bottom:10px;">' +
-          'Paste three columns: Rush Name, PM, Rush. Each score is 0, 0.5 or 1. ' +
-          'A blank cell leaves that score as it is. A header row is fine.</div>' +
-        '<textarea class="iv-import-text" oninput="setCsText(this.value)" ' +
-          'style="width:100%; height:260px; font-family:JetBrains Mono,monospace; font-size:12px; ' +
-          'padding:10px; border:1px solid var(--line-strong); border-radius:8px; ' +
-          'background:var(--surface); color:var(--fg);">' + escapeHtml(imp.text) + '</textarea>' +
-        '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">' +
-          '<button class="btn" onclick="closeChairImport()">Cancel</button>' +
-          '<button class="btn primary" onclick="previewChairImport()">Preview</button>' +
-        '</div>';
-    } else {
-      const surv = csSurvivors();
-      const states = imp.rows.map(function (r) { return csRowState(r, imp); });
-      const count = function (k) { return states.filter(function (s) { return s.kind === k; }).length; };
-      const toSave = count('ok') + count('check');
-      const selStyle = 'width:100%; padding:4px 6px; font-size:12px; border:1px solid var(--line); ' +
-        'border-radius:6px; background:var(--surface); color:var(--fg);';
-      body =
-        '<div style="font-size:12.5px; margin-bottom:10px;">' +
-          '<strong>' + toSave + '</strong> rushes will save · ' +
-          '<span style="color:' + BAND_EDGE.amber + ';">' + count('check') + ' to check</span> · ' +
-          '<span style="color:' + BAND_EDGE.red + ';">' + count('bad') + ' blocked</span> · ' +
-          '<span style="color:var(--fg-muted);">' + count('skip') + ' with no scores (skipped)</span>' +
-        '</div>' +
-        '<div style="max-height:52vh; overflow:auto; border:1px solid var(--line); border-radius:8px;">' +
-        '<table style="width:100%; border-collapse:collapse; font-size:12px;">' +
-          '<thead><tr style="position:sticky; top:0; background:var(--bg);">' +
-            ['Sheet name', 'Rush', 'PM', 'Rush score', 'Status'].map(function (h) {
-              return '<th style="text-align:left; padding:7px 8px; border-bottom:1px solid var(--line);">' + h + '</th>';
-            }).join('') +
-          '</tr></thead><tbody>' +
-          imp.rows.map(function (row, i) {
-            const st = states[i];
-            return '<tr style="border-bottom:1px solid var(--line);' + (st.kind === 'skip' ? ' opacity:0.5;' : '') + '">' +
-              '<td style="padding:6px 8px;">' + escapeHtml(row.sheetName) + '</td>' +
-              '<td style="padding:6px 8px; min-width:190px;">' +
-                '<select style="' + selStyle + '" onchange="setCsPnm(' + i + ', this.value)">' +
-                  '<option value="">— pick —</option>' +
-                  surv.map(function (s) {
-                    return '<option value="' + s.pnm_id + '"' + (s.pnm_id === row.pnmId ? ' selected' : '') +
-                      '>' + escapeHtml(s.name) + '</option>';
-                  }).join('') +
-                '</select></td>' +
-              '<td style="padding:6px 8px; font-family:JetBrains Mono,monospace;">' + escapeHtml(row.pmTxt || '—') + '</td>' +
-              '<td style="padding:6px 8px; font-family:JetBrains Mono,monospace;">' + escapeHtml(row.rushTxt || '—') + '</td>' +
-              '<td style="padding:6px 8px; color:' + TONE[st.kind] + ';">' +
-                escapeHtml(st.kind === 'ok' ? 'ready' : st.note) + '</td>' +
-            '</tr>';
-          }).join('') +
-        '</tbody></table></div>' +
-        (imp.result !== null
-          ? '<div style="margin-top:10px; font-size:12.5px; color:' + BAND_EDGE.green + ';">' +
-              imp.result + ' scores saved. The board has been refreshed.</div>'
-          : '') +
-        '<div style="display:flex; justify-content:space-between; gap:8px; margin-top:12px;">' +
-          '<button class="btn" onclick="backChairImport()">Edit paste</button>' +
-          '<div style="display:flex; gap:8px;">' +
-            '<button class="btn" onclick="closeChairImport()">Close</button>' +
-            '<button class="btn primary" onclick="saveChairImport()"' +
-              (toSave && !imp.saving ? '' : ' disabled') + '>' +
-              (imp.saving ? 'Saving…' : 'Save ' + toSave + ' rush' + (toSave === 1 ? '' : 'es')) +
-            '</button>' +
-          '</div>' +
-        '</div>';
-    }
-    return '<div onclick="closeChairImport()" style="position:fixed; inset:0; z-index:1000; ' +
-        'background:rgba(0,0,0,0.55); display:flex; align-items:flex-start; justify-content:center; ' +
-        'padding:40px 20px; overflow-y:auto;">' +
-      '<div onclick="event.stopPropagation()" style="background:var(--bg); border-radius:14px; ' +
-        'max-width:900px; width:100%; border:1px solid var(--line-strong); padding:18px;">' +
-        '<div style="font-size:18px; font-weight:600; margin-bottom:12px;">Import PM / Rush scores</div>' +
-        (imp.error
-          ? '<div style="padding:9px 12px; border-radius:8px; margin-bottom:10px; font-size:12.5px; ' +
-              'background:rgba(198,74,74,0.12); color:' + BAND_EDGE.red + ';">' + escapeHtml(imp.error) + '</div>'
-          : '') +
-        body +
-      '</div></div>';
-  }
 
   // ---------- deliberation decisions + bid slides ----------
   // delib_decisions holds one row per rush: accepted / denied / redelib.
