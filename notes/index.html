@@ -5882,10 +5882,6 @@
       root.innerHTML = renderLogin();
       return;
     }
-    if (state.delibMode) {
-      root.innerHTML = renderDelib();
-      return;
-    }
     if (state.presentMode) {
       root.innerHTML = renderPresent();
       return;
@@ -5902,11 +5898,14 @@
 
           '<div class="view ' + (state.currentView === 'candidates' ? 'active' : '') + '">' + renderCandidates() + '</div>' +
           '<div class="view ' + (state.currentView === 'ratings' ? 'active' : '') + '">' + renderRatings() + '</div>' +
+          '<div class="view ' + (state.currentView === 'deliberations' ? 'active' : '') + '">' + renderDeliberations() + '</div>' +
           '<div class="view ' + (state.currentView === 'brothers' ? 'active' : '') + '">' + renderBrothers() + '</div>' +
 
 
         '</main>' +
-      '</div>';
+      '</div>' +
+      (state.delibFs ? delibStage(true) : '') +
+      (state.delibRedelibFor ? delibRedelibModal() : '');
 
     fitBrandSub();
   }
@@ -6260,6 +6259,7 @@
     nametags: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><circle cx="8.5" cy="11" r="1.8"/><path d="M13.5 10h4M13.5 13h4M6 16c.4-1.3 1.4-1.9 2.5-1.9s2.1.6 2.5 1.9"/></svg>',
     budget: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4h10.5A1.5 1.5 0 0 1 18 5.5V20H7.5A1.5 1.5 0 0 1 6 18.5z"/><path d="M6 4v16"/><path d="M9.5 9h5M9.5 12.5h5"/></svg>',
     reviews: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4"/><circle cx="12" cy="16.8" r="0.35" fill="currentColor" stroke="none"/></svg>',
+    deliberations: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="5" y="6.25" width="10" height="4.5" rx="1" transform="rotate(-45 10 8.5)"/><path d="M11.9 10.4 19.5 18"/><path d="M3.5 20.5h9"/></svg>',
     ratings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M4 19.5V13m4 6.5V8.5m4 11V5m4 14.5V10m4 9.5v-5.5"/><path d="M2.5 21h19" stroke-width="1.2"/></svg>',
   };
   const BRAND_HEX = '<svg viewBox="0 0 46 50" preserveAspectRatio="none"><polygon points="23,1.5 44.5,13 44.5,37 23,48.5 1.5,37 1.5,13" fill="#13213a" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/></svg>';
@@ -6777,7 +6777,6 @@
         '</div>' +
         '<div class="rk-actions">' +
           '<button type="button" class="btn" onclick="event.stopPropagation(); openRatingsManage(this)">Manage ▾</button>' +
-          '<button type="button" class="btn primary" onclick="startDelib()">Deliberation Slides</button>' +
         '</div>' +
       '</div>' +
 
@@ -7425,15 +7424,29 @@
 
   const DELIB_CSS = '' +
     '<style id="delibCss">' +
-    '.delib-wrap{position:fixed; inset:0; z-index:900; background:var(--bg); display:flex; flex-direction:column;}' +
-    '.delib-bar{display:flex; align-items:center; gap:12px; padding:10px 18px; flex-wrap:wrap;' +
-      'border-bottom:1px solid var(--line-strong); background:var(--surface);}' +
-    '.delib-pos{font-family:\'JetBrains Mono\',monospace; font-size:13px; color:var(--fg-muted);}' +
-    '.delib-bar input{width:70px; padding:5px 7px; border:1px solid var(--line-strong); border-radius:6px;' +
-      'background:var(--bg); color:var(--fg); font-family:\'JetBrains Mono\',monospace;}' +
-    '.delib-slide{flex:1; overflow:auto; padding:28px 36px;}' +
-    '.delib-grid{display:grid; grid-template-columns:minmax(240px,32%) 1fr; gap:34px; align-items:start;}' +
-    '.delib-photo{width:100%; max-height:72vh; object-fit:cover; border-radius:12px;}' +
+    '.dl-opts{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 14px;}' +
+    '.dl-group{display:flex; align-items:center; gap:8px;}' +
+    '.dl-label{font-family:Inter,sans-serif; font-size:13px; font-weight:600; color:var(--fg); margin-right:4px;}' +
+    '.dl-k{font-family:Inter,sans-serif; font-size:12px; color:var(--fg-muted);}' +
+    '.dl-num{width:64px; padding:7px 9px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface);' +
+      'color:var(--fg); font-family:\'JetBrains Mono\',monospace; font-size:13px;}' +
+    '.dl-num:focus{outline:none; border-color:var(--fg-muted);}' +
+    '.dl-num.bad{border-color:var(--danger); color:var(--danger);}' +
+    '.dl-card{background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; overflow:hidden;}' +
+    '.dl-head{display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line);}' +
+    '.dl-pos{font-family:\'JetBrains Mono\',monospace; font-size:13px; color:var(--fg-muted); min-width:110px; text-align:center;}' +
+    '.dl-err{font-family:Inter,sans-serif; font-size:12px; color:var(--danger);}' +
+    '.dl-box{position:relative; width:100%; overflow:hidden; background:var(--bg);}' +
+    '.dl-box.fs{position:fixed; inset:0; z-index:950; display:flex; align-items:center; justify-content:center; background:#000;}' +
+    '.dl-box.fs.idle, .dl-box.fs.idle *{cursor:none !important;}' +
+    '.dl-frame{position:relative; overflow:hidden; width:100%;}' +
+    '.dl-box.fs .dl-frame{width:auto;}' +
+    '.dl-canvas{position:absolute; left:0; top:0; width:1600px; height:900px; transform-origin:0 0;' +
+      'background:var(--bg); color:var(--fg); font-family:Inter,sans-serif;}' +
+    '.dl-empty{padding:80px 24px; text-align:center; font-family:Inter,sans-serif; color:var(--fg-muted);}' +
+    '.delib-slide{position:absolute; inset:0; overflow:hidden; padding:40px 44px;}' +
+    '.delib-grid{display:grid; grid-template-columns:30% 1fr 250px; gap:34px; align-items:start;}' +
+    '.delib-photo{width:100%; max-height:800px; object-fit:cover; border-radius:12px;}' +
     '.delib-name{font-size:34px; font-weight:600; line-height:1.15; margin-bottom:22px;}' +
     '.delib-stats{display:grid; grid-template-columns:1fr 1fr; gap:14px 30px; margin-bottom:22px;}' +
     '.delib-k{color:var(--fg-muted); font-size:12px; text-transform:uppercase; letter-spacing:0.08em;}' +
@@ -7441,9 +7454,26 @@
     '.delib-text{font-size:18px; line-height:1.5; margin-bottom:16px;}' +
     '.delib-links a{font-size:18px; margin-right:26px;}' +
     '.delib-divider{display:flex; flex-direction:column; align-items:center; justify-content:center;' +
-      'min-height:70vh; text-align:center;}' +
+      'height:100%; text-align:center;}' +
     '.delib-comment{font-size:18px; line-height:1.5; padding:12px 16px; border-radius:10px;' +
       'border:1px solid var(--line); background:var(--surface); margin-bottom:10px;}' +
+    '.dl-side{display:flex; flex-direction:column; gap:18px;}' +
+    '.dl-panel{background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; padding:16px 16px 10px;}' +
+    '.dl-panel-t{font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--fg-muted); margin-bottom:10px;}' +
+    '.dl-opt{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; padding:9px 10px;' +
+      'margin:0 0 6px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--fg);' +
+      'font-family:Inter,sans-serif; font-size:17px; cursor:pointer; text-align:left;}' +
+    '.dl-opt:hover{border-color:var(--line-strong);}' +
+    '.dl-opt.on{border-color:var(--fg); box-shadow:inset 0 0 0 1px var(--fg); font-weight:600;}' +
+    '.dl-key{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:400; color:var(--fg-muted);}' +
+    '.dl-key kbd{display:inline-block; min-width:26px; padding:2px 7px; border:1px solid var(--line-strong); border-bottom-width:2px;' +
+      'border-radius:6px; background:var(--surface); font-family:\'JetBrains Mono\',monospace; font-size:14px; color:var(--fg); text-align:center;}' +
+    '.dl-done{display:flex; align-items:center; gap:12px; padding:6px 2px 14px; font-size:19px; font-weight:600; color:var(--fg);}' +
+    '.dl-check{flex:none; display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px;' +
+      'border-radius:50%; background:#2f8f4e; color:#fff; font-size:16px;}' +
+    '.dl-done-sub{font-size:13px; font-weight:400; color:var(--fg-muted); margin-top:2px;}' +
+    '.dl-flash{animation:dlFlash 0.6s ease-out;}' +
+    '@keyframes dlFlash{0%{transform:scale(0.94); opacity:0.3;} 100%{transform:scale(1); opacity:1;}}' +
     '</style>';
 
   const DELIB_TINT = { A: 'rgba(72,160,90,0.16)', B: 'transparent', C: 'rgba(214,120,160,0.16)' };
@@ -7456,7 +7486,7 @@
   function delibBlock(score, pnmId) {
     const dec = pnmId ? (state.delibDecisions || {})[pnmId] : null;
     if (dec && dec.block_override) return dec.block_override;   // manual move wins
-    const a = state.ratingsConfig.block_a_min, b = state.ratingsConfig.block_b_min;
+    const cuts = delibEffCuts(), a = cuts.a, b = cuts.b;
     if (!isFinite(a) || !isFinite(b)) return null;
     if (score !== null && score >= a) return 'A';
     if (score !== null && score >= b) return 'B';
@@ -7568,7 +7598,7 @@
 
     return '<div class="delib-grid">' +
       (url ? '<img class="delib-photo" src="' + url + '" alt="">'
-           : '<div class="delib-photo" style="height:50vh; display:flex; align-items:center; ' +
+           : '<div class="delib-photo" style="height:450px; display:flex; align-items:center; ' +
                'justify-content:center; border:1px dashed var(--line-strong); color:var(--fg-muted);">' +
                'no headshot</div>') +
       '<div>' +
@@ -7605,6 +7635,7 @@
             : '<span style="font-size:18px; color:var(--fg-muted); margin-right:26px;">No resume</span>') +
         '</div>' +
       '</div>' +
+      delibSidePanels(r.pnm_id, s) +
     '</div>';
   }
 
@@ -7628,17 +7659,70 @@
     '</div>';
   }
 
-  function renderDelib() {
+  // ---------- Deliberations page ----------
+  // The deck lives on its own tab as one big card: a 1600x900 slide canvas
+  // scaled to the card, or to the whole screen when presenting. Block
+  // cutpoints preview live while typing and save on Enter / leaving the box.
+  // Decisions are keyboard-driven so nothing on the projector reveals them:
+  // every decision shows the same "Decision recorded" receipt.
+
+  function delibEffCuts() {
+    if (state.delibDraft) return state.delibDraft;
+    return { a: state.ratingsConfig.block_a_min, b: state.ratingsConfig.block_b_min };
+  }
+  function delibRecorded(s, dec) {
+    if (!dec || !dec.decision) return false;
+    return s.redelib ? (dec.decision === 'accepted' || dec.decision === 'denied') : true;
+  }
+  function delibCur() {
     const d = delibSlides();
-    if (!d.slides.length) { state.delibMode = false; return ''; }
+    if (typeof state.delibIndex !== 'number') state.delibIndex = 0;
+    if (!d.slides.length) return { d: d, s: null, i: 0 };
     const i = Math.max(0, Math.min(state.delibIndex, d.slides.length - 1));
     state.delibIndex = i;
-    const s = d.slides[i];
-    const a = state.ratingsConfig.block_a_min, b = state.ratingsConfig.block_b_min;
-    const pos = s.kind === 'rush'
+    return { d: d, s: d.slides[i], i: i };
+  }
+  function delibPosText(s, d) {
+    return s.kind === 'rush'
       ? (s.redelib ? 'Redelib ' + s.n + ' of ' + s.of : s.n + ' of ' + d.total)
       : (s.block === 'R' ? 'Redelib' : s.block + ' block');
+  }
 
+  // Right-hand column of a rush slide: Move block, then Decision.
+  function delibSidePanels(pnmId, s) {
+    const dec = (state.delibDecisions || {})[pnmId] || {};
+    const ov = dec.block_override || '';
+    const key = function (k) { return '<span class="dl-key">press <kbd>' + k + '</kbd></span>'; };
+    const bopt = function (v, label, k) {
+      return '<button type="button" class="dl-opt' + (ov === v ? ' on' : '') + '" ' +
+        'onclick="delibMoveBlock(\'' + pnmId + '\', \'' + v + '\')"><span>' + label + '</span>' + key(k) + '</button>';
+    };
+    const dopt = function (v, label, k) {
+      return '<button type="button" class="dl-opt" onclick="pickDelibDecision(\'' + pnmId + '\', \'' + v + '\')">' +
+        '<span>' + label + '</span>' + key(k) + '</button>';
+    };
+    let decision;
+    if (delibRecorded(s, dec)) {
+      const t = dec.decided_at ? new Date(dec.decided_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+      decision =
+        '<div class="dl-done' + (state.delibFlash === pnmId ? ' dl-flash' : '') + '">' +
+          '<span class="dl-check">✓</span>' +
+          '<div>Decision recorded' + (t ? '<div class="dl-done-sub">Saved ' + t + '</div>' : '') + '</div>' +
+        '</div>' +
+        '<button type="button" class="dl-opt" onclick="delibUndo(\'' + pnmId + '\')"><span>Undo</span>' + key('Z') + '</button>';
+    } else {
+      decision = dopt('accepted', 'Accept', 'A') + dopt('denied', 'Deny', 'D') + dopt('redelib', 'Redelib', 'R');
+    }
+    return '<div class="dl-side">' +
+      '<div class="dl-panel"><div class="dl-panel-t">Move block</div>' +
+        bopt('A', 'A block', '1') + bopt('B', 'B block', '2') + bopt('C', 'C block', '3') + bopt('', 'By score', '0') +
+      '</div>' +
+      '<div class="dl-panel"><div class="dl-panel-t">Decision</div>' + decision + '</div>' +
+    '</div>';
+  }
+
+  function delibSlideInner(s, d) {
+    const cuts = delibEffCuts(), a = cuts.a, b = cuts.b;
     let body;
     if (state.delibCommentsFor) {
       body = delibCommentsPage(state.delibCommentsFor);
@@ -7658,46 +7742,81 @@
     } else {
       body = delibRushSlide(s);
     }
-
-    return DELIB_CSS +
-      '<div class="delib-wrap">' +
-        '<div class="delib-bar">' +
-          '<button class="btn" onclick="endDelib()">‹ Exit</button>' +
-          '<div class="delib-pos">' + pos + '</div>' +
-          (state.delibIvError
-            ? '<div style="font-size:12px; color:' + BAND_EDGE.red + ';">Interview data failed to load: ' +
-                escapeHtml(state.delibIvError) + '</div>'
-            : '') +
-          '<div style="flex:1;"></div>' +
-          (s.kind === 'rush' && !state.delibCommentsFor ? delibBlockSelect(s.row.pnm_id) : '') +
-          (s.kind === 'rush' && !state.delibCommentsFor ? delibDecisionSelect(s.row.pnm_id) : '') +
-          '<button class="btn" onclick="exportDelibDeckPdf()">Export deck PDF</button>' +
-          '<button class="btn" onclick="exportBidSlides()">Export bid slides</button>' +
-          '<span class="delib-k">A ≥</span>' +
-          '<input class="delib-input" id="delibA" value="' + (isFinite(a) ? a : '') + '">' +
-          '<span class="delib-k">B ≥</span>' +
-          '<input class="delib-input" id="delibB" value="' + (isFinite(b) ? b : '') + '">' +
-          '<button class="btn" onclick="saveDelibBlocks()">Set blocks</button>' +
-          '<button class="btn" onclick="delibStep(-1)"' + (i === 0 ? ' disabled' : '') + '>Back</button>' +
-          '<button class="btn primary" onclick="delibStep(1)"' +
-            (i === d.slides.length - 1 ? ' disabled' : '') + '>Next</button>' +
-        '</div>' +
-        '<div class="delib-slide" style="background:' +
-          (s.block && !state.delibCommentsFor ? DELIB_TINT[s.block] : 'transparent') + ';">' +
-          body + '</div>' +
-        (state.delibRedelibFor ? delibRedelibModal() : '') +
-      '</div>';
+    const tint = s.block && !state.delibCommentsFor ? DELIB_TINT[s.block] : 'transparent';
+    return '<div class="delib-slide" style="background:' + tint + ';">' + body + '</div>';
   }
 
-  window.startDelib = async function () {
-    state.delibMode = true;
-    state.delibIndex = 0;
-    state.delibCommentsFor = null;
+  function delibStage(fs) {
+    const c = delibCur();
+    if (!c.s) return '';
+    let sc, frame;
+    if (fs) {
+      sc = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+      frame = 'width:' + (1600 * sc).toFixed(1) + 'px; height:' + (900 * sc).toFixed(1) + 'px;';
+    } else {
+      sc = state._dlScale || 0.6;
+      frame = 'height:' + (900 * sc).toFixed(1) + 'px;';
+    }
+    return '<div class="dl-box' + (fs ? ' fs' + (state.dlIdle ? ' idle' : '') : '') + '"' +
+        (fs ? ' id="dlFs" onmousemove="delibWake()"' : '') + '>' +
+      '<div class="dl-frame" style="' + frame + '"><div class="dl-canvas" style="transform:scale(' + sc + ');">' +
+        delibSlideInner(c.s, c.d) +
+      '</div></div></div>';
+  }
+
+  function delibCardHtml() {
+    const c = delibCur();
+    if (!c.s) {
+      return '<div class="dl-card" id="delibCard"><div class="dl-empty">' +
+        (state.ratings.length ? 'No rushes left to deliberate.' : 'No rushes yet. Slides appear once candidates are rated.') +
+        '</div></div>';
+    }
+    const last = c.d.slides.length - 1;
+    return '<div class="dl-card" id="delibCard">' +
+      '<div class="dl-head">' +
+        '<button class="btn" onclick="delibStep(-1)"' + (c.i === 0 ? ' disabled' : '') + '>‹ Back</button>' +
+        '<div class="dl-pos">' + delibPosText(c.s, c.d) + '</div>' +
+        '<button class="btn" onclick="delibStep(1)"' + (c.i === last ? ' disabled' : '') + '>Next ›</button>' +
+        (state.delibIvError ? '<div class="dl-err">Interview data failed to load: ' + escapeHtml(state.delibIvError) + '</div>' : '') +
+        '<div style="flex:1;"></div>' +
+        '<button class="btn primary" onclick="delibFullscreen()">Present fullscreen</button>' +
+      '</div>' +
+      (state.delibFs ? '<div class="dl-empty">Presenting in fullscreen. Press Esc to return.</div>' : delibStage(false)) +
+    '</div>';
+  }
+
+  function renderDeliberations() {
+    if (!state.delibLoaded) {
+      setTimeout(function () {
+        if (!state.delibLoaded && state.currentView === 'deliberations' && state.currentUser) delibLoad();
+      }, 0);
+    }
+    const cuts = delibEffCuts();
+    const val = function (v) { return v !== null && v !== undefined && isFinite(v) ? v : ''; };
+    const num = function (id, v) {
+      return '<input id="' + id + '" class="dl-num" inputmode="decimal" value="' + val(v) + '" ' +
+        'oninput="delibPreviewBlocks()" onchange="saveDelibBlocks()" ' +
+        'onkeydown="if(event.key===\'Enter\'){this.blur();}">';
+    };
+    setTimeout(window.delibFit, 0);
+    return DELIB_CSS +
+      '<div class="dl-opts">' +
+        '<div class="dl-group"><span class="dl-label">Blocks</span>' +
+          '<span class="dl-k">A ≥</span>' + num('delibA', cuts.a) +
+          '<span class="dl-k">B ≥</span>' + num('delibB', cuts.b) +
+        '</div>' +
+        '<div style="flex:1;"></div>' +
+        '<button class="btn" onclick="exportDelibDeckPdf()">Export deliberation slides</button>' +
+        '<button class="btn" onclick="exportBidSlides()">Export bid slides</button>' +
+      '</div>' +
+      delibCardHtml();
+  }
+
+  async function delibLoad() {
+    state.delibLoaded = true;
     state.delibIv = null;
     state.delibIvError = null;
-    render();
-    state.delibDecisions = {};
-    state.delibRedelibFor = null;
+    state.delibDecisions = state.delibDecisions || {};
     const [ivRes, decRes] = await Promise.all([
       sb.from('v_interview_board')
         .select('pnm_id, interviewer_psu_id, score_raw, score_adjusted, exempt, missed_interview, comment'),
@@ -7712,8 +7831,124 @@
     state.delibIvError = ivRes.error ? ivRes.error.message
                        : decRes.error ? 'decisions: ' + decRes.error.message : null;
     render();
+  }
+
+  // Size the canvas to the card (or the screen) without a full re-render.
+  window.delibFit = function () {
+    const box = document.querySelector('#delibCard .dl-box');
+    if (box && box.clientWidth) {
+      const s = box.clientWidth / 1600;
+      state._dlScale = s;
+      box.querySelector('.dl-frame').style.height = (900 * s).toFixed(1) + 'px';
+      box.querySelector('.dl-canvas').style.transform = 'scale(' + s + ')';
+    }
+    const fb = document.getElementById('dlFs');
+    if (fb) {
+      const s = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+      const fr = fb.querySelector('.dl-frame');
+      fr.style.width = (1600 * s).toFixed(1) + 'px';
+      fr.style.height = (900 * s).toFixed(1) + 'px';
+      fb.querySelector('.dl-canvas').style.transform = 'scale(' + s + ')';
+    }
   };
-  window.endDelib = function () { state.delibMode = false; state.delibCommentsFor = null; render(); };
+  window.addEventListener('resize', function () { window.delibFit(); });
+
+  window.delibRepaint = function () {
+    const el = document.getElementById('delibCard');
+    if (el) el.outerHTML = delibCardHtml();
+    window.delibFit();
+  };
+
+  // Live preview while typing cutpoints; saving happens on change.
+  window.delibPreviewBlocks = function () {
+    const ea = document.getElementById('delibA'), eb = document.getElementById('delibB');
+    if (!ea || !eb) return;
+    const a = Number(ea.value), b = Number(eb.value);
+    const cur = delibSlides().slides[state.delibIndex];
+    const ok = ea.value.trim() !== '' && eb.value.trim() !== '' && isFinite(a) && isFinite(b) && a > b && b >= 0 && a <= 100;
+    state.delibDraft = ok ? { a: a, b: b } : null;
+    window.delibMarkCuts(ok);
+    if (cur && cur.kind === 'rush') {
+      const idx = delibSlides().slides.findIndex(function (x) { return x.kind === 'rush' && x.row.pnm_id === cur.row.pnm_id; });
+      if (idx >= 0) state.delibIndex = idx;
+    }
+    window.delibRepaint();
+  };
+
+  window.delibMarkCuts = function (ok) {
+    ['delibA', 'delibB'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('bad', !ok);
+    });
+  };
+
+  // Fullscreen: the whole document goes fullscreen and the canvas is drawn
+  // as a fixed layer above the app, so re-renders don't drop out of it.
+  window.delibFullscreen = function () {
+    state.delibFs = true;
+    state.delibCommentsFor = null;
+    state.dlIdle = false;
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
+    render();
+    window.delibWake();
+  };
+  window.delibExitFs = function () {
+    state.delibFs = false;
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+    render();
+  };
+  document.addEventListener('fullscreenchange', function () {
+    if (!document.fullscreenElement && state.delibFs) { state.delibFs = false; render(); }
+    else setTimeout(window.delibFit, 50);
+  });
+  // Hide the cursor after 2 seconds without movement while presenting.
+  window.delibWake = function () {
+    state.dlIdle = false;
+    const fb = document.getElementById('dlFs');
+    if (fb) fb.classList.remove('idle');
+    clearTimeout(state._dlIdleT);
+    state._dlIdleT = setTimeout(function () {
+      if (!state.delibFs) return;
+      state.dlIdle = true;
+      const f = document.getElementById('dlFs');
+      if (f) f.classList.add('idle');
+    }, 2000);
+  };
+
+  window.delibMoveBlock = function (pnmId, v) {
+    const cur = ((state.delibDecisions || {})[pnmId] || {}).block_override || '';
+    if (cur === v || state.delibBusy) return;
+    window.setDelibBlockOverride(pnmId, v);
+  };
+
+  // Undo restores the decision as it was before the last one recorded here.
+  // Without that history (e.g. after a reload) it clears the decision,
+  // returning a rush to redelib if it had been sent there.
+  window.delibUndo = async function (pnmId) {
+    if (state.delibBusy) return;
+    const cur = (state.delibDecisions || {})[pnmId];
+    if (!cur) return;
+    let prev = (state.delibUndo || {})[pnmId];
+    if (!prev) {
+      prev = cur.decision === 'redelib'
+        ? { decision: null, redelib_at: null, redelib_yes_pct: null, decided_at: null }
+        : { decision: cur.redelib_at ? 'redelib' : null, redelib_at: cur.redelib_at || null,
+            redelib_yes_pct: cur.redelib_yes_pct === undefined ? null : cur.redelib_yes_pct, decided_at: null };
+    }
+    const row = {
+      pnm_id: pnmId, decision: prev.decision, redelib_at: prev.redelib_at,
+      redelib_yes_pct: prev.redelib_yes_pct, decided_at: prev.decided_at || new Date().toISOString()
+    };
+    state.delibBusy = true;
+    const { error } = await sb.from('delib_decisions').upsert(row, { onConflict: 'pnm_id' });
+    state.delibBusy = false;
+    if (error) { toast('Undo failed: ' + error.message, 'error'); return; }
+    state.delibDecisions[pnmId] = Object.assign({}, cur, row);
+    if (state.delibUndo) delete state.delibUndo[pnmId];
+    render();
+  };
+
   window.delibStep = function (dir) {
     const n = delibSlides().slides.length;
     const next = state.delibIndex + dir;
@@ -7731,7 +7966,11 @@
     const a = Number(document.getElementById('delibA').value);
     const b = Number(document.getElementById('delibB').value);
     if (!isFinite(a) || !isFinite(b) || a <= b || b < 0 || a > 100) {
-      toast('A must be higher than B, both between 0 and 100', 'error');
+      // Mid-edit (e.g. tabbing from A to B): leave the saved blocks alone and
+      // flag the inputs instead of interrupting with a toast.
+      state.delibDraft = null;
+      window.delibRepaint();
+      window.delibMarkCuts(false);
       return;
     }
     // Keep the current rush on screen while dividers shift around it.
@@ -7743,6 +7982,7 @@
       { key: 'block_b_min', value: String(b), note: note, updated_at: now, updated_by: null }
     ], { onConflict: 'key' });
     if (error) { toast('Blocks not saved: ' + error.message, 'error'); return; }
+    state.delibDraft = null;
     state.ratingsConfig.block_a_min = a;
     state.ratingsConfig.block_b_min = b;
     if (cur && cur.kind === 'rush') {
@@ -7773,10 +8013,18 @@
       redelib_yes_pct: pct !== undefined ? pct : (cur ? cur.redelib_yes_pct : null),
       decided_at: new Date().toISOString()
     };
+    state.delibBusy = true;
     const { error } = await sb.from('delib_decisions').upsert(row, { onConflict: 'pnm_id' });
+    state.delibBusy = false;
     if (error) { toast('Not saved: ' + error.message, 'error'); return false; }
-    state.delibDecisions[pnmId] = row;
-    toast('Saved');
+    state.delibUndo = state.delibUndo || {};
+    state.delibUndo[pnmId] = {
+      decision: cur ? cur.decision : null, redelib_at: cur ? cur.redelib_at : null,
+      redelib_yes_pct: cur ? cur.redelib_yes_pct : null, decided_at: cur ? cur.decided_at : null
+    };
+    state.delibDecisions[pnmId] = Object.assign({}, cur || {}, row);
+    state.delibFlash = pnmId;
+    setTimeout(function () { if (state.delibFlash === pnmId) state.delibFlash = null; }, 700);
     render();
     return true;
   }
@@ -8630,6 +8878,7 @@
       { id: 'candidates', label: 'Candidates', icon: '★', count: state.pnms.length },
       { id: 'ratings', label: 'Brotherhood Ratings', icon: '▲',
         count: state.ratings.filter(function (r) { return r.unique_raters > 0; }).length },
+      { id: 'deliberations', label: 'Deliberations', icon: '⚖' },
       { id: 'brothers', label: 'Brothers', icon: '◍', count: state.brothers.length },
     ];
     if (tierRank(state.currentTier) >= 2) {
@@ -8670,7 +8919,10 @@
       '</aside>';
   }
 
-  window.switchView = function(v) { state.currentView = v; render(); };
+  window.switchView = function(v) {
+    if (state.delibFs && v !== 'deliberations') window.delibExitFs();
+    state.currentView = v; render();
+  };
 
   window.logout = async function() {
     try { await sb.auth.signOut(); } catch (e) { console.error('signOut failed', e); }
@@ -8695,6 +8947,7 @@
       candidates: ['Candidates', ''],
       brothers: ['Brothers', '& chapter'],
       ratings: ['Brotherhood', 'Ratings'],
+      deliberations: ['Deliberations', ''],
       nametags: ['Nametags', '& print'],
       budget: ['Budget', '& expenses'],
       reviews: ['ID Review', '& corrections'],
@@ -8718,7 +8971,7 @@
     const calIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:18px;height:18px;vertical-align:middle;margin-right:8px;color:var(--fg-muted)"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>';
     return '' +
       '<div class="page-header">' +
-        '<div><h1 class="page-title' + (state.currentView === 'ratings' ? ' page-title-compact' : '') + '">' + titleHtml + '</h1>' + subHtml + '</div>' +
+        '<div><h1 class="page-title' + (state.currentView === 'ratings' || state.currentView === 'deliberations' ? ' page-title-compact' : '') + '">' + titleHtml + '</h1>' + subHtml + '</div>' +
         '<div class="page-meta">' +
           '<div>' + calIcon + dateStr + '</div>' +
         '</div>' +
@@ -11174,17 +11427,29 @@
 
   // keyboard shortcuts
   document.addEventListener('keydown', (e) => {
-    if (state.delibMode) {
+    if ((state.currentView === 'deliberations' || state.delibFs) && state.currentUser && !state.presentMode &&
+        !e.ctrlKey && !e.metaKey && !e.altKey) {
       const tag = (e.target.tagName || '').toLowerCase();
       if (tag === 'textarea' || tag === 'input' || tag === 'select') return;
+      if (document.querySelector('.modal.active, .si-overlay')) return;
+      if (e.key === 'Escape') {
+        if (state.delibRedelibFor) { e.preventDefault(); window.cancelDelibRedelib(); return; }
+        if (state.delibCommentsFor) { e.preventDefault(); window.closeDelibComments(); return; }
+        if (state.delibFs) { e.preventDefault(); window.delibExitFs(); return; }
+      }
+      if (state.delibRedelibFor) return;
       if (e.key === 'ArrowRight') { e.preventDefault(); window.delibStep(1);  return; }
       if (e.key === 'ArrowLeft')  { e.preventDefault(); window.delibStep(-1); return; }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        if (state.delibRedelibFor) window.cancelDelibRedelib();
-        else if (state.delibCommentsFor) window.closeDelibComments();
-        else window.endDelib();
-        return;
+      const c = delibCur();
+      if (c.s && c.s.kind === 'rush' && !state.delibCommentsFor && !state.delibBusy) {
+        const k = (e.key || '').toLowerCase(), id = c.s.row.pnm_id;
+        const dec = (state.delibDecisions || {})[id] || {};
+        const done = delibRecorded(c.s, dec);
+        const pick = { a: 'accepted', d: 'denied', r: 'redelib' }[k];
+        if (pick) { e.preventDefault(); if (!done) window.pickDelibDecision(id, pick); return; }
+        if (k === 'z') { e.preventDefault(); if (done) window.delibUndo(id); return; }
+        const blk = { '1': 'A', '2': 'B', '3': 'C', '0': '' }[k];
+        if (blk !== undefined) { e.preventDefault(); window.delibMoveBlock(id, blk); return; }
       }
     }
     if (state.presentMode) {
