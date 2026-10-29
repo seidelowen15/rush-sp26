@@ -846,7 +846,9 @@
     padding: 14px 20px 10px; margin-bottom: 24px;
   }
   .rk-chart-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
-  .rk-chart-title { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: var(--fg); }
+  .rk-chart-title { font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; color: var(--fg); }
+  .rk-chart-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .rk-chart-cap { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--fg-muted); }
   .rk-zoom-note { font-weight: 500; color: #a8740f; margin-left: 8px; }
   .rk-seg { display: inline-flex; background: var(--surface-2); border-radius: 7px; padding: 2px; }
   .rk-seg button {
@@ -855,7 +857,8 @@
   }
   .rk-seg button.active { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(3,16,46,0.08); }
   .rk-seg button:disabled { opacity: 0.45; cursor: not-allowed; }
-  .rk-chart-wrap { position: relative; }
+  .rk-chart-wrap { position: relative; --rk-line: var(--navy); --rk-mid-ink: #5c6476; }
+  [data-theme="dark"] .rk-chart-wrap { --rk-line: #d6deec; --rk-mid-ink: #aab3c5; }
   .rk-tip {
     display: none; position: absolute; z-index: 5; pointer-events: none; white-space: nowrap;
     padding: 8px 10px; border-radius: 7px; background: var(--navy); color: #fff;
@@ -6335,13 +6338,15 @@
     return null;
   }
 
-  // Chart 1. Ranking curve: score by rank, cut targets as dashed rules, the
-  // regions between them very lightly shaded. Full distribution or zoomed
-  // to the ranks around the cut targets (same score scale either way).
+  // Chart 1. Ranking distribution: score by rank, color-coded regions split
+  // at the cut targets. Each cut line sits on the boundary between the last
+  // candidate inside the cut and the first one outside it (rank k | k+1),
+  // and the region shading meets the line exactly. Full distribution or
+  // zoomed to the ranks around the cuts (same score scale either way).
   function ratingsCurveChart(rows, pass) {
     const N = rows.length;
     if (!N) return '';
-    const W = ratingsChartWidth(), H = 240, PADL = 46, PADR = 18, PADT = 22, PADB = 28;
+    const W = ratingsChartWidth(), H = 260, PADL = 58, PADR = 18, PADT = 24, PADB = 28;
     const iw = W - PADL - PADR, ih = H - PADT - PADB;
     const cuts = ratingsCuts(N);
     const zoom = state.ratingsCurveMode === 'boundary' && cuts.length > 0;
@@ -6354,53 +6359,70 @@
     const vals = rows.map(function (r) { return Number(r.final_score_available); });
     const vlo = Math.min.apply(null, vals), vhi = Math.max.apply(null, vals);
     const span = (vhi - vlo) || 1;
-    const x = function (rank) { return PADL + ((rank - r0) / Math.max(r1 - r0, 1)) * iw; };
-    const y = function (v) { return PADT + ih - ((v - vlo) / span) * ih; };
+    // ranks map to slots; the plot spans from the left edge of r0's slot to the right edge of r1's
+    const x = function (rank) { return PADL + ((rank - r0 + 0.5) / (r1 - r0 + 1)) * iw; };
+    const xEdge = function (k) { return PADL + ((k - r0 + 1) / (r1 - r0 + 1)) * iw; };   // boundary after rank k
     const clampX = function (px) { return Math.min(PADL + iw, Math.max(PADL, px)); };
+    const y = function (v) { return PADT + ih - ((v - vlo) / span) * ih; };
     const font = 'font-family="Inter, sans-serif"';
 
-    // region shading: above first cut / between cuts / below last cut (none)
-    let regions = '';
-    if (cuts.length) {
-      const a = clampX(x(cuts[0][0] + 0.5));
-      regions += '<rect x="' + PADL + '" y="' + PADT + '" width="' + Math.max(0, a - PADL).toFixed(1) +
-        '" height="' + ih + '" fill="var(--navy)" opacity="0.035"/>';
-      if (cuts.length > 1 && cuts[1][0] !== cuts[0][0]) {
-        const b = clampX(x(cuts[1][0] + 0.5));
-        regions += '<rect x="' + a.toFixed(1) + '" y="' + PADT + '" width="' + Math.max(0, b - a).toFixed(1) +
-          '" height="' + ih + '" fill="#e0a828" opacity="0.07"/>';
-      }
+    // regions: inside first cut / between cuts / remaining
+    const GREEN = '#3f8f5a', AMBER = '#c98a12', RED = '#c0453f';
+    const bounds = [];
+    cuts.forEach(function (c) { if (bounds.indexOf(c[0]) === -1) bounds.push(c[0]); });
+    const regions = [];
+    if (bounds.length) {
+      regions.push({ from: 1, to: bounds[0], fill: GREEN, label: 'Top ' + bounds[0], sub: 'Strongest candidates' });
+      if (bounds.length > 1) regions.push({ from: bounds[0] + 1, to: bounds[1], fill: AMBER, label: 'Next ' + (bounds[1] - bounds[0]), sub: 'Close to cut', ink: 'var(--rk-mid-ink)' });
+      const last = bounds[bounds.length - 1];
+      if (last < N) regions.push({ from: last + 1, to: N, fill: RED, label: 'Remaining ' + (N - last), sub: 'Below cut threshold' });
     }
+    let shade = '', regionLabels = '';
+    regions.forEach(function (rg) {
+      const a = clampX(xEdge(rg.from - 1)), b = clampX(xEdge(rg.to));
+      if (b - a <= 0) return;
+      shade += '<rect x="' + a.toFixed(1) + '" y="' + PADT + '" width="' + (b - a).toFixed(1) + '" height="' + ih +
+        '" fill="' + rg.fill + '" opacity="0.09"/>';
+      if (b - a >= 96) {
+        const cx = (a + b) / 2, ink = rg.ink || rg.fill;
+        regionLabels += '<text x="' + cx.toFixed(1) + '" y="' + (PADT + ih - 30) + '" text-anchor="middle" font-size="12.5" font-weight="600" ' +
+            font + ' fill="' + ink + '">' + rg.label + '</text>' +
+          '<text x="' + cx.toFixed(1) + '" y="' + (PADT + ih - 14) + '" text-anchor="middle" font-size="10.5" ' +
+            font + ' fill="' + ink + '" opacity="0.85">' + rg.sub + '</text>';
+      }
+    });
 
-    // gridlines + score labels
+    // gridlines + score labels + axis title
     let grid = '';
     for (let g = 0; g <= 4; g++) {
       const v = vlo + (span * g) / 4, gy = y(v);
       grid += '<line x1="' + PADL + '" y1="' + gy.toFixed(1) + '" x2="' + (PADL + iw) + '" y2="' + gy.toFixed(1) +
         '" stroke="var(--line)" stroke-width="1"/>' +
-        '<text x="' + (PADL - 8) + '" y="' + (gy + 3.5).toFixed(1) + '" text-anchor="end" font-size="10" ' + font +
+        '<text x="' + (PADL - 10) + '" y="' + (gy + 3.5).toFixed(1) + '" text-anchor="end" font-size="10.5" ' + font +
         ' fill="var(--fg-muted)">' + v.toFixed(2) + '</text>';
     }
+    grid += '<text transform="translate(14 ' + (PADT + ih / 2).toFixed(1) + ') rotate(-90)" text-anchor="middle" font-size="10.5" ' +
+      font + ' fill="var(--fg-muted)">Score</text>';
 
-    // cut rules, labels staggered when close
+    // cut rules on the region boundaries; labels above, staggered if crowded
     let rules = '', lastLx = -1e9;
     cuts.forEach(function (c, i) {
-      const px = x(c[0]);
+      const px = xEdge(c[0]);
       if (px < PADL - 0.5 || px > PADL + iw + 0.5) return;
-      const ly = (px - lastLx < 70) ? PADT + 11 : PADT - 8;   // second label drops inside when lines are close
+      const color = i === 0 ? '#6f8f7a' : AMBER;
+      const crowded = px - lastLx < 70;
       const anchor = px > PADL + iw - 60 ? 'end' : 'start';
-      const tx = anchor === 'end' ? px - 4 : px + 4;
       rules += '<line x1="' + px.toFixed(1) + '" y1="' + PADT + '" x2="' + px.toFixed(1) + '" y2="' + (PADT + ih) +
-        '" stroke="var(--fg-muted)" stroke-width="1" stroke-dasharray="4 4" opacity="0.7"/>' +
-        '<text x="' + tx.toFixed(1) + '" y="' + ly + '" text-anchor="' + anchor +
-        '" font-size="10.5" ' + font + ' fill="var(--fg-muted)">' + c[1] + ' · ' + c[0] + '</text>';
+        '" stroke="' + color + '" stroke-width="1.2" stroke-dasharray="4 4"/>' +
+        '<text x="' + (anchor === 'end' ? px - 4 : px + 4).toFixed(1) + '" y="' + (crowded ? PADT + 12 : PADT - 9) +
+        '" text-anchor="' + anchor + '" font-size="10.5" ' + font + ' fill="var(--fg-muted)">' + c[1] + ' · ' + c[0] + '</text>';
       lastLx = px;
     });
 
     // curve + points
     const pts = {}, list = [];
     let path = '', dots = '';
-    const rad = zoom ? 3.5 : 2.2;
+    const rad = zoom ? 3.5 : 2.3;
     rows.forEach(function (r, i) {
       const rank = i + 1;
       if (rank < r0 || rank > r1) return;
@@ -6409,25 +6431,25 @@
       list.push({ id: r.pnm_id, x: px });
       path += (path ? ' L' : 'M') + px.toFixed(1) + ' ' + py.toFixed(1);
       const on = !pass || pass(r);
-      dots += '<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="' + rad + '" fill="var(--navy)" opacity="' +
-        (on ? '0.9' : '0.15') + '"/>';
+      dots += '<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="' + rad + '" fill="var(--rk-line)" opacity="' +
+        (on ? '0.95' : '0.15') + '"/>';
     });
     state._rkPts = pts;
     state._rkList = list;
     setTimeout(rkCheckWidth, 0);
     // One hit layer over the plot; the nearest rank to the pointer wins.
-    const hits = '<rect x="' + (PADL - 6) + '" y="' + PADT + '" width="' + (iw + 12) + '" height="' + ih + '" fill="transparent" ' +
+    const hits = '<rect x="' + PADL + '" y="' + PADT + '" width="' + iw + '" height="' + ih + '" fill="transparent" ' +
       'style="cursor:pointer" onmousemove="rkMove(event)" onmouseleave="rkHover(null)" onclick="rkClick(event)"/>';
 
-    const axis = '<text x="' + PADL + '" y="' + (H - 8) + '" font-size="10" ' + font + ' fill="var(--fg-muted)">#' + r0 + '</text>' +
-      '<text x="' + (PADL + iw) + '" y="' + (H - 8) + '" text-anchor="end" font-size="10" ' + font + ' fill="var(--fg-muted)">#' + r1 + '</text>' +
-      '<text x="' + (PADL + iw / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" ' + font + ' fill="var(--fg-muted)">' +
+    const axis = '<text x="' + PADL + '" y="' + (H - 8) + '" font-size="10.5" ' + font + ' fill="var(--fg-muted)">#' + r0 + '</text>' +
+      '<text x="' + (PADL + iw) + '" y="' + (H - 8) + '" text-anchor="end" font-size="10.5" ' + font + ' fill="var(--fg-muted)">#' + r1 + '</text>' +
+      '<text x="' + (PADL + iw / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" ' + font + ' fill="var(--fg-muted)">' +
         (zoom ? 'Rank (zoomed)' : 'Rank') + '</text>';
 
     return '<svg id="rkSvg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" ' +
         'data-w="' + W + '" style="display:block; width:100%; height:auto; max-width:' + W + 'px;">' +
-      regions + grid + rules +
-      '<path d="' + path + '" fill="none" stroke="var(--navy)" stroke-width="1.5" stroke-linejoin="round" opacity="0.85"/>' +
+      shade + grid + regionLabels + rules +
+      '<path d="' + path + '" fill="none" stroke="var(--rk-line)" stroke-width="1.8" stroke-linejoin="round"/>' +
       dots +
       '<circle id="rkMark" r="7" cx="0" cy="0" fill="none" stroke="var(--gold-dark)" stroke-width="2" opacity="0" pointer-events="none"/>' +
       hits + axis +
@@ -6666,12 +6688,13 @@
 
       '<section class="rk-chart-card">' +
         '<div class="rk-chart-bar">' +
-          '<div class="rk-chart-title">Ranking curve' + (zoomNote ? ' <span class="rk-zoom-note">' + zoomNote + '</span>' : '') + '</div>' +
+          '<div class="rk-chart-title">Ranking distribution' + (zoomNote ? ' <span class="rk-zoom-note">' + zoomNote + '</span>' : '') + '</div>' +
+          '<div class="rk-chart-right"><span class="rk-chart-cap">Each point represents a candidate\u2019s normalized score.</span>' +
           '<div class="rk-seg">' +
             '<button type="button" class="' + (mode === 'full' ? 'active' : '') + '" onclick="setRatingsCurveMode(\'full\')">Full distribution</button>' +
             '<button type="button" class="' + (mode === 'boundary' ? 'active' : '') + '" onclick="setRatingsCurveMode(\'boundary\')"' +
               (cutsIn.length ? '' : ' disabled title="No cut targets inside the ranked list"') + '>Cut boundary</button>' +
-          '</div>' +
+          '</div>' +'</div>' +
         '</div>' +
         '<div class="rk-chart-wrap" id="rkChartWrap">' + ratingsCurveChart(rows, pass) +
           '<div class="rk-tip" id="rkTip"></div></div>' +
