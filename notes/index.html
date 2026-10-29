@@ -5313,21 +5313,6 @@
   [data-theme="dark"] .kpi-value, [data-theme="dark"] .phase-name,
   [data-theme="dark"] .section-title, [data-theme="dark"] .view-dashboard .section-title { color: var(--gold); }
   [data-theme="dark"] .kpi-icon { color: var(--gold); }
-  /* ========== RSVP (Phase 0 #7) ========== */
-  .rsvp-card { max-width: 420px; }
-  .rsvp-event-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--fg); margin: 18px 0 4px; }
-  .rsvp-event-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 18px; }
-  .rsvp-field { text-align: left; margin: 14px 0; }
-  .rsvp-actions { display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
-  .rsvp-confirm { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--fg); margin-top: 16px; }
-  .rsvp-block { margin-top: 4px; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
-  .rsvp-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin-bottom: 8px; }
-  .rsvp-counts { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
-  .rsvp-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 8px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); color: var(--fg-soft); }
-  .rsvp-count.yes { color: var(--success); border-color: var(--line-strong); }
-  .rsvp-count.no { color: var(--danger); }
-  .rsvp-note { font-size: 12px; color: var(--fg-muted); line-height: 1.5; }
-  .rsvp-note code { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -5470,7 +5455,6 @@
         <label class="field-label">Notes</label>
         <textarea class="field-textarea" id="eventNotes" placeholder="Details, links, who's bringing what…"></textarea>
       </div>
-      <div id="eventRsvpArea"></div>
     </div>
     <div class="modal-footer">
       <button class="btn danger" id="deleteEventBtn" onclick="deleteCurrentEvent()" style="display:none">Delete</button>
@@ -5800,15 +5784,6 @@
       clearTimeout(realtimeDebounce);
       realtimeDebounce = setTimeout(async () => { await loadExpenses(); render(); }, 250);
     });
-    // Phase 0 #7: RSVP responses — refresh the open event modal's RSVP block live.
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'event_rsvps' }, () => {
-      clearTimeout(realtimeDebounce);
-      realtimeDebounce = setTimeout(async () => {
-        await loadEventRsvps();
-        if (state.rsvpMode) { render(); return; }
-        renderEventRsvpArea();
-      }, 250);
-    });
     // Candidates page. pnms + attendance reload the roster; pnm_votes is
     // the hot path during deliberations so it reloads votes only.
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'pnms' }, () => {
@@ -6026,11 +6001,6 @@
     marketingPostsLoaded: false,
     marketingViewMode: 'calendar',     // 'calendar' | 'list'
     marketingStatusFilter: 'all',      // 'all' | 'draft' | 'published'
-    // Phase 0 #7 — RSVP
-    eventRsvps: [],
-    eventRsvpsLoaded: false,
-    rsvpMode: null,                    // { eventId, key, event, valid, submitted } when ?rsvp= is present
-    rsvpBrothers: [],
     editingMarketingPostId: null,
     editingMarketingPost: {},
     // Phase 0 #6 — Budget Tracking
@@ -6113,8 +6083,6 @@
       await loadMarketingPosts();
       // Phase 0 #6
 
-      // Phase 0 #7 — RSVP responses (soft-fails until migration 0005 lands)
-      await loadEventRsvps();
       // Open PSU ID reviews filed by the kiosk. Rush chair and above only.
       await loadIdReviews();
       // Candidates is now a view over pnms + attendance + pnm_votes.
@@ -6303,10 +6271,6 @@
     const root = document.getElementById('root');
     if (state.loading) {
       root.innerHTML = renderLoadingScreen();
-      return;
-    }
-    if (state.rsvpMode) {
-      root.innerHTML = renderRsvpPage();
       return;
     }
     if (state.setPasswordMode) {
@@ -10940,7 +10904,6 @@
 
     renderConflictsArea();
     attachConflictListeners();
-    renderEventRsvpArea();
 
     document.getElementById('eventModal').classList.add('active');
     setTimeout(() => document.getElementById('eventTitle').focus(), 50);
@@ -15292,6 +15255,7 @@
     }
   };
 
+<<<<<<< HEAD
 
 
   // ============================================================
@@ -15512,6 +15476,8 @@
   };
 
 
+=======
+>>>>>>> main
   if (sb) init();
 </script>
 </body>
